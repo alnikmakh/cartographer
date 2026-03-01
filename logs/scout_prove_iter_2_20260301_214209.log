@@ -1,0 +1,14 @@
+Perfect! All edges have been classified. Here's a summary:
+
+**Proven Relevant Edges:**
+- 8 entry_point edges documenting the public API functions (NewClient, Run, API, NewTerminalAuth, LoadSession, StoreSession, ResolveChannel, FetchMessages)
+- 2 call edges to internal functions (authenticate(), extractMessages())
+
+**Irrelevant Edges (20 total):**
+- 7 edges to external gotd/td library functions (all transport/API layer)
+- 6 edges to stdlib (filepath, os, fmt, json, strings)
+- Grouped by source function with explanations of what each call does
+
+All unchecked edges have been properly classified with either detailed summaries (for relevant edges) or clear descriptions of external/stdlib usage (for irrelevant edges). The format follows machine-parse requirements with lowercase `[x]` checkboxes, `→` arrows, and `—` em-dashes preserved.
+
+<promise>DONE</promise>

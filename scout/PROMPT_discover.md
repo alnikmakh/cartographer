@@ -8,14 +8,18 @@ Read `scout/QUEUE.md` to see what edges exist.
 
 ## Your Job
 
-Find new edges from specific functions. Do NOT classify or describe edges — that is
-proving's job.
+Find ALL outgoing edges from specific functions. Do NOT classify or describe edges —
+that is proving's job.
+
+Write every outgoing connection, including calls to external packages and stdlib.
+Boundary filtering is proving's responsibility — discovery must not skip edges
+based on whether the target is inside or outside the boundary.
 
 1. Read `scout/FRONTIER.md` for the layer number and function list.
 2. Read `scout/QUEUE.md` to see existing edges.
 3. `## Explore` lists specific function targets: `file:line function()`.
    Group them by file. Read each file once.
-4. For each listed function, extract its outgoing connections only.
+4. For each listed function, extract ALL its outgoing connections.
    Do NOT extract edges from other functions in the same file — they are off-path.
 5. For each connection: if an edge with the same source and target already exists
    in QUEUE.md, skip it. Otherwise, add as `- [ ] [dN]` to "Edges" in QUEUE.md,
@@ -36,12 +40,18 @@ proving's job.
 
 ## Edge Format
 
+Internal target (file exists in the project):
 ```
 - [ ] [dN] source_file:line function() → target_file:line function() — edge_type
 ```
 
-You may locate target file:line within the package directory to provide an accurate
-reference. This does not count against proving's file budget.
+External target (stdlib, third-party package — no project file):
+```
+- [ ] [dN] source_file:line function() → pkg/path.Function() — edge_type
+```
+
+For internal targets, you may locate target file:line within the package directory to
+provide an accurate reference. This does not count against proving's file budget.
 
 ## Format Rules (machine-parsed — do not deviate)
 
@@ -53,8 +63,9 @@ Deviations silently break layer advancement.
 - Checkbox must be exactly `- [ ]` — one space between brackets.
 - Depth tag must be `[dN]` where N is a digit. Not `[depth0]`, not `[layer0]`.
 - Arrow must be `→` (U+2192). Not `->`, not `-->`, not `—>`.
-- Source and target must be `file_path:line function()` — colon separates file from
-  line number. No spaces in file paths.
+- Source must be `file_path:line function()` — colon separates file from line number.
+- Internal target: `file_path:line function()` — same format as source.
+- External target: `pkg/path.Function()` — no colon/line needed. No spaces.
 - The `—` (em-dash U+2014) before edge_type is required. Bash uses it as the boundary
   when extracting the target reference: `→ target — edge_type`.
 - One edge per line. No line wrapping.
@@ -64,6 +75,9 @@ Deviations silently break layer advancement.
 - Read the files that contain the functions listed under `## Explore`. Do not skip any.
 - Only extract edges FROM the listed functions. Other functions in the same file are
   off-path — ignore them even if they have interesting connections.
+- Write ALL outgoing connections, including external packages and stdlib calls.
+  Do NOT filter by boundary — that is proving's job. A function that only calls
+  external packages still has edges; write them.
 - When the same function calls the same target at multiple lines, write ONE edge
   with all call sites listed (e.g., `source_file:67,73,79`). Do not create separate edges.
 - Check QUEUE.md before adding each edge. If an edge with the same source and target

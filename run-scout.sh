@@ -115,11 +115,11 @@ done
 # --- Functions ---
 
 count_unchecked() {
-    grep -c '^\- \[ \]' "$QUEUE" 2>/dev/null || echo 0
+    grep -c '^\- \[ \]' "$QUEUE" 2>/dev/null || true
 }
 
 count_proven() {
-    grep -c '^\- \[x\]' "$QUEUE" 2>/dev/null || echo 0
+    grep -c '^\- \[x\]' "$QUEUE" 2>/dev/null || true
 }
 
 count_irrelevant() {
@@ -137,15 +137,20 @@ frontier_has_files() {
 extract_entry_point_functions() {
     # Parse CONTEXT.md ## Entry Points, extract file:line function() refs
     local refs=""
+    local edges=""
     while IFS= read -r line; do
         [ -z "$line" ] && continue
         local fileline func
         fileline=$(echo "$line" | grep -oP '\S+:\d+')
         func=$(echo "$line" | grep -oP '— \K\S+')
-        [ -n "$fileline" ] && [ -n "$func" ] && refs+="$fileline $func"$'\n'
+        if [ -n "$fileline" ] && [ -n "$func" ]; then
+            refs+="$fileline $func"$'\n'
+            edges+="- [ ] [d0] BOUNDARY → $fileline $func — entry_point"$'\n'
+        fi
     done < <(awk '/^## Entry Points/{found=1; next} /^## /{found=0} found && /^- /{print}' "$CONTEXT")
 
     refs=$(echo "$refs" | sed '/^\s*$/d' | sort -u)
+    edges=$(echo "$edges" | sed '/^\s*$/d')
 
     {
         echo "## Layer"
@@ -154,6 +159,14 @@ extract_entry_point_functions() {
         echo "## Explore"
         echo "$refs"
     } > "$FRONTIER"
+
+    # Seed QUEUE.md with entry-point edges for proving
+    if [ -n "$edges" ] && ! grep -q 'BOUNDARY →' "$QUEUE"; then
+        local tmp
+        tmp=$(mktemp)
+        EDGES_BLOCK="$edges" awk '/^edge_type:/{print; print ""; print ENVIRON["EDGES_BLOCK"]; next} {print}' "$QUEUE" > "$tmp"
+        mv "$tmp" "$QUEUE"
+    fi
 }
 
 compute_next_frontier() {
@@ -165,6 +178,10 @@ compute_next_frontier() {
     explored=$(grep -E '^\- \[[ x]\]' "$QUEUE" \
         | grep -oP '\[d\d+\]\s+\K\S+' \
         | sort -u) || true
+
+    # Merge cumulative frontier entries (ALL_VISITED) — tracks every file:line
+    # that has ever been on a frontier, even if it produced no edges (dead ends)
+    explored=$(printf '%s\n%s' "$explored" "$ALL_VISITED" | sed '/^\s*$/d' | sort -u)
 
     # Targets: full reference from target side of RELEVANT edges
     # e.g. "session.go:10 FileSessionStorage{}" from "... → session.go:10 FileSessionStorage{} — DI"
@@ -245,6 +262,7 @@ ITERATION=0
 CONSECUTIVE_FAILURES=0
 MAX_CONSECUTIVE_FAILURES=3
 LAYER=0
+ALL_VISITED=""  # cumulative file:line entries from all frontiers
 
 while frontier_has_files; do
 
@@ -352,8 +370,11 @@ while frontier_has_files; do
 
     # --- Advance phase (bash computes next frontier) ---
 
+    # Accumulate current frontier entries before overwriting FRONTIER.md
+    ALL_VISITED+=$(awk '/^## Explore/{found=1; next} /^## /{found=0} found && /\S/{print $1}' "$FRONTIER")$'\n'
+
     LAYER=$((LAYER + 1))
-    MAX_DEPTH=$(grep -A1 '## Max Depth' "$CONTEXT" | tail -1 | tr -dc '0-9')
+    MAX_DEPTH=$(awk '/^## Max Depth/{found=1; next} found && /[0-9]/{gsub(/[^0-9]/,""); print; exit}' "$CONTEXT")
 
     if [ "$LAYER" -ge "$MAX_DEPTH" ]; then
         echo -e "${YELLOW}Reached max depth: $MAX_DEPTH${NC}"

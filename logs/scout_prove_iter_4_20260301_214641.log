@@ -1,0 +1,9 @@
+Perfect! I've successfully classified all edges from the first unchecked source file (`tg-digest/internal/telegram/client.go:68 authenticate()`). 
+
+Summary of changes:
+- **Removed** 3 unchecked edges from the Edges section (lines that called `auth.NewFlow()`, `Auth()`, and `IfNecessary()`)
+- **Added** 3 lines to the Irrelevant Edges section, classifying them as external gotd/td calls outside the boundary
+
+The remaining two unchecked edges are from a different source file (`messages.go:91 extractMessages()`), so they'll be processed in the next iteration following the batching rule.
+
+<promise>DONE</promise>
