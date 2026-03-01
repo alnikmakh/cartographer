@@ -11,20 +11,36 @@ Read `scout/QUEUE.md` to see what edges exist.
 
 Find new edges. Broad, fast, shallow. Do NOT describe data flow — that is proving's job.
 
-1. Identify the frontier — targets of proven [x] edges in QUEUE.md that have not
-   been explored by discovery yet. If QUEUE.md is empty, start from the entry points
+1. Check `scout/FRONTIER.md`. If it lists files, those are your frontier — read up to 2
+   of them. If FRONTIER.md is empty or says "ENTRY_POINTS", start from the entry points
    in CONTEXT.md.
-2. Read 3-5 source files at the frontier.
-3. For each connection found, classify it:
+2. Read the frontier files.
+3. Extract ALL connections from those files. For each, classify it:
 
    **Relevant** — touches data or control flow between entry points, is within
    boundaries, and within max depth. Add as unchecked `- [ ]` to "Relevant Edges".
 
-   **Irrelevant** — logging, metrics, telemetry, error reporting, unrelated features,
-   or outside boundaries. Add to "Irrelevant Edges" with a short skip reason.
+   **Irrelevant** — outside boundaries, external packages, logging, metrics,
+   telemetry, error reporting, or unrelated features. Add to "Irrelevant Edges"
+   with a description of what the call does AND why it was skipped.
 
-4. Expect 5-10 new edges per iteration.
-5. Only identify what connects to what. Do NOT read deeply.
+4. Be thorough within the files you read. Extract every connection, not just obvious ones.
+5. Only identify what connects to what. Do NOT read deeply into targets.
+
+## After Adding Edges
+
+Write the next frontier to `scout/FRONTIER.md`. The frontier is the set of target
+files from the NEW edges you just added that have not been explored yet. List one
+file per line. If you found no new relevant edges, write "EMPTY".
+
+## Irrelevant Edge Format
+
+Do NOT just write "external package" or "outside boundary". Explain what the call
+actually does so a reader understands the full picture without opening source files.
+
+Good: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: Telegram MTProto API call that fetches channel message history with offset/limit pagination. Outside boundary (external gotd/td SDK).`
+
+Bad: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: external gotd/td API`
 
 ## Edge Types to Find
 
@@ -44,16 +60,22 @@ Find new edges. Broad, fast, shallow. Do NOT describe data flow — that is prov
 
 ## Guardrails
 
-- Read at most 5 files. Hard limit.
+- Read ALL frontier files listed in FRONTIER.md (or all entry point files if starting fresh).
+- Extract ALL edges from those files — do not skip connections.
 - Every edge must have depth [dN] from nearest entry point.
 - Do NOT add edges beyond max depth in CONTEXT.md.
 - Do NOT add edges outside boundaries in CONTEXT.md (put in irrelevant instead).
-- Do NOT prove, describe, or summarize any edge.
+- Do NOT prove, describe, or summarize any relevant edge.
 
 ## If No Frontier Exists
 
-If all proven edge targets have been explored and you find no new connections,
+If FRONTIER.md says "EMPTY" or you find no new connections from the frontier files,
+AND you added NO new relevant edges to QUEUE.md in this iteration,
 output `<promise>ALL_DONE</promise>`.
+
+IMPORTANT: If you added ANY new `- [ ]` edges, you MUST output `<promise>DONE</promise>`
+instead — those edges still need proving. Only use `ALL_DONE` when the queue has
+no new work.
 
 ## When Done
 

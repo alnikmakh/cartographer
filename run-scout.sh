@@ -43,6 +43,7 @@ case "$PROVIDER" in
     claude)
         CLI_CMD="${CLAUDE_CMD:-claude}"
         CLI_FLAGS="-p --dangerously-skip-permissions"
+        [ -n "${CLAUDE_MODEL:-}" ] && CLI_FLAGS="$CLI_FLAGS --model $CLAUDE_MODEL"
         PIPE_MODE="stdin"
         ;;
     codex)
@@ -95,7 +96,8 @@ mkdir -p "$LOG_DIR"
 # --- Validate files ---
 
 for f in "$QUEUE" "$DISCOVER_PROMPT" "$PROVE_PROMPT" \
-         "$SCRIPT_DIR/scout/CONTEXT.md" "$SCRIPT_DIR/scout/OVERVIEW.md" \
+         "$SCRIPT_DIR/scout/CONTEXT.md" \
+         "$SCRIPT_DIR/scout/FRONTIER.md" \
          "$SCRIPT_DIR/.specify/memory/constitution.md"; do
     if [ ! -f "$f" ]; then
         echo -e "${RED}Error: $(basename "$f") not found at $f${NC}"
@@ -194,6 +196,13 @@ while true; do
     echo -e "  Irrelevant: $IRRELEVANT"
     echo ""
 
+    # --- Show frontier for discovery ---
+
+    if [ "$MODE" = "discover" ]; then
+        FRONTIER_CONTENT=$(cat "$SCRIPT_DIR/scout/FRONTIER.md" 2>/dev/null || echo "")
+        echo -e "  Frontier:   ${FRONTIER_CONTENT:-ENTRY_POINTS}"
+    fi
+
     # --- Run agent ---
 
     LOG_FILE="$LOG_DIR/scout_${MODE}_iter_${ITERATION}_$(date '+%Y%m%d_%H%M%S').log"
@@ -204,14 +213,21 @@ while true; do
         # --- Check completion signals ---
 
         if echo "$AGENT_OUTPUT" | grep -q "<promise>ALL_DONE</promise>"; then
-            echo ""
-            echo -e "${GREEN}━━━ ALL_DONE — No frontier remaining. Scout complete. ━━━${NC}"
-            echo ""
-            echo -e "  Total iterations: $ITERATION"
-            echo -e "  Proven edges:     $(count_proven)"
-            echo -e "  Irrelevant edges: $(count_irrelevant)"
-            echo -e "  Output:           scout/OVERVIEW.md"
-            break
+            # Safety: if there are still unchecked edges, agent lied — continue
+            REMAINING=$(count_unchecked)
+            if [ "$REMAINING" -gt 0 ]; then
+                echo -e "${YELLOW}⚠ Agent said ALL_DONE but $REMAINING unchecked edges remain — continuing${NC}"
+                CONSECUTIVE_FAILURES=0
+            else
+                echo ""
+                echo -e "${GREEN}━━━ ALL_DONE — No frontier remaining. Scout complete. ━━━${NC}"
+                echo ""
+                echo -e "  Total iterations: $ITERATION"
+                echo -e "  Proven edges:     $(count_proven)"
+                echo -e "  Irrelevant edges: $(count_irrelevant)"
+                echo -e "  Output:           scout/QUEUE.md"
+                break
+            fi
 
         elif echo "$AGENT_OUTPUT" | grep -q "<promise>DONE</promise>"; then
             echo -e "${GREEN}✓ $MODE completed${NC}"

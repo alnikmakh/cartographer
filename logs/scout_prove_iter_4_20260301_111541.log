@@ -1,0 +1,11 @@
+Perfect! I've successfully proven all three unchecked edges in auth.go:
+
+1. **Phone → prompt (line 35)**: Phone() calls prompt() to interactively request the user's phone number, which is cached and returned as part of the gotd/td UserAuthenticator interface.
+
+2. **Password → prompt (line 46)**: Password() calls prompt() to request the 2FA password, with no caching—returns directly to gotd/td's auth handler.
+
+3. **Code → prompt (line 51)**: Code() calls prompt() to request the SMS/app authentication code sent to the user's account, flowing to gotd/td for validation.
+
+All three edges confirmed and documented with detailed summaries including data flow, transformations, and file:line references.
+
+<promise>DONE</promise>

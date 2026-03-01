@@ -38,8 +38,8 @@ connections found).
 ### Irrelevant Edges
 
 ```
-- billing/service.ts:60 processInvoice → logger.ts:12 log — SKIPPED: logging, no data transformation
-- billing/service.ts:63 processInvoice → metrics.ts:8 increment — SKIPPED: telemetry, outside boundaries
+- billing/service.ts:60 processInvoice → logger.ts:12 log — SKIPPED: structured JSON logger that writes request context (invoice ID, amount, user) to stdout for observability. Not explored because logging does not transform data.
+- billing/service.ts:63 processInvoice → metrics.ts:8 increment — SKIPPED: Prometheus counter that tracks invoice creation rate by currency. Outside boundaries (packages/analytics).
 ```
 
 ---
@@ -58,8 +58,8 @@ If an edge crosses into a forbidden package, add it to irrelevant with "outside 
 
 ### File Budget
 
-- Discovery: at most 5 files per iteration.
-- Proving: at most 2 files per iteration (source and target of the edge).
+- Discovery: at most 2 frontier files per iteration. Extract ALL edges from them.
+- Proving: at most 2 files per iteration. Prove ALL unchecked edges sharing the same source file.
 
 ---
 
@@ -67,9 +67,10 @@ If an edge crosses into a forbidden package, add it to irrelevant with "outside 
 
 - [ ] Every relevant edge has file:line references on both source and target
 - [ ] Every proven edge has a data-flow summary
-- [ ] Irrelevant edges are listed with skip reasons
+- [ ] Irrelevant edges explain what the call does AND why it was skipped
+- [ ] All irrelevant edges are copied into OVERVIEW.md "Noted but Not Explored"
 - [ ] OVERVIEW.md is self-contained — reader needs no source files
-- [ ] OVERVIEW.md is concise — under 4000 tokens
+- [ ] OVERVIEW.md is verbose — each edge has full context, not one-liners
 - [ ] All paths between entry points are traced within boundaries
 - [ ] DI, event, config, middleware indirection is followed, not skipped
 - [ ] No unexplored frontier remains within boundaries and depth limit

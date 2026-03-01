@@ -1,0 +1,12 @@
+**Discovery Summary:**
+
+Frontier file `auth.go` has been fully analyzed. All relevant edges from this file were already discovered and proven in previous iterations:
+- Phone → prompt (d2)
+- Password → prompt (d2)
+- Code → prompt (d2)
+
+No **new relevant edges** were found. One additional irrelevant edge was documented (SignUp → fmt.Errorf, a stdlib call).
+
+Frontier is now empty with no unexplored targets remaining.
+
+<promise>ALL_DONE</promise>

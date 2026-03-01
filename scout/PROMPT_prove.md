@@ -3,27 +3,37 @@
 You are a SCOUT agent in a Ralph Wiggum loop. This iteration is PROVING.
 
 Read `.specify/memory/constitution.md` for core rules.
-Read `scout/QUEUE.md` to find the first unchecked edge.
+Read `scout/QUEUE.md` to find unchecked edges.
 
 ## Your Job
 
-Confirm and describe exactly ONE edge. Deep, careful, precise.
+Confirm and describe edges, one file at a time. Write everything to QUEUE.md only.
 
-1. Pick the FIRST unchecked `- [ ]` edge from "Relevant Edges" in QUEUE.md.
-2. Read the source file and target file for that edge. Only these two files.
-3. Confirm: does this connection actually exist?
-   - **YES**: Write a one-line summary — what data goes in, what transformation
-     happens, what comes out. Mark the edge `[x]` in QUEUE.md with the summary.
+1. Look at the FIRST unchecked `- [ ]` edge in "Relevant Edges" in QUEUE.md.
+2. Find ALL other unchecked edges that share the same source file.
+3. Read that source file (and the target file if it differs). At most 2 files.
+4. For each edge in the batch, confirm: does this connection actually exist?
+   - **YES**: Mark the edge `[x]` in QUEUE.md with a detailed summary.
    - **NO**: Remove the edge from relevant. Add to "Irrelevant Edges" with explanation.
-4. Append the proven finding to the appropriate section of `scout/OVERVIEW.md`:
-   - Call chain connections → "Call Chain"
-   - Type definitions encountered → "Key Types"
-   - Data transformations → "Data Flow"
+
+## Summary Format
+
+Each proven edge summary must include ALL of the following — this is the only
+record that will be used to compile the final overview:
+
+- What the source function does and why it calls the target
+- What data/arguments flow across the edge (parameter types and values)
+- What the target does with that data (transformation, validation, side effects)
+- How this fits into the broader feature flow
+- Any key types or structs encountered (with fields)
+- file:line references for every claim
 
 ## Guardrails
 
-- Read at most 2 files (the source and target of the edge). Hard limit.
-- Do NOT discover new edges. Do NOT explore beyond the two files.
+- Read at most 2 files (the shared source file and one target file). Hard limit.
+- Only prove edges that share the same source file in this iteration.
+- Do NOT write to OVERVIEW.md. Only write to QUEUE.md.
+- Do NOT discover new edges. Do NOT explore beyond the files you read.
 - Do NOT add new unchecked edges to QUEUE.md.
 - If you notice other connections while reading, ignore them.
   Discovery will find them on its next pass.
