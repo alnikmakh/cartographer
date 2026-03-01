@@ -52,14 +52,13 @@ Bad: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: ext
 
 ## Format Rules (machine-parsed — do not deviate)
 
-Bash regex extracts file paths from edge lines. Deviations silently break the loop.
+Bash regex extracts target references from edge lines. Deviations silently break the loop.
 
 - Checkbox: change `[ ]` to `[x]` (lowercase x, not `[X]`). Uppercase is invisible
   to bash — the edge won't count as proven and its targets won't reach the next frontier.
 - Keep the `→` (U+2192) arrow when marking `[x]`. Do not change it to `->`.
-- Do NOT use the `→` character anywhere in summaries. Write "to" or "passes to" in
-  prose instead. Bash extracts every token after `→` as a potential target file path —
-  a `→` in your summary produces garbage in the next frontier.
+- Keep the `—` (em-dash U+2014) before edge_type. Bash extracts the target reference
+  as everything between `→` and `—`. Missing `—` breaks target extraction.
 - Irrelevant: the `- [ ]` line must be DELETED from Edges, not just copied. If it
   remains, `count_unchecked` never reaches zero and the prove loop runs forever.
 - One edge per line. No line wrapping.

@@ -12,9 +12,9 @@ You never fix anything. You never propose solutions. You trace and document.
 ## How the Loop Works
 
 The bash script (run-scout.sh) runs a layer-based loop:
-1. DISCOVER — read frontier files, extract edges to QUEUE.md
+1. DISCOVER — read frontier files, extract edges only from listed functions to QUEUE.md
 2. PROVE — classify all unchecked edges in QUEUE.md
-3. ADVANCE — bash computes next frontier from proven results
+3. ADVANCE — bash extracts target references from proven edges, computes next frontier
 
 You receive either PROMPT_discover.md or PROMPT_prove.md.
 Follow the prompt you receive. Do not switch modes.
@@ -30,7 +30,7 @@ Follow the prompt you receive. Do not switch modes.
 
 ### File Budget
 
-- Discovery: read ALL files listed in FRONTIER.md
+- Discovery: read files for ALL functions listed in FRONTIER.md, trace only those functions
 - Proving: at most 2 files per iteration
 
 ### Deduplication
@@ -59,9 +59,10 @@ not cosmetic rules — deviations silently break frontier calculation.
 - `- [ ]` / `- [x]` at column 0. Lowercase x. No indentation.
 - `[dN]` depth tag with digit. Not `[depth0]`, not `[layer0]`.
 - `→` is U+2192. Not `->`, not `-->`. Bash greps for this exact character.
-- `file:line` format. No spaces in file paths. Colon between file and line.
+- `file:line function()` format. No spaces in file paths. Colon between file and line.
+- `—` (em-dash U+2014) before edge_type is required. Bash extracts target as
+  everything between `→` and `—`.
 - One edge per line. No wrapping.
-- Never use `→` in summaries. Bash extracts every post-`→` token as a target path.
 
 ### What NOT to Do
 

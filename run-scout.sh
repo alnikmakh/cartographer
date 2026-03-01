@@ -3,14 +3,14 @@
 # Scout Loop — Layer-based discovery/proving loop
 #
 # Architecture:
-#   layer=0, frontier=entry point files
+#   layer=0, frontier=entry point functions
 #   LOOP:
-#     DISCOVER: read frontier files → extract edges → write QUEUE.md
+#     DISCOVER: read frontier files, trace ONLY listed functions → write QUEUE.md
 #     PROVE (repeat): classify edges until unchecked == 0 → write QUEUE.md
 #     ADVANCE (bash):
-#       explored = source files from ALL edges in QUEUE.md
-#       targets = target files from RELEVANT edges in QUEUE.md
-#       next = targets - explored
+#       explored = source file:line from ALL edges in QUEUE.md
+#       targets = target file:line function() from RELEVANT edges in QUEUE.md
+#       next = targets whose file:line is not in explored
 #       next empty? → done
 #       layer >= max_depth? → done
 #       else → write next to FRONTIER.md, layer++, continue
@@ -134,41 +134,57 @@ frontier_has_files() {
     echo "$explore_lines" | grep -q '\S'
 }
 
-extract_entry_point_files() {
-    # Parse CONTEXT.md ## Entry Points section, extract unique file paths, write to FRONTIER.md
-    local files
-    files=$(awk '/^## Entry Points/{found=1; next} /^## /{found=0} found && /^- /{print}' "$CONTEXT" \
-        | grep -oP '[^\s]+:\d+' \
-        | sed 's/:[0-9]*$//' \
-        | sort -u)
+extract_entry_point_functions() {
+    # Parse CONTEXT.md ## Entry Points, extract file:line function() refs
+    local refs=""
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local fileline func
+        fileline=$(echo "$line" | grep -oP '\S+:\d+')
+        func=$(echo "$line" | grep -oP '— \K\S+')
+        [ -n "$fileline" ] && [ -n "$func" ] && refs+="$fileline $func"$'\n'
+    done < <(awk '/^## Entry Points/{found=1; next} /^## /{found=0} found && /^- /{print}' "$CONTEXT")
+
+    refs=$(echo "$refs" | sed '/^\s*$/d' | sort -u)
 
     {
         echo "## Layer"
         echo "0"
         echo ""
         echo "## Explore"
-        echo "$files"
+        echo "$refs"
     } > "$FRONTIER"
 }
 
 compute_next_frontier() {
     local layer="$1"
 
-    # Source files = source side of ALL edges (explored)
+    # Explored: file:line from source side of ALL edges
+    # e.g. "client.go:23" from "- [x] [d0] client.go:23 NewClient() → ..."
     local explored
     explored=$(grep -E '^\- \[[ x]\]' "$QUEUE" \
-        | grep -oP '\]\s+\[d\d+\]\s+\K[^\s:]+' \
-        | sort -u)
+        | grep -oP '\[d\d+\]\s+\K\S+' \
+        | sort -u) || true
 
-    # Target files = target side of RELEVANT (checked) edges only
-    local targets
-    targets=$(grep -E '^\- \[x\]' "$QUEUE" \
-        | grep -oP '→\s+\K[^\s:]+' \
-        | sort -u)
+    # Targets: full reference from target side of RELEVANT edges
+    # e.g. "session.go:10 FileSessionStorage{}" from "... → session.go:10 FileSessionStorage{} — DI"
+    # Lazy .+? stops at first " — " (edge_type separator)
+    local target_refs
+    target_refs=$(grep -E '^\- \[x\]' "$QUEUE" \
+        | grep -oP '→\s+\K.+?(?=\s+—)' \
+        | sort -u) || true
 
-    # Next frontier = targets - explored
-    local next
-    next=$(comm -23 <(echo "$targets") <(echo "$explored"))
+    # Filter: keep targets whose file:line is not in explored
+    local next=""
+    while IFS= read -r ref; do
+        [ -z "$ref" ] && continue
+        local fileline="${ref%% *}"  # "session.go:10 Foo()" → "session.go:10"
+        if ! echo "$explored" | grep -qxF "$fileline"; then
+            next+="$ref"$'\n'
+        fi
+    done <<< "$target_refs"
+
+    next=$(echo "$next" | sed '/^\s*$/d')
 
     if [ -z "$next" ]; then
         return 1
@@ -205,7 +221,7 @@ exec > >(tee -a "$SESSION_LOG") 2>&1
 
 # --- Phase 1: Initialize frontier from CONTEXT.md entry points ---
 
-extract_entry_point_files
+extract_entry_point_functions
 
 # --- Banner ---
 

@@ -8,13 +8,15 @@ Read `scout/QUEUE.md` to see what edges exist.
 
 ## Your Job
 
-Find new edges. Broad, fast, shallow. Do NOT classify or describe edges — that is
+Find new edges from specific functions. Do NOT classify or describe edges — that is
 proving's job.
 
-1. Read `scout/FRONTIER.md` for the layer number and file list.
+1. Read `scout/FRONTIER.md` for the layer number and function list.
 2. Read `scout/QUEUE.md` to see existing edges.
-3. Read ALL files listed under `## Explore` in FRONTIER.md.
-4. Extract ALL connections from those files.
+3. `## Explore` lists specific function targets: `file:line function()`.
+   Group them by file. Read each file once.
+4. For each listed function, extract its outgoing connections only.
+   Do NOT extract edges from other functions in the same file — they are off-path.
 5. For each connection: if an edge with the same source and target already exists
    in QUEUE.md, skip it. Otherwise, add as `- [ ] [dN]` to "Edges" in QUEUE.md,
    where N is the layer number from FRONTIER.md.
@@ -43,21 +45,25 @@ reference. This does not count against proving's file budget.
 
 ## Format Rules (machine-parsed — do not deviate)
 
-Bash regex extracts source/target file paths from edge lines to compute the next
-frontier. Deviations silently break layer advancement.
+Bash regex extracts source/target references from edge lines to compute the next
+frontier. The target reference (file:line function) becomes the next frontier entry.
+Deviations silently break layer advancement.
 
 - Start each edge at column 0: `- [ ] [d...`. No leading spaces.
 - Checkbox must be exactly `- [ ]` — one space between brackets.
 - Depth tag must be `[dN]` where N is a digit. Not `[depth0]`, not `[layer0]`.
 - Arrow must be `→` (U+2192). Not `->`, not `-->`, not `—>`.
-- Source and target must be `file_path:line` — colon separates file from line number.
-  No spaces in file paths.
+- Source and target must be `file_path:line function()` — colon separates file from
+  line number. No spaces in file paths.
+- The `—` (em-dash U+2014) before edge_type is required. Bash uses it as the boundary
+  when extracting the target reference: `→ target — edge_type`.
 - One edge per line. No line wrapping.
 
 ## Guardrails
 
-- Read ALL files listed under `## Explore` in FRONTIER.md. Do not skip any.
-- Extract ALL edges from those files — do not skip connections.
+- Read the files that contain the functions listed under `## Explore`. Do not skip any.
+- Only extract edges FROM the listed functions. Other functions in the same file are
+  off-path — ignore them even if they have interesting connections.
 - When the same function calls the same target at multiple lines, write ONE edge
   with all call sites listed (e.g., `source_file:67,73,79`). Do not create separate edges.
 - Check QUEUE.md before adding each edge. If an edge with the same source and target
