@@ -371,7 +371,7 @@ while frontier_has_files; do
     # --- Advance phase (bash computes next frontier) ---
 
     # Accumulate current frontier entries before overwriting FRONTIER.md
-    ALL_VISITED+=$(awk '/^## Explore/{found=1; next} /^## /{found=0} found && /\S/{print $1}' "$FRONTIER")$'\n'
+    ALL_VISITED+=$(awk '/^## Explore/{found=1; next} /^## /{found=0} found && /[^ \t]/{print $1}' "$FRONTIER")$'\n'
 
     LAYER=$((LAYER + 1))
     MAX_DEPTH=$(awk '/^## Max Depth/{found=1; next} found && /[0-9]/{gsub(/[^0-9]/,""); print; exit}' "$CONTEXT")
@@ -388,7 +388,7 @@ while frontier_has_files; do
 
     echo ""
     echo -e "${CYAN}── Layer $LAYER frontier ──${NC}"
-    awk '/^## Explore/{found=1; next} /^## /{found=0} found && /\S/{print "  " $0}' "$FRONTIER"
+    awk '/^## Explore/{found=1; next} /^## /{found=0} found && /[^ \t]/{print "  " $0}' "$FRONTIER"
     echo ""
 done
 
