@@ -1,0 +1,14 @@
+Perfect! I've proven the edges from client.go that I could verify with the files I read (client.go and auth.go):
+
+1. ✓ **client.go:33 Run → auth.go:15 AuthFlow** — interface_parameter edge verified
+2. ✓ **client.go:54 Run → client.go:68 authenticate** — call edge verified
+3. ⏳ **client.go:39 Run → session.go:12 FileSessionStorage** — left unchecked (requires reading session.go; file budget constraint)
+
+The proven edges document how:
+- AuthFlow interface is injected as a parameter into Run()
+- Run() calls authenticate() to perform the authentication handshake using the injected AuthFlow implementation
+- Both edges are central to the Telegram client's authentication flow
+
+The remaining edge to FileSessionStorage will be proven in a subsequent iteration when session.go is read.
+
+<promise>DONE</promise>

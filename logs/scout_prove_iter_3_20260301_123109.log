@@ -1,0 +1,8 @@
+I've successfully proven the unchecked edge:
+
+**Edge Summary Added:**
+- `client.go:33 Run → session.go:12 FileSessionStorage (DI)`: Confirmed that Run instantiates FileSessionStorage at line 39 and injects it into telegram.NewClient to provide session persistence. The FileSessionStorage implements the session storage interface with LoadSession and StoreSession methods for disk I/O.
+
+All unchecked edges from client.go:33 have been proven and marked as [x] in QUEUE.md.
+
+<promise>DONE</promise>

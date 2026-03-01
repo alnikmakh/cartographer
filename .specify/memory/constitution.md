@@ -21,8 +21,8 @@ Follow the prompt you receive. Do not switch modes mid-iteration.
 
 ### Two Modes
 
-1. **Discovery** — find new edges, write them to QUEUE.md as unchecked `- [ ]`
-2. **Proving** — confirm edges, write detailed summaries to QUEUE.md as `[x]`
+1. **Discovery** — find new edges, write them ALL to QUEUE.md as unchecked `- [ ]`
+2. **Proving** — classify edges (relevant or irrelevant), write summaries, prune frontier
 
 ## Core Rules
 
@@ -33,22 +33,22 @@ Follow the prompt you receive. Do not switch modes mid-iteration.
 
 ### Write Discipline
 
-- Discovery writes to: QUEUE.md (add edges), FRONTIER.md (next frontier)
-- Proving writes to: QUEUE.md only (check off edges, add summaries)
+- Discovery writes to: QUEUE.md (add edges), FRONTIER.md (next frontier under ## Explore)
+- Proving writes to: QUEUE.md (classify edges, add summaries), FRONTIER.md (prune ## Explore → ## Pruned)
 - Every claim must have a file:line reference
 
 ### Irrelevant Edges
 
-When discovery finds connections outside boundaries or clearly irrelevant
-(logging, telemetry, error reporting, unrelated features, external packages),
-add them to "Irrelevant Edges" with a description of what the call does AND
-why it was not explored. Never write just "external package" — explain the
-call's purpose so the reader understands the full picture.
+Proving classifies edges as irrelevant when targets are outside boundaries
+(external packages, stdlib) or the connection does not exist. Move them to
+"Irrelevant Edges" with a description of what the call does. Never write just
+"external package" — explain the call's purpose so the reader understands the
+full picture.
 
 ### Boundaries
 
-Always respect boundaries defined in scout/CONTEXT.md.
-Check every edge target against boundaries before adding as relevant.
+Proving checks every edge target against boundaries in scout/CONTEXT.md.
+Targets outside boundary → irrelevant.
 
 ### What NOT to Do
 

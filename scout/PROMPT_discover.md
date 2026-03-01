@@ -9,38 +9,30 @@ Read `scout/QUEUE.md` to see what edges exist.
 
 ## Your Job
 
-Find new edges. Broad, fast, shallow. Do NOT describe data flow — that is proving's job.
+Find new edges. Broad, fast, shallow. Do NOT classify or describe edges — that is
+proving's job.
 
-1. Check `scout/FRONTIER.md`. If it lists files, those are your frontier — read up to 2
-   of them. If FRONTIER.md is empty or says "ENTRY_POINTS", start from the entry points
-   in CONTEXT.md.
+1. Check `scout/FRONTIER.md`.
+   - If it says "ENTRY_POINTS", start from the entry points in CONTEXT.md.
+   - If `## Explore` lists files, those are your frontier — read up to 2 of them.
+   - If `## Explore` is empty or FRONTIER.md says "EMPTY", skip to "If No Frontier
+     Exists" below.
 2. Read the frontier files.
-3. Extract ALL connections from those files. For each, classify it:
-
-   **Relevant** — touches data or control flow between entry points, is within
-   boundaries, and within max depth. Add as unchecked `- [ ]` to "Relevant Edges".
-
-   **Irrelevant** — outside boundaries, external packages, logging, metrics,
-   telemetry, error reporting, or unrelated features. Add to "Irrelevant Edges"
-   with a description of what the call does AND why it was skipped.
-
+3. Extract ALL connections from those files. Add each as unchecked `- [ ]` to
+   "Relevant Edges" in QUEUE.md. Do not classify or filter — proving decides
+   what is relevant.
 4. Be thorough within the files you read. Extract every connection, not just obvious ones.
 5. Only identify what connects to what. Do NOT read deeply into targets.
 
 ## After Adding Edges
 
-Write the next frontier to `scout/FRONTIER.md`. The frontier is the set of target
-files from the NEW edges you just added that have not been explored yet. List one
-file per line. If you found no new relevant edges, write "EMPTY".
+Write the next frontier to `scout/FRONTIER.md` under `## Explore`. List target files
+from the NEW edges you just added, one per line, even if the file was read before —
+it may contain deeper functions to explore next iteration. Only include files that
+can be read (within the repo, not external packages). Keep any existing `## Pruned`
+section unchanged.
 
-## Irrelevant Edge Format
-
-Do NOT just write "external package" or "outside boundary". Explain what the call
-actually does so a reader understands the full picture without opening source files.
-
-Good: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: Telegram MTProto API call that fetches channel message history with offset/limit pagination. Outside boundary (external gotd/td SDK).`
-
-Bad: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: external gotd/td API`
+If you found no new edges, leave `## Explore` empty.
 
 ## Edge Types to Find
 
@@ -50,6 +42,8 @@ Bad: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: ext
 - Config-driven pipelines (step names mapped to implementations)
 - Factory/strategy patterns (string to implementation lookups)
 - Middleware chains (ordered handler arrays)
+- Interface/abstract type parameters on entry points or key functions (target = the type definition)
+- Constructor or factory functions that create and return typed instances
 - Re-exports through barrel files (only if they transform or aggregate)
 
 ## Edge Format
@@ -60,23 +54,24 @@ Bad: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: ext
 
 ## Guardrails
 
-- Read ALL frontier files listed in FRONTIER.md (or all entry point files if starting fresh).
+- Read ALL frontier files (or all entry point files if FRONTIER.md says "ENTRY_POINTS").
 - Extract ALL edges from those files — do not skip connections.
-- Every edge must have depth [dN] from nearest entry point.
+- d0 = the source function is an entry point listed in CONTEXT.md. dN = the source
+  function is a target of a d(N-1) edge. Depth is per-function, not per-file — if a file
+  contains both entry points and non-entry-point functions, only edges from the entry
+  point functions are d0.
 - Do NOT add edges beyond max depth in CONTEXT.md.
-- Do NOT add edges outside boundaries in CONTEXT.md (put in irrelevant instead).
-- Do NOT prove, describe, or summarize any relevant edge.
+- When the same function calls the same target at multiple lines, write ONE edge
+  with all call sites listed (e.g., `source_file:67,73,79`). Do not create separate edges.
+- Do NOT prove, describe, or summarize any edge.
 
 ## If No Frontier Exists
 
-If FRONTIER.md says "EMPTY" or you find no new connections from the frontier files,
-AND you added NO new relevant edges to QUEUE.md in this iteration,
-output `<promise>ALL_DONE</promise>`.
-
-IMPORTANT: If you added ANY new `- [ ]` edges, you MUST output `<promise>DONE</promise>`
-instead — those edges still need proving. Only use `ALL_DONE` when the queue has
-no new work.
+`## Explore` is empty or FRONTIER.md says "EMPTY" → output `<promise>ALL_DONE</promise>`.
 
 ## When Done
 
-Output `<promise>DONE</promise>`
+If you added new edges, write the next frontier and output `<promise>DONE</promise>`.
+
+If you found NO new edges, leave `## Explore` empty and output
+`<promise>DONE</promise>` — the next iteration will ALL_DONE.

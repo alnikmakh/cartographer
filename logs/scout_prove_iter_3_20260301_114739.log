@@ -1,0 +1,9 @@
+All unchecked edges have been proven and checked off in QUEUE.md. I've verified:
+
+1. **auth.go batch** (3 edges) - Phone, Password, and Code methods all call the prompt() function with different prompts, handling user input for authentication
+2. **client.go edge** - Run() instantiates FileSessionStorage and injects it as a dependency into the telegram.NewClient options
+3. **messages.go edge** - FetchMessages() calls extractMessages() three times (for different response types), filtering raw Telegram messages into normalized Message structs
+
+Each summary includes data flows, type information, and file:line references documenting the connections.
+
+<promise>DONE</promise>
