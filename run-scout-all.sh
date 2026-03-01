@@ -1,7 +1,7 @@
 #!/bin/bash
 #
-# Run the scout loop for each tg-digest feature context.
-# Swaps CONTEXT.md, resets QUEUE.md and OVERVIEW.md, runs the loop,
+# Run the scout loop for each feature context.
+# Swaps CONTEXT.md, resets QUEUE.md and FRONTIER.md, runs the loop,
 # then saves the result to scout/results/.
 #
 # Usage:
@@ -26,7 +26,7 @@ NC='\033[0m'
 mkdir -p "$RESULTS_DIR"
 
 # Validate templates exist
-for f in "$TEMPLATES_DIR/QUEUE.md" "$TEMPLATES_DIR/OVERVIEW.md"; do
+for f in "$TEMPLATES_DIR/QUEUE.md" "$TEMPLATES_DIR/FRONTIER.md"; do
     if [ ! -f "$f" ]; then
         echo -e "${RED}Missing template: $f${NC}"
         exit 1
@@ -60,26 +60,24 @@ for ctx in "${CONTEXT_FILES[@]}"; do
     echo ""
 
     # Check if result already exists (resume support)
-    if [ -f "$RESULTS_DIR/${name}-OVERVIEW.md" ]; then
+    if [ -f "$RESULTS_DIR/${name}-QUEUE.md" ]; then
         echo -e "${YELLOW}  Result already exists, skipping. Delete to re-run.${NC}"
         continue
     fi
 
-    # Swap context, reset queue and overview
+    # Swap context, reset queue and frontier
     cp "$ctx" "$SCRIPT_DIR/scout/CONTEXT.md"
     cp "$TEMPLATES_DIR/QUEUE.md" "$SCRIPT_DIR/scout/QUEUE.md"
-    cp "$TEMPLATES_DIR/OVERVIEW.md" "$SCRIPT_DIR/scout/OVERVIEW.md"
+    cp "$TEMPLATES_DIR/FRONTIER.md" "$SCRIPT_DIR/scout/FRONTIER.md"
 
     # Run the scout loop, forwarding all arguments
     if "$SCRIPT_DIR/run-scout.sh" "$@"; then
-        cp "$SCRIPT_DIR/scout/OVERVIEW.md" "$RESULTS_DIR/${name}-OVERVIEW.md"
         cp "$SCRIPT_DIR/scout/QUEUE.md" "$RESULTS_DIR/${name}-QUEUE.md"
-        echo -e "${GREEN}  Saved: scout/results/${name}-OVERVIEW.md${NC}"
+        echo -e "${GREEN}  Saved: scout/results/${name}-QUEUE.md${NC}"
     else
         echo -e "${RED}  Scout loop failed for $name${NC}"
         FAILED=$((FAILED + 1))
         # Save partial results anyway
-        cp "$SCRIPT_DIR/scout/OVERVIEW.md" "$RESULTS_DIR/${name}-OVERVIEW.partial.md"
         cp "$SCRIPT_DIR/scout/QUEUE.md" "$RESULTS_DIR/${name}-QUEUE.partial.md"
     fi
 done

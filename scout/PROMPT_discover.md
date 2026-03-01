@@ -3,8 +3,7 @@
 You are a SCOUT agent in a Ralph Wiggum loop. This iteration is DISCOVERY.
 
 Read `.specify/memory/constitution.md` for core rules.
-Read `scout/CONTEXT.md` for entry points, boundaries, and max depth.
-Read `scout/OVERVIEW.md` to understand what is already known.
+Read `scout/CONTEXT.md` for entry points and boundaries.
 Read `scout/QUEUE.md` to see what edges exist.
 
 ## Your Job
@@ -12,27 +11,14 @@ Read `scout/QUEUE.md` to see what edges exist.
 Find new edges. Broad, fast, shallow. Do NOT classify or describe edges — that is
 proving's job.
 
-1. Check `scout/FRONTIER.md`.
-   - If it says "ENTRY_POINTS", start from the entry points in CONTEXT.md.
-   - If `## Explore` lists files, those are your frontier — read up to 2 of them.
-   - If `## Explore` is empty or FRONTIER.md says "EMPTY", skip to "If No Frontier
-     Exists" below.
-2. Read the frontier files.
-3. Extract ALL connections from those files. Add each as unchecked `- [ ]` to
-   "Relevant Edges" in QUEUE.md. Do not classify or filter — proving decides
-   what is relevant.
-4. Be thorough within the files you read. Extract every connection, not just obvious ones.
-5. Only identify what connects to what. Do NOT read deeply into targets.
-
-## After Adding Edges
-
-Write the next frontier to `scout/FRONTIER.md` under `## Explore`. List target files
-from the NEW edges you just added, one per line, even if the file was read before —
-it may contain deeper functions to explore next iteration. Only include files that
-can be read (within the repo, not external packages). Keep any existing `## Pruned`
-section unchanged.
-
-If you found no new edges, leave `## Explore` empty.
+1. Read `scout/FRONTIER.md` for the layer number and file list.
+2. Read `scout/QUEUE.md` to see existing edges.
+3. Read ALL files listed under `## Explore` in FRONTIER.md.
+4. Extract ALL connections from those files.
+5. For each connection: if an edge with the same source and target already exists
+   in QUEUE.md, skip it. Otherwise, add as `- [ ] [dN]` to "Edges" in QUEUE.md,
+   where N is the layer number from FRONTIER.md.
+6. Output `<promise>DONE</promise>`.
 
 ## Edge Types to Find
 
@@ -49,29 +35,37 @@ If you found no new edges, leave `## Explore` empty.
 ## Edge Format
 
 ```
-- [ ] [dN] source_file:line function → target_file:line function — edge_type
+- [ ] [dN] source_file:line function() → target_file:line function() — edge_type
 ```
+
+You may locate target file:line within the package directory to provide an accurate
+reference. This does not count against proving's file budget.
+
+## Format Rules (machine-parsed — do not deviate)
+
+Bash regex extracts source/target file paths from edge lines to compute the next
+frontier. Deviations silently break layer advancement.
+
+- Start each edge at column 0: `- [ ] [d...`. No leading spaces.
+- Checkbox must be exactly `- [ ]` — one space between brackets.
+- Depth tag must be `[dN]` where N is a digit. Not `[depth0]`, not `[layer0]`.
+- Arrow must be `→` (U+2192). Not `->`, not `-->`, not `—>`.
+- Source and target must be `file_path:line` — colon separates file from line number.
+  No spaces in file paths.
+- One edge per line. No line wrapping.
 
 ## Guardrails
 
-- Read ALL frontier files (or all entry point files if FRONTIER.md says "ENTRY_POINTS").
+- Read ALL files listed under `## Explore` in FRONTIER.md. Do not skip any.
 - Extract ALL edges from those files — do not skip connections.
-- d0 = the source function is an entry point listed in CONTEXT.md. dN = the source
-  function is a target of a d(N-1) edge. Depth is per-function, not per-file — if a file
-  contains both entry points and non-entry-point functions, only edges from the entry
-  point functions are d0.
-- Do NOT add edges beyond max depth in CONTEXT.md.
 - When the same function calls the same target at multiple lines, write ONE edge
   with all call sites listed (e.g., `source_file:67,73,79`). Do not create separate edges.
+- Check QUEUE.md before adding each edge. If an edge with the same source and target
+  already exists, skip it (dedup).
 - Do NOT prove, describe, or summarize any edge.
-
-## If No Frontier Exists
-
-`## Explore` is empty or FRONTIER.md says "EMPTY" → output `<promise>ALL_DONE</promise>`.
+- Do NOT write to FRONTIER.md — bash manages the frontier.
+- Do NOT output `<promise>ALL_DONE</promise>` — bash decides termination.
 
 ## When Done
 
-If you added new edges, write the next frontier and output `<promise>DONE</promise>`.
-
-If you found NO new edges, leave `## Explore` empty and output
-`<promise>DONE</promise>` — the next iteration will ALL_DONE.
+Output `<promise>DONE</promise>`.

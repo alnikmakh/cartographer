@@ -1,41 +1,34 @@
 # Scout — Autonomous Codebase Explorer
 
-Scout is a queue-driven loop that uses AI agents to map how a codebase works. You give it entry points and boundaries, and it traces every connection — function calls, DI, events, config pipelines — building a self-contained explanation map.
+Scout is a layer-based loop that uses AI agents to map how a codebase works. You give it entry points and boundaries, and it traces every connection — function calls, DI, events, config pipelines — building a self-contained edge queue with data-flow summaries.
 
 It does **not** fix or change anything. It only reads and documents.
 
 ## How It Works
 
 ```
-                    ┌──────────────────────┐
-                    │   run-scout.sh       │
-                    │   checks QUEUE.md    │
-                    └─────────┬────────────┘
-                              │
-               ┌──────────────┴──────────────┐
-               │                             │
-        unchecked edges?               no unchecked?
-               │                             │
-               ▼                             ▼
-      ┌─────────────────┐          ┌─────────────────┐
-      │  PROVING mode   │          │ DISCOVERY mode   │
-      │  Confirm 1 edge │          │ Find 5-10 edges  │
-      │  Read 2 files   │          │ Read 3-5 files   │
-      └────────┬────────┘          └────────┬─────────┘
-               │                             │
-               └──────────────┬──────────────┘
-                              │
-                        <promise>DONE
-                              │
-                         next iteration
+layer=0, frontier=entry point files
+
+LOOP:
+  ├─ DISCOVER (agent): read frontier files, extract edges to QUEUE.md
+  ├─ PROVE (agent, repeats): classify all unchecked edges in QUEUE.md
+  ├─ ADVANCE (bash):
+  │    explored = source files from ALL edges
+  │    targets  = target files from RELEVANT edges
+  │    next     = targets − explored
+  │    next empty? ──────────── DONE
+  │    layer >= max_depth? ──── DONE
+  │    else → write next to FRONTIER.md, layer++
+  └─ GOTO LOOP
 ```
 
-Two modes alternate automatically:
+Three phases per layer, strict ownership:
 
-- **Discovery** — Broad, shallow. Reads frontier files, identifies connections, adds them as unchecked edges to the queue.
-- **Proving** — Deep, precise. Picks one unchecked edge, reads the source and target files, confirms the connection, writes a data-flow summary.
+- **Discovery** — Broad, shallow. Reads all frontier files, extracts connections, adds them as unchecked `- [ ]` edges to QUEUE.md.
+- **Proving** — Deep, precise. Batches edges by source file, reads source + target (2 files max), classifies each as relevant `- [x]` or irrelevant (moved to Irrelevant Edges section). Repeats until all unchecked edges are drained.
+- **Advance** — Bash only. Computes the next frontier from proven results. Neither agent touches FRONTIER.md.
 
-The loop ends when discovery finds no remaining frontier (`ALL_DONE`).
+The loop ends when bash finds no new frontier files or hits max depth.
 
 ## Prerequisites
 
@@ -45,7 +38,7 @@ One of these CLI tools installed and on your PATH:
 |----------|-----|---------|
 | Claude Code | `claude` | `npm i -g @anthropic-ai/claude-code` |
 | OpenAI Codex | `codex` | `npm i -g @openai/codex` |
-| Google Gemini | `gemini` | `npm i -g @anthropic-ai/claude-code` / Gemini CLI |
+| Google Gemini | `gemini` | Gemini CLI |
 | GitHub Copilot | `copilot` | VS Code extension CLI |
 
 ## Setup
@@ -59,72 +52,36 @@ This is the only file you need to edit. Define:
 
 ## Entry Points
 
-- path/to/file.ts:42 — functionName() description of why this is an entry point
+- path/to/file.go:42 — FunctionName() description of why this is an entry point
 
 ## Boundaries
 
 Explore within:
-- packages/billing
-- packages/shared (only modules imported by billing)
+- path/to/package/
 
 Do NOT explore:
-- packages/frontend
-- node_modules
+- path/to/other/
+- Any *_test.go files
 
 ## Max Depth
 
-15 hops from any entry point.
+5 hops from any entry point.
 
 ## Notes
 
 - Any important context the agent should know (DI frameworks, event patterns, etc.)
 ```
 
-### 2. Clear the queue and overview
+### 2. Reset state
 
-Reset `scout/QUEUE.md` to the empty template:
+Copy templates to working files:
 
-```markdown
-# Edge Queue
-
-## Relevant Edges
-
-FORMAT: - [ ] [dN] source_file:line function → target_file:line function — edge_type
-PROVEN: - [x] [dN] (same) — SUMMARY: what goes in, what happens, what comes out
-
-edge_type: call | DI | event | config | middleware | re-export
-
-
-## Irrelevant Edges (noted, not explored)
-
-FORMAT: - source_file:line function → target — SKIPPED: reason
+```bash
+cp scout/templates/QUEUE.md scout/QUEUE.md
+cp scout/templates/FRONTIER.md scout/FRONTIER.md
 ```
 
-Reset `scout/OVERVIEW.md` to the empty template:
-
-```markdown
-# Explanation Map
-
-## Entry Points
-
-(filled by agent from CONTEXT.md on first iteration)
-
-## Call Chain
-
-(agent appends proven edges here as they are confirmed)
-
-## Key Types
-
-(agent appends type definitions encountered during proving)
-
-## Data Flow
-
-(agent appends data transformation descriptions here)
-
-## Noted but Not Explored
-
-(agent copies irrelevant edges here with explanations from QUEUE.md)
-```
+Or use `run-scout-all.sh` which resets automatically per context.
 
 ### 3. Run
 
@@ -143,16 +100,44 @@ Reset `scout/OVERVIEW.md` to the empty template:
 
 Press `Ctrl+C` to stop at any time.
 
+### Run all contexts
+
+If you have multiple feature contexts in `scout/contexts/`:
+
+```bash
+./run-scout-all.sh 30           # 30 iterations per feature
+./run-scout-all.sh codex 30     # with a different provider
+```
+
+Results are saved to `scout/results/{name}-QUEUE.md`. Existing results are skipped (delete to re-run).
+
 ## Output
 
-When finished, `scout/OVERVIEW.md` contains the complete explanation map with:
+`scout/QUEUE.md` is the final output. It contains:
 
-- **Call Chain** — every proven connection with file:line references
-- **Key Types** — type definitions encountered along the way
-- **Data Flow** — what data goes in, how it transforms, what comes out
-- **Noted but Not Explored** — connections that exist but were outside scope
+- **Edges** — every proven connection with `[x]`, file:line references, and data-flow summaries
+- **Irrelevant Edges** — connections that exist but were outside scope, with explanations
 
-The map is self-contained. A reader should understand the full structure without opening any source files.
+## Edge Format
+
+The edge format is machine-parsed by bash. The exact characters matter.
+
+```
+UNCHECKED:  - [ ] [dN] source_file:line function() → target_file:line function() — edge_type
+PROVEN:     - [x] [dN] source_file:line function() → target_file:line function() — edge_type — SUMMARY: ...
+IRRELEVANT: - source_file:line function() → target — SKIPPED: reason
+```
+
+Critical formatting rules:
+
+| Rule | Why |
+|------|-----|
+| `→` must be U+2192, not `->` | Bash `grep -oP '→\s+\K[^\s:]+'` extracts target file paths |
+| `[x]` must be lowercase | `grep '^\- \[x\]'` is case-sensitive — `[X]` is invisible |
+| `- [ ]` at column 0, no indent | `grep '^\- \[ \]'` anchors to line start |
+| `[dN]` with digit, not `[depth0]` | `grep -oP '\[d\d+\]'` extracts source files for explored set |
+| No `→` in summaries | Regex matches every `→` on the line — extras produce garbage targets |
+| Delete `- [ ]` when moving to Irrelevant | `count_unchecked` must reach 0 or prove loop runs forever |
 
 ## Logs
 
@@ -164,28 +149,30 @@ All output is captured in `logs/`:
 
 ## Safety
 
-- The agent **never modifies source code**. It only reads source files and writes to `scout/QUEUE.md` and `scout/OVERVIEW.md`.
-- File budget per iteration: 5 files (discovery), 2 files (proving).
-- Consecutive failure limit: 3 iterations without a completion signal stops the loop.
+- The agent **never modifies source code**. It only reads source files and writes to `scout/QUEUE.md`.
+- File budget per iteration: all frontier files (discovery), 2 files (proving).
+- Consecutive failure limit: 3 iterations without a `<promise>DONE</promise>` signal stops the loop.
+- FRONTIER.md is only written by bash, never by agents.
 - All agents run with `--dangerously-skip-permissions` (or equivalent). Review the output.
 
 ## File Structure
 
 ```
 .
-├── run-scout.sh                  # Main loop script
+├── run-scout.sh                  # Main loop script (layer-based)
+├── run-scout-all.sh              # Run loop for each context in scout/contexts/
 ├── scout/
 │   ├── CONTEXT.md                # YOU EDIT THIS — entry points, boundaries, depth
-│   ├── QUEUE.md                  # Edge queue (managed by the agent)
-│   ├── OVERVIEW.md               # Output explanation map (built by the agent)
-│   ├── PROMPT_discover.md        # Discovery mode prompt (sent to agent)
-│   └── PROMPT_prove.md           # Proving mode prompt (sent to agent)
-├── specs/
-│   └── 001-build-overview/       # Spec defining the scout workflow
+│   ├── QUEUE.md                  # Edge queue (agents write edges here)
+│   ├── FRONTIER.md               # Current frontier (bash-managed, agents read only)
+│   ├── PROMPT_discover.md        # Discovery mode prompt
+│   ├── PROMPT_prove.md           # Proving mode prompt
+│   ├── contexts/                 # Multiple feature contexts for run-scout-all.sh
+│   ├── results/                  # Saved results per context
+│   └── templates/                # Empty QUEUE.md and FRONTIER.md templates
 ├── .specify/memory/
 │   └── constitution.md           # Agent behavioral rules
-├── logs/                         # All output logs
-└── ralph-wiggum/                 # Upstream Ralph Wiggum framework
+└── logs/                         # All output logs
 ```
 
 ## Customization
@@ -194,7 +181,4 @@ All output is captured in `logs/`:
 - **File budgets**: Edit `.specify/memory/constitution.md` to change per-iteration limits.
 - **Max depth**: Set in `scout/CONTEXT.md` per exploration run.
 - **Provider CLI path**: Set `CLAUDE_CMD`, `CODEX_CMD`, or `GEMINI_CMD` environment variables to override default binary names.
-
-## Credits
-
-Built on [Ralph Wiggum](https://github.com/fstandhartinger/ralph-wiggum) — autonomous AI coding with spec-driven development by Geoffrey Huntley's methodology.
+- **Model override**: Set `CLAUDE_MODEL` or `GEMINI_MODEL` to use a specific model.

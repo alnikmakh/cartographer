@@ -1,13 +1,13 @@
 # Edge Queue
 
-## Relevant Edges
+## Edges
 
-FORMAT: - [ ] [dN] source_file:line function → target_file:line function — edge_type
-PROVEN: - [x] [dN] (same) — SUMMARY: what goes in, what happens, what comes out
+FORMAT: - [ ] [dN] source_file:line function() → target_file:line function() — edge_type
+PROVEN: - [x] [dN] (same) — SUMMARY: ...
 
 edge_type: call | DI | event | config | middleware | re-export
 
 
-## Irrelevant Edges (noted, not explored)
+## Irrelevant Edges
 
-FORMAT: - source_file:line function → target — SKIPPED: reason
+FORMAT: - source_file:line function() → target — SKIPPED: reason
