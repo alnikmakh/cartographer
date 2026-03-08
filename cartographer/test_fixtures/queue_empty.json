@@ -1,0 +1,9 @@
+{
+  "pending": [],
+  "explored": [
+    "src/main.go",
+    "src/handler.go"
+  ],
+  "boundaries_recorded": 2,
+  "externals_skipped": 5
+}

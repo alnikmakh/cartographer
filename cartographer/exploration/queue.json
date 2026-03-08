@@ -1,0 +1,14 @@
+{
+  "pending": [
+    {
+      "node": "dependency-cruiser/src/report/index.mjs",
+      "discovered_from": "seed",
+      "reason": "starting point",
+      "priority": "high",
+      "depth": 0
+    }
+  ],
+  "explored": [],
+  "boundaries_recorded": 0,
+  "externals_skipped": 0
+}

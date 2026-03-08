@@ -1,0 +1,17 @@
+## Iteration 1 Summary
+
+Explored **4 nodes** (all tier 1 files in `tg-digest/internal/telegram/`):
+
+| Node | Depth | Key Findings |
+|------|-------|-------------|
+| **client.go** | 0 | `Client` struct wraps gotd. `Run()` handles connection + auth, passes callback. Uses `FileSessionStorage` and `AuthFlow`. |
+| **session.go** | 1 | `FileSessionStorage` — implements gotd `session.Storage`. JSON-encodes raw session bytes to disk. |
+| **auth.go** | 1 | `AuthFlow` interface embeds gotd's `UserAuthenticator`. `TerminalAuth` is the only impl — interactive stdin prompts. |
+| **messages.go** | 1 | `ResolveChannel` (username → InputChannel), `FetchMessages` (history fetch + filter). `Message` DTO with ID/Text/Timestamp. |
+
+**Boundaries**: 1 recorded (`tg-digest/cmd/digest/main.go`)
+**Externals skipped**: 4 (`gotd/td/telegram`, `gotd/td/telegram/auth`, `gotd/td/tg`, `gotd/td/session`)
+
+Queue is empty, all tier 1 nodes explored.
+
+<promise>MAP_COMPLETE</promise>

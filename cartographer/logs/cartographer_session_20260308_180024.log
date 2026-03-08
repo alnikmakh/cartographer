@@ -1,0 +1,28 @@
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m                  CARTOGRAPHER LOOP STARTING                   [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;34mProvider:[0m       claude (claude)
+[0;34mMax iterations:[0m 20
+[0;34mScope:[0m          scope.json
+[0;34mLog:[0m            /home/dev/project/cartographer/logs/cartographer_session_20260308_180024.log
+
+[0;36mSingle-agent loop: read queue → explore nodes → save → repeat[0m
+[1;33mPress Ctrl+C to stop[0m
+
+
+[0;35m════════════════════ ITERATION 1 / 20 ════════════════════[0m
+[0;34m[2026-03-08 18:00:24][0m
+  Pending nodes: 1
+
+[0;32mMap complete! All in-scope nodes explored.[0m
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m              CARTOGRAPHER LOOP FINISHED                       [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+  Nodes explored:    4
+  Nodes discovered:  9
+  Output:            cartographer/exploration/
+

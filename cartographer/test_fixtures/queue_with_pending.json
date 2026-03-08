@@ -1,0 +1,16 @@
+{
+  "pending": [
+    {
+      "node": "src/handler.go",
+      "discovered_from": "src/main.go",
+      "reason": "imported by main",
+      "priority": "high",
+      "depth": 1
+    }
+  ],
+  "explored": [
+    "src/main.go"
+  ],
+  "boundaries_recorded": 1,
+  "externals_skipped": 3
+}
