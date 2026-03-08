@@ -3,14 +3,14 @@
 # Scout Loop — Layer-based discovery/proving loop
 #
 # Architecture:
-#   layer=0, frontier=entry point files
+#   layer=0, frontier=entry point functions
 #   LOOP:
-#     DISCOVER: read frontier files → extract edges → write QUEUE.md
+#     DISCOVER: read frontier files, trace ONLY listed functions → write QUEUE.md
 #     PROVE (repeat): classify edges until unchecked == 0 → write QUEUE.md
 #     ADVANCE (bash):
-#       explored = source files from ALL edges in QUEUE.md
-#       targets = target files from RELEVANT edges in QUEUE.md
-#       next = targets - explored
+#       explored = source file:line from ALL edges in QUEUE.md
+#       targets = target file:line function() from RELEVANT edges in QUEUE.md
+#       next = targets whose file:line is not in explored
 #       next empty? → done
 #       layer >= max_depth? → done
 #       else → write next to FRONTIER.md, layer++, continue
@@ -115,11 +115,11 @@ done
 # --- Functions ---
 
 count_unchecked() {
-    grep -c '^\- \[ \]' "$QUEUE" 2>/dev/null || echo 0
+    grep -c '^\- \[ \]' "$QUEUE" 2>/dev/null || true
 }
 
 count_proven() {
-    grep -c '^\- \[x\]' "$QUEUE" 2>/dev/null || echo 0
+    grep -c '^\- \[x\]' "$QUEUE" 2>/dev/null || true
 }
 
 count_irrelevant() {
@@ -134,41 +134,74 @@ frontier_has_files() {
     echo "$explore_lines" | grep -q '\S'
 }
 
-extract_entry_point_files() {
-    # Parse CONTEXT.md ## Entry Points section, extract unique file paths, write to FRONTIER.md
-    local files
-    files=$(awk '/^## Entry Points/{found=1; next} /^## /{found=0} found && /^- /{print}' "$CONTEXT" \
-        | grep -oP '[^\s]+:\d+' \
-        | sed 's/:[0-9]*$//' \
-        | sort -u)
+extract_entry_point_functions() {
+    # Parse CONTEXT.md ## Entry Points, extract file:line function() refs
+    local refs=""
+    local edges=""
+    while IFS= read -r line; do
+        [ -z "$line" ] && continue
+        local fileline func
+        fileline=$(echo "$line" | grep -oP '\S+:\d+')
+        func=$(echo "$line" | grep -oP '— \K\S+')
+        if [ -n "$fileline" ] && [ -n "$func" ]; then
+            refs+="$fileline $func"$'\n'
+            edges+="- [ ] [d0] BOUNDARY → $fileline $func — entry_point"$'\n'
+        fi
+    done < <(awk '/^## Entry Points/{found=1; next} /^## /{found=0} found && /^- /{print}' "$CONTEXT")
+
+    refs=$(echo "$refs" | sed '/^\s*$/d' | sort -u)
+    edges=$(echo "$edges" | sed '/^\s*$/d')
 
     {
         echo "## Layer"
         echo "0"
         echo ""
         echo "## Explore"
-        echo "$files"
+        echo "$refs"
     } > "$FRONTIER"
+
+    # Seed QUEUE.md with entry-point edges for proving
+    if [ -n "$edges" ] && ! grep -q 'BOUNDARY →' "$QUEUE"; then
+        local tmp
+        tmp=$(mktemp)
+        EDGES_BLOCK="$edges" awk '/^edge_type:/{print; print ""; print ENVIRON["EDGES_BLOCK"]; next} {print}' "$QUEUE" > "$tmp"
+        mv "$tmp" "$QUEUE"
+    fi
 }
 
 compute_next_frontier() {
     local layer="$1"
 
-    # Source files = source side of ALL edges (explored)
+    # Explored: file:line from source side of ALL edges
+    # e.g. "client.go:23" from "- [x] [d0] client.go:23 NewClient() → ..."
     local explored
     explored=$(grep -E '^\- \[[ x]\]' "$QUEUE" \
-        | grep -oP '\]\s+\[d\d+\]\s+\K[^\s:]+' \
-        | sort -u)
+        | grep -oP '\[d\d+\]\s+\K\S+' \
+        | sort -u) || true
 
-    # Target files = target side of RELEVANT (checked) edges only
-    local targets
-    targets=$(grep -E '^\- \[x\]' "$QUEUE" \
-        | grep -oP '→\s+\K[^\s:]+' \
-        | sort -u)
+    # Merge cumulative frontier entries (ALL_VISITED) — tracks every file:line
+    # that has ever been on a frontier, even if it produced no edges (dead ends)
+    explored=$(printf '%s\n%s' "$explored" "$ALL_VISITED" | sed '/^\s*$/d' | sort -u)
 
-    # Next frontier = targets - explored
-    local next
-    next=$(comm -23 <(echo "$targets") <(echo "$explored"))
+    # Targets: full reference from target side of RELEVANT edges
+    # e.g. "session.go:10 FileSessionStorage{}" from "... → session.go:10 FileSessionStorage{} — DI"
+    # Lazy .+? stops at first " — " (edge_type separator)
+    local target_refs
+    target_refs=$(grep -E '^\- \[x\]' "$QUEUE" \
+        | grep -oP '→\s+\K.+?(?=\s+—)' \
+        | sort -u) || true
+
+    # Filter: keep targets whose file:line is not in explored
+    local next=""
+    while IFS= read -r ref; do
+        [ -z "$ref" ] && continue
+        local fileline="${ref%% *}"  # "session.go:10 Foo()" → "session.go:10"
+        if ! echo "$explored" | grep -qxF "$fileline"; then
+            next+="$ref"$'\n'
+        fi
+    done <<< "$target_refs"
+
+    next=$(echo "$next" | sed '/^\s*$/d')
 
     if [ -z "$next" ]; then
         return 1
@@ -205,7 +238,7 @@ exec > >(tee -a "$SESSION_LOG") 2>&1
 
 # --- Phase 1: Initialize frontier from CONTEXT.md entry points ---
 
-extract_entry_point_files
+extract_entry_point_functions
 
 # --- Banner ---
 
@@ -229,6 +262,7 @@ ITERATION=0
 CONSECUTIVE_FAILURES=0
 MAX_CONSECUTIVE_FAILURES=3
 LAYER=0
+ALL_VISITED=""  # cumulative file:line entries from all frontiers
 
 while frontier_has_files; do
 
@@ -336,8 +370,11 @@ while frontier_has_files; do
 
     # --- Advance phase (bash computes next frontier) ---
 
+    # Accumulate current frontier entries before overwriting FRONTIER.md
+    ALL_VISITED+=$(awk '/^## Explore/{found=1; next} /^## /{found=0} found && /[^ \t]/{print $1}' "$FRONTIER")$'\n'
+
     LAYER=$((LAYER + 1))
-    MAX_DEPTH=$(grep -A1 '## Max Depth' "$CONTEXT" | tail -1 | tr -dc '0-9')
+    MAX_DEPTH=$(awk '/^## Max Depth/{found=1; next} found && /[0-9]/{gsub(/[^0-9]/,""); print; exit}' "$CONTEXT")
 
     if [ "$LAYER" -ge "$MAX_DEPTH" ]; then
         echo -e "${YELLOW}Reached max depth: $MAX_DEPTH${NC}"
@@ -351,7 +388,7 @@ while frontier_has_files; do
 
     echo ""
     echo -e "${CYAN}── Layer $LAYER frontier ──${NC}"
-    awk '/^## Explore/{found=1; next} /^## /{found=0} found && /\S/{print "  " $0}' "$FRONTIER"
+    awk '/^## Explore/{found=1; next} /^## /{found=0} found && /[^ \t]/{print "  " $0}' "$FRONTIER"
     echo ""
 done
 

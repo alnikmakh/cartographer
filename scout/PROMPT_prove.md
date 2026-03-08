@@ -13,6 +13,8 @@ Classify and describe edges, one source file at a time.
 1. Look at the FIRST unchecked `- [ ]` edge in "Edges" in QUEUE.md.
 2. Find ALL other unchecked edges that share the same source file.
 3. Read that source file (and the target file if it differs). At most 2 files.
+   For **entry_point** edges (source is `BOUNDARY`), there is no source file —
+   batch by target file instead and read only the target file.
 4. For each edge in the batch, confirm and classify:
 
    **Relevant** — the connection exists in source code AND the target is within
@@ -24,6 +26,10 @@ Classify and describe edges, one source file at a time.
    OR the connection does not actually exist. **Delete** the `- [ ]` line from
    the Edges section and add a new line to the Irrelevant Edges section.
    The `- [ ]` line must not remain — bash loops until unchecked count is zero.
+
+   External targets (no colon/line in the target, e.g. `pkg/path.Function()`) are
+   always irrelevant. You can classify them from the source file alone — no need
+   to read the external package. Still explain what the call does.
 
 ## Summary Format
 
@@ -37,6 +43,17 @@ Each proven relevant edge summary must include ALL of the following:
 - file:line references for every claim
 - If the edge constructs an object that is injected into another component (via options,
   constructor parameter, or configuration), set edge_type to "DI" rather than "call".
+
+### Entry Point Edges
+
+Entry point edges have source `BOUNDARY` — the caller is outside the explored boundary.
+These are always relevant. The summary must include:
+
+- What the function does (its purpose in the package)
+- Its parameters and return type
+- What role it plays as a public API entry point
+- How it connects to other functions in the package (what it enables callers to do next)
+- Key types or structs it creates, accepts, or returns (with fields)
 
 ## Irrelevant Edge Format
 
@@ -52,14 +69,13 @@ Bad: `- messages.go:44 FetchMessages → api.MessagesGetHistory — SKIPPED: ext
 
 ## Format Rules (machine-parsed — do not deviate)
 
-Bash regex extracts file paths from edge lines. Deviations silently break the loop.
+Bash regex extracts target references from edge lines. Deviations silently break the loop.
 
 - Checkbox: change `[ ]` to `[x]` (lowercase x, not `[X]`). Uppercase is invisible
   to bash — the edge won't count as proven and its targets won't reach the next frontier.
 - Keep the `→` (U+2192) arrow when marking `[x]`. Do not change it to `->`.
-- Do NOT use the `→` character anywhere in summaries. Write "to" or "passes to" in
-  prose instead. Bash extracts every token after `→` as a potential target file path —
-  a `→` in your summary produces garbage in the next frontier.
+- Keep the `—` (em-dash U+2014) before edge_type. Bash extracts the target reference
+  as everything between `→` and `—`. Missing `—` breaks target extraction.
 - Irrelevant: the `- [ ]` line must be DELETED from Edges, not just copied. If it
   remains, `count_unchecked` never reaches zero and the prove loop runs forever.
 - One edge per line. No line wrapping.
@@ -68,6 +84,8 @@ Bash regex extracts file paths from edge lines. Deviations silently break the lo
 
 - Read at most 2 files (the shared source file and one target file). Hard limit.
 - Only prove edges that share the same source file in this iteration.
+- For entry_point edges (source `BOUNDARY`): batch by target file instead. Prove all
+  entry_point edges whose target is in the same file in one iteration.
 - Do NOT discover new edges. Do NOT explore beyond the files you read.
 - Do NOT add new unchecked edges to QUEUE.md.
 - Do NOT write to FRONTIER.md — bash manages the frontier.

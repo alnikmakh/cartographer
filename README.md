@@ -1,21 +1,21 @@
 # Scout — Autonomous Codebase Explorer
 
-Scout is a layer-based loop that uses AI agents to map how a codebase works. You give it entry points and boundaries, and it traces every connection — function calls, DI, events, config pipelines — building a self-contained edge queue with data-flow summaries.
+Scout is a layer-based loop that uses AI agents to trace execution flows through a codebase. You give it entry points and boundaries, and it follows the call graph function-by-function — only tracing outgoing connections from functions that are reachable from your entry points.
 
 It does **not** fix or change anything. It only reads and documents.
 
 ## How It Works
 
 ```
-layer=0, frontier=entry point files
+layer=0, frontier=entry point functions from CONTEXT.md
 
 LOOP:
-  ├─ DISCOVER (agent): read frontier files, extract edges to QUEUE.md
+  ├─ DISCOVER (agent): read files, trace ONLY listed functions → QUEUE.md
   ├─ PROVE (agent, repeats): classify all unchecked edges in QUEUE.md
   ├─ ADVANCE (bash):
-  │    explored = source files from ALL edges
-  │    targets  = target files from RELEVANT edges
-  │    next     = targets − explored
+  │    explored = source file:line from ALL edges
+  │    targets  = target file:line function() from RELEVANT edges
+  │    next     = targets whose file:line ∉ explored
   │    next empty? ──────────── DONE
   │    layer >= max_depth? ──── DONE
   │    else → write next to FRONTIER.md, layer++
@@ -24,9 +24,9 @@ LOOP:
 
 Three phases per layer, strict ownership:
 
-- **Discovery** — Broad, shallow. Reads all frontier files, extracts connections, adds them as unchecked `- [ ]` edges to QUEUE.md.
-- **Proving** — Deep, precise. Batches edges by source file, reads source + target (2 files max), classifies each as relevant `- [x]` or irrelevant (moved to Irrelevant Edges section). Repeats until all unchecked edges are drained.
-- **Advance** — Bash only. Computes the next frontier from proven results. Neither agent touches FRONTIER.md.
+- **Discovery** — Reads files but only traces from functions listed in FRONTIER.md. Other functions in the same file are ignored (off-path). Adds connections as unchecked `- [ ]` edges to QUEUE.md.
+- **Proving** — Batches edges by source file, reads source + target (2 files max), classifies each as relevant `- [x]` or irrelevant (moved to Irrelevant Edges section). Repeats until all unchecked edges are drained.
+- **Advance** — Bash only. Extracts target references from proven edges as the next frontier. Neither agent touches FRONTIER.md.
 
 The loop ends when bash finds no new frontier files or hits max depth.
 
@@ -132,11 +132,11 @@ Critical formatting rules:
 
 | Rule | Why |
 |------|-----|
-| `→` must be U+2192, not `->` | Bash `grep -oP '→\s+\K[^\s:]+'` extracts target file paths |
+| `→` must be U+2192, not `->` | Bash `grep -oP '→\s+\K.+?(?=\s+—)'` extracts target references |
 | `[x]` must be lowercase | `grep '^\- \[x\]'` is case-sensitive — `[X]` is invisible |
 | `- [ ]` at column 0, no indent | `grep '^\- \[ \]'` anchors to line start |
-| `[dN]` with digit, not `[depth0]` | `grep -oP '\[d\d+\]'` extracts source files for explored set |
-| No `→` in summaries | Regex matches every `→` on the line — extras produce garbage targets |
+| `[dN]` with digit, not `[depth0]` | `grep -oP '\[d\d+\]\s+\K\S+'` extracts source file:line for explored set |
+| `—` (em-dash) before edge_type | Bash extracts target as everything between `→` and `—` — missing `—` breaks it |
 | Delete `- [ ]` when moving to Irrelevant | `count_unchecked` must reach 0 or prove loop runs forever |
 
 ## Logs
@@ -150,7 +150,7 @@ All output is captured in `logs/`:
 ## Safety
 
 - The agent **never modifies source code**. It only reads source files and writes to `scout/QUEUE.md`.
-- File budget per iteration: all frontier files (discovery), 2 files (proving).
+- File budget: discovery reads files for listed functions only (not whole files), proving reads 2 files max.
 - Consecutive failure limit: 3 iterations without a `<promise>DONE</promise>` signal stops the loop.
 - FRONTIER.md is only written by bash, never by agents.
 - All agents run with `--dangerously-skip-permissions` (or equivalent). Review the output.
