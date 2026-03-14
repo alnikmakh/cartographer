@@ -273,7 +273,7 @@ test_init_creates_structure() {
     local tmpdir
     tmpdir=$(mktemp -d)
 
-    init_exploration "src/main.go" "$tmpdir"
+    init_exploration "$tmpdir" "src/main.go"
 
     assert_dir_exists "creates nodes dir" "$tmpdir/nodes"
     assert_dir_exists "creates edges dir" "$tmpdir/edges"
@@ -289,7 +289,7 @@ test_init_seeds_valid_json() {
     local tmpdir
     tmpdir=$(mktemp -d)
 
-    init_exploration "src/main.go" "$tmpdir"
+    init_exploration "$tmpdir" "src/main.go"
 
     assert_json_valid "queue.json is valid JSON" "$tmpdir/queue.json"
     assert_json_valid "index.json is valid JSON" "$tmpdir/index.json"
@@ -302,7 +302,7 @@ test_init_queue_has_seed() {
     local tmpdir
     tmpdir=$(mktemp -d)
 
-    init_exploration "src/main.go" "$tmpdir"
+    init_exploration "$tmpdir" "src/main.go"
 
     local has_seed
     has_seed=$(grep -c 'src/main.go' "$tmpdir/queue.json")
@@ -319,7 +319,7 @@ test_init_stats_zeroed() {
     local tmpdir
     tmpdir=$(mktemp -d)
 
-    init_exploration "src/main.go" "$tmpdir"
+    init_exploration "$tmpdir" "src/main.go"
 
     local explored
     explored=$(grep -o '"total_nodes_explored":[[:space:]]*[0-9]*' "$tmpdir/stats.json" | grep -o '[0-9]*$')
@@ -328,10 +328,397 @@ test_init_stats_zeroed() {
     rm -rf "$tmpdir"
 }
 
+test_init_multiple_seeds() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    init_exploration "$tmpdir" "a.mjs" "b.mjs" "c.mjs"
+
+    local pending_count
+    pending_count=$(queue_pending_count "$tmpdir/queue.json")
+    assert_eq "multiple seeds: queue has 3 pending items" "3" "$pending_count"
+
+    assert_json_valid "multiple seeds: queue.json is valid JSON" "$tmpdir/queue.json"
+
+    local discovered
+    discovered=$(grep -o '"total_nodes_discovered":[[:space:]]*[0-9]*' "$tmpdir/stats.json" | grep -o '[0-9]*$')
+    assert_eq "multiple seeds: stats counts all seeds" "3" "$discovered"
+
+    rm -rf "$tmpdir"
+}
+
 test_init_creates_structure
 test_init_seeds_valid_json
 test_init_queue_has_seed
 test_init_stats_zeroed
+test_init_multiple_seeds
+
+# ============================================================
+# discover_boundaries tests
+# ============================================================
+
+echo ""
+echo "--- discover_boundaries ---"
+
+test_discover_finds_siblings() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/src/report" "$tmpdir/src/graph-utl" "$tmpdir/src/utl" "$tmpdir/src/validate"
+
+    local result
+    result=$(discover_boundaries "src/report/**" "$tmpdir")
+    local count
+    count=$(echo "$result" | grep -c '.' || true)
+    assert_eq "finds sibling dirs" "3" "$count"
+
+    rm -rf "$tmpdir"
+}
+
+test_discover_excludes_scope_dir() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/src/report" "$tmpdir/src/graph-utl" "$tmpdir/src/utl"
+
+    local result
+    result=$(discover_boundaries "src/report/**" "$tmpdir")
+    local has_report
+    has_report=$(echo "$result" | grep -c 'src/report$' || true)
+    assert_eq "excludes scope dir from output" "0" "$has_report"
+
+    rm -rf "$tmpdir"
+}
+
+test_discover_no_siblings() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/src/report"
+
+    local result
+    result=$(discover_boundaries "src/report/**" "$tmpdir")
+    assert_eq "no siblings returns empty" "" "$result"
+
+    rm -rf "$tmpdir"
+}
+
+test_discover_missing_parent() {
+    local result
+    result=$(discover_boundaries "nonexistent/path/**" "/tmp/nowhere_$$")
+    assert_eq "missing parent returns empty" "" "$result"
+}
+
+test_discover_finds_siblings
+test_discover_excludes_scope_dir
+test_discover_no_siblings
+test_discover_missing_parent
+
+# ============================================================
+# detect_ignore_patterns tests
+# ============================================================
+
+echo ""
+echo "--- detect_ignore_patterns ---"
+
+test_ignore_js() {
+    local result
+    result=$(detect_ignore_patterns "foo.mjs")
+    local has_node_modules
+    has_node_modules=$(echo "$result" | grep -c 'node_modules' || true)
+    assert_eq "JS extension includes node_modules" "1" "$has_node_modules"
+}
+
+test_ignore_go() {
+    local result
+    result=$(detect_ignore_patterns "foo.go")
+    local has_test
+    has_test=$(echo "$result" | grep -c '_test.go' || true)
+    assert_eq "Go extension includes _test.go" "1" "$has_test"
+}
+
+test_ignore_unknown() {
+    local result
+    result=$(detect_ignore_patterns "foo.rs")
+    local has_vendor
+    has_vendor=$(echo "$result" | grep -c 'vendor' || true)
+    assert_eq "unknown extension includes vendor" "1" "$has_vendor"
+}
+
+test_ignore_js
+test_ignore_go
+test_ignore_unknown
+
+# ============================================================
+# complete_scope tests
+# ============================================================
+
+echo ""
+echo "--- complete_scope ---"
+
+test_complete_scope_writes_valid_json() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report" "$tmpdir/project/src/graph-utl" "$tmpdir/project/src/utl"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": ["src/report/index.mjs", "src/report/dot/index.mjs"],
+  "boundaries": {
+    "explore_within": ["src/report/**"]
+  }
+}
+EOF
+
+    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
+    assert_json_valid "complete_scope writes valid JSON" "$tmpdir/scope.json"
+
+    rm -rf "$tmpdir"
+}
+
+test_complete_scope_preserves_seed() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": ["src/report/index.mjs"],
+  "boundaries": {
+    "explore_within": ["src/report/**"]
+  }
+}
+EOF
+
+    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
+    local has_seed
+    has_seed=$(grep -c 'src/report/index.mjs' "$tmpdir/scope.json")
+    assert_eq "preserves seed in output" "1" "$has_seed"
+
+    rm -rf "$tmpdir"
+}
+
+test_complete_scope_adds_boundaries() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report" "$tmpdir/project/src/graph-utl" "$tmpdir/project/src/utl"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": ["src/report/index.mjs"],
+  "boundaries": {
+    "explore_within": ["src/report/**"]
+  }
+}
+EOF
+
+    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
+    local has_graphutl
+    has_graphutl=$(grep -c 'graph-utl' "$tmpdir/scope.json")
+    assert_eq "adds discovered boundary (graph-utl)" "1" "$has_graphutl"
+
+    local has_utl
+    has_utl=$(grep -c '"src/utl"' "$tmpdir/scope.json")
+    assert_eq "adds discovered boundary (utl)" "1" "$has_utl"
+
+    rm -rf "$tmpdir"
+}
+
+test_complete_scope_fills_budget() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": "src/report/index.mjs",
+  "boundaries": {
+    "explore_within": ["src/report/**"]
+  }
+}
+EOF
+
+    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
+    local has_max_iter
+    has_max_iter=$(grep -c '"max_iterations"' "$tmpdir/scope.json")
+    assert_eq "fills max_iterations default" "1" "$has_max_iter"
+
+    local has_max_nodes
+    has_max_nodes=$(grep -c '"max_nodes"' "$tmpdir/scope.json")
+    assert_eq "fills max_nodes default" "1" "$has_max_nodes"
+
+    rm -rf "$tmpdir"
+}
+
+test_complete_scope_string_seed() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": "src/report/index.mjs",
+  "boundaries": {
+    "explore_within": ["src/report/**"]
+  }
+}
+EOF
+
+    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
+    assert_json_valid "string seed produces valid JSON" "$tmpdir/scope.json"
+
+    local has_seed
+    has_seed=$(grep -c 'src/report/index.mjs' "$tmpdir/scope.json")
+    assert_eq "string seed is preserved" "1" "$has_seed"
+
+    rm -rf "$tmpdir"
+}
+
+test_complete_scope_writes_valid_json
+test_complete_scope_preserves_seed
+test_complete_scope_adds_boundaries
+test_complete_scope_fills_budget
+test_complete_scope_string_seed
+
+# ============================================================
+# --init integration test
+# ============================================================
+
+echo ""
+echo "--- --init integration ---"
+
+test_init_mode_integration() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report" "$tmpdir/project/src/utl" "$tmpdir/project/src/lib"
+
+    # Create minimal scope.json
+    local edir="$tmpdir/exploration"
+    mkdir -p "$edir"
+
+    cat > "$edir/scope.json" << 'EOF'
+{
+  "seed": ["src/report/index.mjs", "src/report/dot/index.mjs"],
+  "boundaries": {
+    "explore_within": ["src/report/**"]
+  }
+}
+EOF
+
+    # Run complete_scope + init_exploration (simulating --init logic)
+    complete_scope "$edir/scope.json" "$tmpdir/project"
+
+    # Extract seeds from the seed line
+    local seeds=()
+    while IFS= read -r s; do
+        [ -n "$s" ] && seeds+=("$s")
+    done < <(grep '"seed"' "$edir/scope.json" | grep -o '"[^"]*"' | grep -v '"seed"' | tr -d '"')
+
+    init_exploration "$edir" "${seeds[@]}"
+
+    assert_json_valid "--init: scope.json is valid" "$edir/scope.json"
+    assert_json_valid "--init: queue.json is valid" "$edir/queue.json"
+    assert_file_exists "--init: stats.json exists" "$edir/stats.json"
+
+    local pending
+    pending=$(queue_pending_count "$edir/queue.json")
+    assert_eq "--init: queue has all seeds" "2" "$pending"
+
+    local has_boundary
+    has_boundary=$(grep -c 'boundary_packages' "$edir/scope.json")
+    assert_eq "--init: scope has boundary_packages" "1" "$has_boundary"
+
+    rm -rf "$tmpdir"
+}
+
+test_init_mode_integration
+
+# ============================================================
+# discover_scope_files tests
+# ============================================================
+
+echo ""
+echo "--- discover_scope_files ---"
+
+test_discover_scope_files_finds_mjs() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report/sub"
+    touch "$tmpdir/project/src/report/index.mjs"
+    touch "$tmpdir/project/src/report/foo.mjs"
+    touch "$tmpdir/project/src/report/sub/bar.mjs"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": "src/report/index.mjs",
+  "boundaries": {
+    "explore_within": ["src/report/**"],
+    "ignore": ["**/*.md", "**/node_modules/**"]
+  }
+}
+EOF
+
+    local result count
+    result=$(discover_scope_files "$tmpdir/scope.json" "$tmpdir/project")
+    count=$(echo "$result" | grep -c '.mjs$')
+    assert_eq "finds all .mjs files" "3" "$count"
+
+    rm -rf "$tmpdir"
+}
+
+test_discover_scope_files_excludes_ignored() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report"
+    touch "$tmpdir/project/src/report/index.mjs"
+    touch "$tmpdir/project/src/report/README.md"
+    touch "$tmpdir/project/src/report/types.d.ts"
+    touch "$tmpdir/project/src/report/types.ts"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": "src/report/index.mjs",
+  "boundaries": {
+    "explore_within": ["src/report/**"],
+    "ignore": ["**/*.md", "**/*.d.ts", "**/*.ts"]
+  }
+}
+EOF
+
+    local result count
+    result=$(discover_scope_files "$tmpdir/scope.json" "$tmpdir/project")
+    count=$(echo "$result" | wc -l)
+    assert_eq "excludes .md, .d.ts, .ts files" "1" "$(echo "$count" | tr -d ' ')"
+
+    local has_md
+    has_md=$(echo "$result" | grep -c '\.md$' || true)
+    assert_eq "no .md in output" "0" "$has_md"
+
+    rm -rf "$tmpdir"
+}
+
+test_discover_scope_files_empty_dir() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report"
+
+    cat > "$tmpdir/scope.json" << 'EOF'
+{
+  "seed": "src/report/index.mjs",
+  "boundaries": {
+    "explore_within": ["src/report/**"],
+    "ignore": []
+  }
+}
+EOF
+
+    local result
+    result=$(discover_scope_files "$tmpdir/scope.json" "$tmpdir/project")
+    assert_eq "empty dir returns empty" "" "$result"
+
+    rm -rf "$tmpdir"
+}
+
+test_discover_scope_files_finds_mjs
+test_discover_scope_files_excludes_ignored
+test_discover_scope_files_empty_dir
 
 # ============================================================
 # Summary

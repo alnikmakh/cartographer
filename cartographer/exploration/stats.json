@@ -1,7 +1,7 @@
 {
-  "seed": "dependency-cruiser/src/report/index.mjs",
-  "started": "2026-03-08",
-  "total_nodes_discovered": 1,
+  "seed": "dependency-cruiser/src/report/anon/anonymize-path-element.mjs",
+  "started": "2026-03-09",
+  "total_nodes_discovered": 41,
   "total_nodes_explored": 0,
   "total_edges": 0,
   "last_iteration": 0,

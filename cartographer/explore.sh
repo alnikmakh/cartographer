@@ -120,24 +120,44 @@ detect_completion() {
 }
 
 # Initialize exploration directory with seed data
-# Usage: init_exploration <seed_file> [exploration_dir]
+# Usage: init_exploration <exploration_dir> <seed1> [seed2] [seed3] ...
 init_exploration() {
-    local seed="$1"
-    local edir="${2:-$EXPLORATION_DIR}"
+    local edir="$1"
+    shift
+    local seeds=("$@")
+    local first_seed="${seeds[0]}"
+    local seed_count=${#seeds[@]}
 
     mkdir -p "$edir/nodes" "$edir/edges"
 
-    # queue.json — seed as only pending node
-    cat > "$edir/queue.json" << QEOF
-{
-  "pending": [
+    # queue.json — all seeds as pending nodes
+    local pending_items=""
+    local first_item=true
+    for s in "${seeds[@]}"; do
+        local item
+        item=$(cat << IEOF
     {
-      "node": "$seed",
+      "node": "$s",
       "discovered_from": "seed",
       "reason": "starting point",
       "priority": "high",
       "depth": 0
     }
+IEOF
+)
+        if $first_item; then
+            pending_items="$item"
+            first_item=false
+        else
+            pending_items="$pending_items,
+$item"
+        fi
+    done
+
+    cat > "$edir/queue.json" << QEOF
+{
+  "pending": [
+$pending_items
   ],
   "explored": [],
   "boundaries_recorded": 0,
@@ -151,9 +171,9 @@ QEOF
     # stats.json — zeroed
     cat > "$edir/stats.json" << SEOF
 {
-  "seed": "$seed",
+  "seed": "$first_seed",
   "started": "$(date -I 2>/dev/null || date '+%Y-%m-%d')",
-  "total_nodes_discovered": 1,
+  "total_nodes_discovered": $seed_count,
   "total_nodes_explored": 0,
   "total_edges": 0,
   "last_iteration": 0,
@@ -162,13 +182,256 @@ QEOF
 SEOF
 
     # findings.md — header
+    local seed_list=""
+    for s in "${seeds[@]}"; do
+        seed_list="$seed_list
+- \`$s\`"
+    done
+
     cat > "$edir/findings.md" << FEOF
 # Exploration Findings
 
-Seed: \`$seed\`
+Seeds:$seed_list
+
 Started: $(date)
 
 FEOF
+}
+
+# discover_scope_files <scope_file> <project_root>
+# Finds all files under explore_within directories, excluding ignore patterns.
+# Prints one file path per line (relative to project root).
+discover_scope_files() {
+    local scope_file="$1"
+    local root="$2"
+
+    # Read explore_within globs — strip trailing /** or /*
+    local ew_entries
+    ew_entries=$(grep '"explore_within"' "$scope_file" | grep -o '"[^"]*"' | grep -v 'explore_within' | tr -d '"')
+
+    # Read ignore globs, convert to grep -v patterns
+    # e.g. "**/*.md" → "\.md$", "**/node_modules/**" → "/node_modules/"
+    local grep_excludes=""
+    local ignore_entries
+    ignore_entries=$(grep '"ignore"' "$scope_file" | grep -o '"[^"]*"' | grep -v 'ignore' | tr -d '"')
+    while IFS= read -r ig; do
+        [ -z "$ig" ] && continue
+        local pat=""
+        case "$ig" in
+            **/node_modules/**)  pat="/node_modules/" ;;
+            **/vendor/**)        pat="/vendor/" ;;
+            **/__pycache__/**)   pat="/__pycache__/" ;;
+            *\*.*)
+                # **/*.md → \.md$
+                local ext
+                ext=$(echo "$ig" | sed 's/.*\*//')  # e.g. ".md", ".d.ts", ".css"
+                ext=$(echo "$ext" | sed 's/\./\\./g')  # escape dots
+                pat="${ext}$"
+                ;;
+        esac
+        [ -z "$pat" ] && continue
+        if [ -z "$grep_excludes" ]; then
+            grep_excludes="$pat"
+        else
+            grep_excludes="$grep_excludes|$pat"
+        fi
+    done <<< "$ignore_entries"
+
+    # Find files under each explore_within directory
+    while IFS= read -r ew_glob; do
+        [ -z "$ew_glob" ] && continue
+        local scope_dir="${ew_glob%%/\*\*}"
+        scope_dir="${scope_dir%%/\*}"
+        local full_dir="$root/$scope_dir"
+        [ -d "$full_dir" ] || continue
+
+        if [ -n "$grep_excludes" ]; then
+            find "$full_dir" -type f | sed "s|^$root/||" | grep -vE "$grep_excludes"
+        else
+            find "$full_dir" -type f | sed "s|^$root/||"
+        fi
+    done <<< "$ew_entries" | sort
+}
+
+# discover_boundaries <explore_within_glob> [project_root]
+# Prints sibling directories of the scope parent, one per line.
+# "dependency-cruiser/src/report/**" → parent "dependency-cruiser/src" → siblings
+discover_boundaries() {
+    local glob="$1"
+    local root="${2:-.}"
+
+    # Strip trailing /** or /*
+    local scope_dir="${glob%%/\*\*}"
+    scope_dir="${scope_dir%%/\*}"
+
+    local parent_dir
+    parent_dir=$(dirname "$scope_dir")
+
+    local full_parent="$root/$parent_dir"
+    if [ ! -d "$full_parent" ]; then
+        return 0
+    fi
+
+    local scope_basename name
+    scope_basename=$(basename "$scope_dir")
+
+    for d in "$full_parent"/*/; do
+        [ -d "$d" ] || continue
+        name=$(basename "$d")
+        if [ "$name" != "$scope_basename" ]; then
+            echo "$parent_dir/$name"
+        fi
+    done
+}
+
+# detect_ignore_patterns <seed_file>
+# Prints comma-separated ignore globs based on first seed's file extension.
+detect_ignore_patterns() {
+    local seed="$1"
+    local ext="${seed##*.}"
+
+    case "$ext" in
+        mjs|cjs|js|jsx)
+            echo "**/*.md,**/*.d.ts,**/*.ts,**/*.css,**/node_modules/**"
+            ;;
+        ts|tsx)
+            echo "**/*.md,**/*.css,**/node_modules/**"
+            ;;
+        go)
+            echo "**/*_test.go,**/vendor/**,**/*.md"
+            ;;
+        py)
+            echo "**/__pycache__/**,**/*.pyc,**/*.md"
+            ;;
+        *)
+            echo "**/node_modules/**,**/vendor/**,**/*.md"
+            ;;
+    esac
+}
+
+# complete_scope <scope_file> [project_root]
+# Reads a minimal scope.json (seed + explore_within), fills missing fields, writes back.
+complete_scope() {
+    local scope_file="$1"
+    local root="${2:-.}"
+
+    if [ ! -f "$scope_file" ]; then
+        echo "Error: scope file not found: $scope_file" >&2
+        return 1
+    fi
+
+    # Read seed — support both string and array formats
+    local seed_line first_seed seeds_json
+    seed_line=$(grep '"seed"' "$scope_file")
+    if echo "$seed_line" | grep -q '\['; then
+        # Array format: extract [...] from the seed line
+        seeds_json=$(echo "$seed_line" | sed 's/.*"seed"[[:space:]]*:[[:space:]]*//' | sed 's/[[:space:]]*,*[[:space:]]*$//')
+        first_seed=$(echo "$seeds_json" | grep -o '"[^"]*"' | head -1 | tr -d '"')
+    else
+        # String format
+        first_seed=$(echo "$seed_line" | grep -o '"[^"]*"' | tail -1 | tr -d '"')
+        seeds_json="\"$first_seed\""
+    fi
+
+    # Read explore_within array
+    local ew_entries
+    ew_entries=$(grep '"explore_within"' "$scope_file" | grep -o '"[^"]*"' | grep -v 'explore_within' | tr -d '"')
+
+    # Discover boundary packages from all explore_within globs
+    local boundaries=""
+    local ew_glob
+    while IFS= read -r ew_glob; do
+        [ -z "$ew_glob" ] && continue
+        local sibs
+        sibs=$(discover_boundaries "$ew_glob" "$root")
+        if [ -n "$sibs" ]; then
+            if [ -n "$boundaries" ]; then
+                boundaries="$boundaries"$'\n'"$sibs"
+            else
+                boundaries="$sibs"
+            fi
+        fi
+    done <<< "$ew_entries"
+
+    # Deduplicate boundaries
+    if [ -n "$boundaries" ]; then
+        boundaries=$(echo "$boundaries" | sort -u)
+    fi
+
+    # Detect ignore patterns
+    local ignore_csv
+    ignore_csv=$(detect_ignore_patterns "$first_seed")
+
+    # Read existing budget values or use defaults
+    local max_iter max_nodes max_depth
+    max_iter=$(grep -o '"max_iterations":[[:space:]]*[0-9]*' "$scope_file" 2>/dev/null | grep -o '[0-9]*$' || true)
+    max_nodes=$(grep -o '"max_nodes":[[:space:]]*[0-9]*' "$scope_file" 2>/dev/null | grep -o '[0-9]*$' || true)
+    max_depth=$(grep -o '"max_depth_from_seed":[[:space:]]*[0-9]*' "$scope_file" 2>/dev/null | grep -o '[0-9]*$' || true)
+    max_iter="${max_iter:-20}"
+    max_nodes="${max_nodes:-50}"
+    max_depth="${max_depth:-5}"
+
+    # Reconstruct explore_within JSON array
+    local ew_json=""
+    local first_ew=true
+    while IFS= read -r ew_glob; do
+        [ -z "$ew_glob" ] && continue
+        if $first_ew; then
+            ew_json="\"$ew_glob\""
+            first_ew=false
+        else
+            ew_json="$ew_json, \"$ew_glob\""
+        fi
+    done <<< "$ew_entries"
+
+    # Build boundary_packages JSON array
+    local bp_json=""
+    if [ -n "$boundaries" ]; then
+        local first_bp=true
+        while IFS= read -r bp; do
+            [ -z "$bp" ] && continue
+            if $first_bp; then
+                bp_json="\"$bp\""
+                first_bp=false
+            else
+                bp_json="$bp_json, \"$bp\""
+            fi
+        done <<< "$boundaries"
+    fi
+
+    # Build ignore JSON array from CSV (disable globbing to protect **)
+    local ignore_json=""
+    local first_ig=true
+    local IFS_OLD="$IFS"
+    IFS=','
+    set -f
+    for ig in $ignore_csv; do
+        if $first_ig; then
+            ignore_json="\"$ig\""
+            first_ig=false
+        else
+            ignore_json="$ignore_json, \"$ig\""
+        fi
+    done
+    set +f
+    IFS="$IFS_OLD"
+
+    # Write completed scope.json
+    cat > "$scope_file" << SCEOF
+{
+  "seed": $seeds_json,
+  "boundaries": {
+    "explore_within": [$ew_json],
+    "boundary_packages": [$bp_json],
+    "ignore": [$ignore_json]
+  },
+  "budget": {
+    "max_iterations": $max_iter,
+    "max_nodes": $max_nodes,
+    "max_depth_from_seed": $max_depth
+  }
+}
+SCEOF
 }
 
 # ============================================================
@@ -177,6 +440,66 @@ FEOF
 
 if [ "${1:-}" = "--test" ]; then
     return 0 2>/dev/null || exit 0
+fi
+
+# ============================================================
+# --init mode: auto-discover boundaries and initialize state
+# ============================================================
+
+if [ "${1:-}" = "--init" ]; then
+    if [ ! -f "$SCOPE_FILE" ]; then
+        echo "Error: scope.json not found at $SCOPE_FILE"
+        echo "Create a minimal scope.json with 'seed' and 'boundaries.explore_within'."
+        exit 1
+    fi
+
+    # Validate minimal required fields
+    if ! grep -q '"seed"' "$SCOPE_FILE"; then
+        echo "Error: scope.json missing 'seed' field"
+        exit 1
+    fi
+    if ! grep -q '"explore_within"' "$SCOPE_FILE"; then
+        echo "Error: scope.json missing 'boundaries.explore_within' field"
+        exit 1
+    fi
+
+    # Clean existing exploration state
+    rm -rf "$NODES_DIR" "$EDGES_DIR"
+    rm -f "$QUEUE_FILE" "$INDEX_FILE" "$STATS_FILE" "$FINDINGS_FILE"
+
+    # Fill in scope.json
+    complete_scope "$SCOPE_FILE" "$PROJECT_ROOT"
+
+    # Discover all in-scope files from the filesystem
+    all_scope_files=()
+    while IFS= read -r f; do
+        [ -n "$f" ] && all_scope_files+=("$f")
+    done < <(discover_scope_files "$SCOPE_FILE" "$PROJECT_ROOT")
+
+    if [ ${#all_scope_files[@]} -eq 0 ]; then
+        echo "Error: no files found matching explore_within globs"
+        exit 1
+    fi
+
+    # Initialize exploration state with all in-scope files
+    init_exploration "$EXPLORATION_DIR" "${all_scope_files[@]}"
+
+    # Print summary — count boundary packages on the single line
+    bp_count=$(grep '"boundary_packages"' "$SCOPE_FILE" | grep -o '"[^"]*"' | grep -v '"boundary_packages"' | wc -l)
+    bp_count=$(echo "$bp_count" | tr -d ' ')
+
+    echo ""
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo "  CARTOGRAPHER --init complete"
+    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    echo ""
+    echo "  Queued:      ${#all_scope_files[@]} files"
+    echo "  Boundaries:  $bp_count packages discovered"
+    echo "  Budget:      $(grep -o '"max_iterations":[[:space:]]*[0-9]*' "$SCOPE_FILE" | grep -o '[0-9]*$') iterations, $(grep -o '"max_nodes":[[:space:]]*[0-9]*' "$SCOPE_FILE" | grep -o '[0-9]*$') nodes"
+    echo ""
+    echo "  Run ./cartographer/explore.sh to start exploring."
+    echo ""
+    exit 0
 fi
 
 # ============================================================
@@ -288,7 +611,7 @@ if [ ! -f "$INDEX_FILE" ]; then
         exit 1
     fi
     echo -e "${CYAN}Initializing exploration from seed: $SEED${NC}"
-    init_exploration "$SEED"
+    init_exploration "$EXPLORATION_DIR" "$SEED"
 fi
 
 # ============================================================

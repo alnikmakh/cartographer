@@ -2,19 +2,8 @@
   "seed": "dependency-cruiser/src/report/index.mjs",
   "boundaries": {
     "explore_within": ["dependency-cruiser/src/report/**"],
-    "boundary_packages": [
-      "dependency-cruiser/src/graph-utl",
-      "dependency-cruiser/src/utl",
-      "dependency-cruiser/src/validate",
-      "dependency-cruiser/src/main",
-      "dependency-cruiser/src/analyze",
-      "dependency-cruiser/src/extract",
-      "dependency-cruiser/src/config-utl",
-      "dependency-cruiser/src/schema",
-      "dependency-cruiser/src/cli",
-      "dependency-cruiser/src/cache"
-    ],
-    "ignore": ["**/*.md", "**/*.d.ts", "**/*.css", "**/*.ts", "**/node_modules/**"]
+    "boundary_packages": ["dependency-cruiser/src/analyze", "dependency-cruiser/src/cache", "dependency-cruiser/src/cli", "dependency-cruiser/src/config-utl", "dependency-cruiser/src/extract", "dependency-cruiser/src/graph-utl", "dependency-cruiser/src/main", "dependency-cruiser/src/schema", "dependency-cruiser/src/utl", "dependency-cruiser/src/validate"],
+    "ignore": ["**/*.md", "**/*.d.ts", "**/*.ts", "**/*.css", "**/node_modules/**"]
   },
   "budget": {
     "max_iterations": 20,
