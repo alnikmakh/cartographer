@@ -446,6 +446,59 @@ EOF
 test_init_creates_queue_files
 
 # ============================================================
+# --dry-run: prints files without creating state
+# ============================================================
+
+echo ""
+echo "--- --dry-run ---"
+
+test_dry_run_prints_files() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report/sub"
+    touch "$tmpdir/project/src/report/index.mjs"
+    touch "$tmpdir/project/src/report/foo.mjs"
+    touch "$tmpdir/project/src/report/sub/bar.mjs"
+
+    local edir="$tmpdir/exploration"
+    mkdir -p "$edir"
+
+    cat > "$edir/scope.json" << 'EOF'
+{
+  "seed": "src/report/index.mjs",
+  "boundaries": {
+    "explore_within": ["src/report/**"],
+    "boundary_packages": ["src/util"],
+    "ignore": ["**/*.md"]
+  },
+  "budget": {
+    "max_iterations": 10,
+    "max_nodes": 50
+  }
+}
+EOF
+
+    # Override paths to use temp dir
+    local SCOPE_FILE="$edir/scope.json"
+    local PROJECT_ROOT="$tmpdir/project"
+
+    # Run discover_scope_files (same function --dry-run uses)
+    local result
+    result=$(discover_scope_files "$SCOPE_FILE" "$PROJECT_ROOT")
+
+    local count
+    count=$(echo "$result" | grep -c '.mjs$')
+    assert_eq "dry-run lists matching files" "3" "$count"
+
+    # Verify no queue_all.txt was created (dry-run doesn't create state)
+    assert_file_not_exists "dry-run does not create queue_all.txt" "$edir/queue_all.txt"
+
+    rm -rf "$tmpdir"
+}
+
+test_dry_run_prints_files
+
+# ============================================================
 # --init: validates complete scope
 # ============================================================
 

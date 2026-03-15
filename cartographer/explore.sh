@@ -162,6 +162,22 @@ if [ "${1:-}" = "--test" ]; then
 fi
 
 # ============================================================
+# --dry-run mode: show matching files without creating state
+# ============================================================
+
+if [ "${1:-}" = "--dry-run" ]; then
+    if [ ! -f "$SCOPE_FILE" ]; then
+        echo "Error: scope.json not found at $SCOPE_FILE"
+        exit 1
+    fi
+
+    discover_scope_files "$SCOPE_FILE" "$PROJECT_ROOT"
+    echo "---"
+    echo "$(discover_scope_files "$SCOPE_FILE" "$PROJECT_ROOT" | wc -l | tr -d ' ') files match"
+    exit 0
+fi
+
+# ============================================================
 # --init mode: validate complete scope.json and initialize state
 # ============================================================
 

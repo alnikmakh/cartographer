@@ -17,6 +17,13 @@ Read `cartographer/exploration/scope.json` to learn:
 
 Read `cartographer/exploration/index.json` to see what's already done.
 
+## Exploration Hints
+
+If scope.json contains a `hints` array, read it. These are pre-phase
+observations about patterns and coupling to watch for. When you
+encounter something matching a hint, note it prominently in the node's
+`notes` field.
+
 ## For Each File: Read, Analyze, Write Three Things
 
 ### Step 1 — Read the source file
