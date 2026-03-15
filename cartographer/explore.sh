@@ -1,19 +1,19 @@
 #!/bin/bash
 #
-# Cartographer — Autonomous codebase exploration loop
+# Cartographer — Script-driven codebase exploration loop
 #
-# A single-agent approach that maps codebases file-by-file.
-# The map lives on disk (split into many small files), not in context.
-# Each iteration picks unexplored nodes from the queue, explores them,
-# and writes results back. Over many iterations a complete dependency
-# graph emerges.
+# The pre-phase produces a complete scope.json. This script iterates
+# through all in-scope files, feeding batches to an AI agent that
+# describes each file. The script controls iteration — what files
+# to explore, when to stop. The agent is a pure file analyzer.
 #
 # Usage:
-#   ./cartographer/explore.sh                  # Claude, use scope.json budget
-#   ./cartographer/explore.sh 10               # Claude, max 10 iterations
-#   ./cartographer/explore.sh codex 10         # Codex, max 10 iterations
-#   ./cartographer/explore.sh gemini 10        # Gemini, max 10 iterations
-#   ./cartographer/explore.sh copilot 10       # Copilot, max 10 iterations
+#   ./cartographer/explore.sh --init             # Initialize from complete scope.json
+#   ./cartographer/explore.sh                    # Claude, use scope.json budget
+#   ./cartographer/explore.sh 10                 # Claude, max 10 iterations
+#   ./cartographer/explore.sh codex 10           # Codex, max 10 iterations
+#   ./cartographer/explore.sh gemini 10          # Gemini, max 10 iterations
+#   ./cartographer/explore.sh copilot 10         # Copilot, max 10 iterations
 #
 
 set -e
@@ -26,58 +26,65 @@ PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 EXPLORATION_DIR="$SCRIPT_DIR/exploration"
 SCOPE_FILE="$EXPLORATION_DIR/scope.json"
-QUEUE_FILE="$EXPLORATION_DIR/queue.json"
+QUEUE_ALL="$EXPLORATION_DIR/queue_all.txt"
+QUEUE_EXPLORED="$EXPLORATION_DIR/queue_explored.txt"
 INDEX_FILE="$EXPLORATION_DIR/index.json"
-STATS_FILE="$EXPLORATION_DIR/stats.json"
 FINDINGS_FILE="$EXPLORATION_DIR/findings.md"
 NODES_DIR="$EXPLORATION_DIR/nodes"
 EDGES_DIR="$EXPLORATION_DIR/edges"
 PROMPT_FILE="$SCRIPT_DIR/PROMPT.md"
 LOG_DIR="$SCRIPT_DIR/logs"
 
+BATCH_SIZE=3
+
 # ============================================================
 # Testable functions
 # ============================================================
 
-# Returns the number of pending nodes in queue.json
-# Usage: queue_pending_count <queue_file>
+# Returns the number of pending files (in queue_all but not queue_explored)
+# Usage: queue_pending_count <queue_all_file> <queue_explored_file>
 queue_pending_count() {
-    local qfile="${1:-$QUEUE_FILE}"
-    if [ ! -f "$qfile" ]; then
+    local all_file="${1:-$QUEUE_ALL}"
+    local explored_file="${2:-$QUEUE_EXPLORED}"
+
+    if [ ! -f "$all_file" ]; then
         echo "0"
         return
     fi
-    # Count objects in the "pending" array by counting "node" keys
-    local count
-    count=$(grep -c '"node"' "$qfile" 2>/dev/null || true)
-    # But we need to only count inside the pending array, not explored.
-    # Since "explored" is a flat string array (no "node" keys), grep for
-    # "node" only matches pending items. This is safe for our JSON shape.
-    echo "${count:-0}"
+
+    # If explored file doesn't exist or is empty, all are pending
+    if [ ! -f "$explored_file" ] || [ ! -s "$explored_file" ]; then
+        wc -l < "$all_file" | tr -d ' '
+        return
+    fi
+
+    comm -23 <(sort "$all_file") <(sort "$explored_file") | wc -l | tr -d ' '
 }
 
 # Returns 0 (true) if budget is exhausted, 1 (false) otherwise
-# Usage: is_budget_exhausted <stats_file> <scope_file>
+# Usage: is_budget_exhausted <queue_explored_file> <scope_file> <current_iteration>
 is_budget_exhausted() {
-    local sfile="${1:-$STATS_FILE}"
+    local explored_file="${1:-$QUEUE_EXPLORED}"
     local scfile="${2:-$SCOPE_FILE}"
+    local current_iter="${3:-0}"
 
-    if [ ! -f "$sfile" ] || [ ! -f "$scfile" ]; then
+    if [ ! -f "$scfile" ]; then
         return 1
     fi
 
-    local nodes_explored max_nodes iteration max_iterations
-    nodes_explored=$(grep -o '"total_nodes_explored":[[:space:]]*[0-9]*' "$sfile" | grep -o '[0-9]*$')
-    max_nodes=$(grep -o '"max_nodes":[[:space:]]*[0-9]*' "$scfile" | grep -o '[0-9]*$')
-    iteration=$(grep -o '"last_iteration":[[:space:]]*[0-9]*' "$sfile" | grep -o '[0-9]*$')
-    max_iterations=$(grep -o '"max_iterations":[[:space:]]*[0-9]*' "$scfile" | grep -o '[0-9]*$')
+    local explored_count=0
+    if [ -f "$explored_file" ] && [ -s "$explored_file" ]; then
+        explored_count=$(wc -l < "$explored_file" | tr -d ' ')
+    fi
 
-    nodes_explored="${nodes_explored:-0}"
+    local max_nodes max_iterations
+    max_nodes=$(grep -o '"max_nodes":[[:space:]]*[0-9]*' "$scfile" | grep -o '[0-9]*$' || true)
+    max_iterations=$(grep -o '"max_iterations":[[:space:]]*[0-9]*' "$scfile" | grep -o '[0-9]*$' || true)
+
     max_nodes="${max_nodes:-999}"
-    iteration="${iteration:-0}"
     max_iterations="${max_iterations:-999}"
 
-    if [ "$nodes_explored" -ge "$max_nodes" ] || [ "$iteration" -ge "$max_iterations" ]; then
+    if [ "$explored_count" -ge "$max_nodes" ] || [ "$current_iter" -ge "$max_iterations" ]; then
         return 0
     fi
     return 1
@@ -89,113 +96,6 @@ is_budget_exhausted() {
 sanitize_node_name() {
     local path="$1"
     echo "$path" | sed 's|/|__|g'
-}
-
-# Detect completion signals in agent output
-# Returns 0 and prints the signal name if found, 1 if no signal
-# Usage: detect_completion <output_text_or_file>
-detect_completion() {
-    local input="$1"
-    local content
-
-    if [ -f "$input" ]; then
-        content=$(cat "$input")
-    else
-        content="$input"
-    fi
-
-    if echo "$content" | grep -q 'MAP_COMPLETE'; then
-        echo "MAP_COMPLETE"
-        return 0
-    fi
-    if echo "$content" | grep -q 'BUDGET_REACHED'; then
-        echo "BUDGET_REACHED"
-        return 0
-    fi
-    if echo "$content" | grep -q 'CONTEXT_FULL'; then
-        echo "CONTEXT_FULL"
-        return 0
-    fi
-    return 1
-}
-
-# Initialize exploration directory with seed data
-# Usage: init_exploration <exploration_dir> <seed1> [seed2] [seed3] ...
-init_exploration() {
-    local edir="$1"
-    shift
-    local seeds=("$@")
-    local first_seed="${seeds[0]}"
-    local seed_count=${#seeds[@]}
-
-    mkdir -p "$edir/nodes" "$edir/edges"
-
-    # queue.json — all seeds as pending nodes
-    local pending_items=""
-    local first_item=true
-    for s in "${seeds[@]}"; do
-        local item
-        item=$(cat << IEOF
-    {
-      "node": "$s",
-      "discovered_from": "seed",
-      "reason": "starting point",
-      "priority": "high",
-      "depth": 0
-    }
-IEOF
-)
-        if $first_item; then
-            pending_items="$item"
-            first_item=false
-        else
-            pending_items="$pending_items,
-$item"
-        fi
-    done
-
-    cat > "$edir/queue.json" << QEOF
-{
-  "pending": [
-$pending_items
-  ],
-  "explored": [],
-  "boundaries_recorded": 0,
-  "externals_skipped": 0
-}
-QEOF
-
-    # index.json — empty
-    echo '{}' > "$edir/index.json"
-
-    # stats.json — zeroed
-    cat > "$edir/stats.json" << SEOF
-{
-  "seed": "$first_seed",
-  "started": "$(date -I 2>/dev/null || date '+%Y-%m-%d')",
-  "total_nodes_discovered": $seed_count,
-  "total_nodes_explored": 0,
-  "total_edges": 0,
-  "last_iteration": 0,
-  "coverage_pct": 0
-}
-SEOF
-
-    # findings.md — header
-    local seed_list=""
-    for s in "${seeds[@]}"; do
-        seed_list="$seed_list
-- \`$s\`"
-    done
-
-    cat > "$edir/findings.md" << FEOF
-# Exploration Findings
-
-Seeds:$seed_list
-
-Started: $(date)
-
-FEOF
 }
 
 # discover_scope_files <scope_file> <project_root>
@@ -253,187 +153,6 @@ discover_scope_files() {
     done <<< "$ew_entries" | sort
 }
 
-# discover_boundaries <explore_within_glob> [project_root]
-# Prints sibling directories of the scope parent, one per line.
-# "dependency-cruiser/src/report/**" → parent "dependency-cruiser/src" → siblings
-discover_boundaries() {
-    local glob="$1"
-    local root="${2:-.}"
-
-    # Strip trailing /** or /*
-    local scope_dir="${glob%%/\*\*}"
-    scope_dir="${scope_dir%%/\*}"
-
-    local parent_dir
-    parent_dir=$(dirname "$scope_dir")
-
-    local full_parent="$root/$parent_dir"
-    if [ ! -d "$full_parent" ]; then
-        return 0
-    fi
-
-    local scope_basename name
-    scope_basename=$(basename "$scope_dir")
-
-    for d in "$full_parent"/*/; do
-        [ -d "$d" ] || continue
-        name=$(basename "$d")
-        if [ "$name" != "$scope_basename" ]; then
-            echo "$parent_dir/$name"
-        fi
-    done
-}
-
-# detect_ignore_patterns <seed_file>
-# Prints comma-separated ignore globs based on first seed's file extension.
-detect_ignore_patterns() {
-    local seed="$1"
-    local ext="${seed##*.}"
-
-    case "$ext" in
-        mjs|cjs|js|jsx)
-            echo "**/*.md,**/*.d.ts,**/*.ts,**/*.css,**/node_modules/**"
-            ;;
-        ts|tsx)
-            echo "**/*.md,**/*.css,**/node_modules/**"
-            ;;
-        go)
-            echo "**/*_test.go,**/vendor/**,**/*.md"
-            ;;
-        py)
-            echo "**/__pycache__/**,**/*.pyc,**/*.md"
-            ;;
-        *)
-            echo "**/node_modules/**,**/vendor/**,**/*.md"
-            ;;
-    esac
-}
-
-# complete_scope <scope_file> [project_root]
-# Reads a minimal scope.json (seed + explore_within), fills missing fields, writes back.
-complete_scope() {
-    local scope_file="$1"
-    local root="${2:-.}"
-
-    if [ ! -f "$scope_file" ]; then
-        echo "Error: scope file not found: $scope_file" >&2
-        return 1
-    fi
-
-    # Read seed — support both string and array formats
-    local seed_line first_seed seeds_json
-    seed_line=$(grep '"seed"' "$scope_file")
-    if echo "$seed_line" | grep -q '\['; then
-        # Array format: extract [...] from the seed line
-        seeds_json=$(echo "$seed_line" | sed 's/.*"seed"[[:space:]]*:[[:space:]]*//' | sed 's/[[:space:]]*,*[[:space:]]*$//')
-        first_seed=$(echo "$seeds_json" | grep -o '"[^"]*"' | head -1 | tr -d '"')
-    else
-        # String format
-        first_seed=$(echo "$seed_line" | grep -o '"[^"]*"' | tail -1 | tr -d '"')
-        seeds_json="\"$first_seed\""
-    fi
-
-    # Read explore_within array
-    local ew_entries
-    ew_entries=$(grep '"explore_within"' "$scope_file" | grep -o '"[^"]*"' | grep -v 'explore_within' | tr -d '"')
-
-    # Discover boundary packages from all explore_within globs
-    local boundaries=""
-    local ew_glob
-    while IFS= read -r ew_glob; do
-        [ -z "$ew_glob" ] && continue
-        local sibs
-        sibs=$(discover_boundaries "$ew_glob" "$root")
-        if [ -n "$sibs" ]; then
-            if [ -n "$boundaries" ]; then
-                boundaries="$boundaries"$'\n'"$sibs"
-            else
-                boundaries="$sibs"
-            fi
-        fi
-    done <<< "$ew_entries"
-
-    # Deduplicate boundaries
-    if [ -n "$boundaries" ]; then
-        boundaries=$(echo "$boundaries" | sort -u)
-    fi
-
-    # Detect ignore patterns
-    local ignore_csv
-    ignore_csv=$(detect_ignore_patterns "$first_seed")
-
-    # Read existing budget values or use defaults
-    local max_iter max_nodes max_depth
-    max_iter=$(grep -o '"max_iterations":[[:space:]]*[0-9]*' "$scope_file" 2>/dev/null | grep -o '[0-9]*$' || true)
-    max_nodes=$(grep -o '"max_nodes":[[:space:]]*[0-9]*' "$scope_file" 2>/dev/null | grep -o '[0-9]*$' || true)
-    max_depth=$(grep -o '"max_depth_from_seed":[[:space:]]*[0-9]*' "$scope_file" 2>/dev/null | grep -o '[0-9]*$' || true)
-    max_iter="${max_iter:-20}"
-    max_nodes="${max_nodes:-50}"
-    max_depth="${max_depth:-5}"
-
-    # Reconstruct explore_within JSON array
-    local ew_json=""
-    local first_ew=true
-    while IFS= read -r ew_glob; do
-        [ -z "$ew_glob" ] && continue
-        if $first_ew; then
-            ew_json="\"$ew_glob\""
-            first_ew=false
-        else
-            ew_json="$ew_json, \"$ew_glob\""
-        fi
-    done <<< "$ew_entries"
-
-    # Build boundary_packages JSON array
-    local bp_json=""
-    if [ -n "$boundaries" ]; then
-        local first_bp=true
-        while IFS= read -r bp; do
-            [ -z "$bp" ] && continue
-            if $first_bp; then
-                bp_json="\"$bp\""
-                first_bp=false
-            else
-                bp_json="$bp_json, \"$bp\""
-            fi
-        done <<< "$boundaries"
-    fi
-
-    # Build ignore JSON array from CSV (disable globbing to protect **)
-    local ignore_json=""
-    local first_ig=true
-    local IFS_OLD="$IFS"
-    IFS=','
-    set -f
-    for ig in $ignore_csv; do
-        if $first_ig; then
-            ignore_json="\"$ig\""
-            first_ig=false
-        else
-            ignore_json="$ignore_json, \"$ig\""
-        fi
-    done
-    set +f
-    IFS="$IFS_OLD"
-
-    # Write completed scope.json
-    cat > "$scope_file" << SCEOF
-{
-  "seed": $seeds_json,
-  "boundaries": {
-    "explore_within": [$ew_json],
-    "boundary_packages": [$bp_json],
-    "ignore": [$ignore_json]
-  },
-  "budget": {
-    "max_iterations": $max_iter,
-    "max_nodes": $max_nodes,
-    "max_depth_from_seed": $max_depth
-  }
-}
-SCEOF
-}
-
 # ============================================================
 # Early return for test mode
 # ============================================================
@@ -443,59 +162,72 @@ if [ "${1:-}" = "--test" ]; then
 fi
 
 # ============================================================
-# --init mode: auto-discover boundaries and initialize state
+# --init mode: validate complete scope.json and initialize state
 # ============================================================
 
 if [ "${1:-}" = "--init" ]; then
     if [ ! -f "$SCOPE_FILE" ]; then
         echo "Error: scope.json not found at $SCOPE_FILE"
-        echo "Create a minimal scope.json with 'seed' and 'boundaries.explore_within'."
+        echo "Run the pre-phase first to produce a complete scope.json."
         exit 1
     fi
 
-    # Validate minimal required fields
-    if ! grep -q '"seed"' "$SCOPE_FILE"; then
-        echo "Error: scope.json missing 'seed' field"
-        exit 1
-    fi
-    if ! grep -q '"explore_within"' "$SCOPE_FILE"; then
-        echo "Error: scope.json missing 'boundaries.explore_within' field"
+    # Validate scope.json has all required fields
+    missing=""
+    grep -q '"seed"' "$SCOPE_FILE" || missing="$missing seed"
+    grep -q '"explore_within"' "$SCOPE_FILE" || missing="$missing explore_within"
+    grep -q '"boundary_packages"' "$SCOPE_FILE" || missing="$missing boundary_packages"
+    grep -q '"ignore"' "$SCOPE_FILE" || missing="$missing ignore"
+    grep -q '"budget"' "$SCOPE_FILE" || missing="$missing budget"
+
+    if [ -n "$missing" ]; then
+        echo "Error: scope.json is incomplete. Missing:$missing"
+        echo "Run the pre-phase to produce a complete scope.json."
         exit 1
     fi
 
-    # Clean existing exploration state
+    # Clean old state
     rm -rf "$NODES_DIR" "$EDGES_DIR"
-    rm -f "$QUEUE_FILE" "$INDEX_FILE" "$STATS_FILE" "$FINDINGS_FILE"
+    rm -f "$QUEUE_ALL" "$QUEUE_EXPLORED" "$INDEX_FILE" "$FINDINGS_FILE"
 
-    # Fill in scope.json
-    complete_scope "$SCOPE_FILE" "$PROJECT_ROOT"
+    # Discover all in-scope files
+    discover_scope_files "$SCOPE_FILE" "$PROJECT_ROOT" > "$QUEUE_ALL"
 
-    # Discover all in-scope files from the filesystem
-    all_scope_files=()
-    while IFS= read -r f; do
-        [ -n "$f" ] && all_scope_files+=("$f")
-    done < <(discover_scope_files "$SCOPE_FILE" "$PROJECT_ROOT")
-
-    if [ ${#all_scope_files[@]} -eq 0 ]; then
+    local_count=$(wc -l < "$QUEUE_ALL" | tr -d ' ')
+    if [ "$local_count" -eq 0 ]; then
         echo "Error: no files found matching explore_within globs"
+        rm -f "$QUEUE_ALL"
         exit 1
     fi
 
-    # Initialize exploration state with all in-scope files
-    init_exploration "$EXPLORATION_DIR" "${all_scope_files[@]}"
+    # Create empty explored file
+    touch "$QUEUE_EXPLORED"
 
-    # Print summary — count boundary packages on the single line
-    bp_count=$(grep '"boundary_packages"' "$SCOPE_FILE" | grep -o '"[^"]*"' | grep -v '"boundary_packages"' | wc -l)
-    bp_count=$(echo "$bp_count" | tr -d ' ')
+    # Create empty index.json
+    echo '{}' > "$INDEX_FILE"
+
+    # Create findings.md header
+    cat > "$FINDINGS_FILE" << FEOF
+# Exploration Findings
+
+Started: $(date)
+
+FEOF
+
+    # Create output dirs
+    mkdir -p "$NODES_DIR" "$EDGES_DIR"
+
+    # Print summary banner
+    max_iter=$(grep -o '"max_iterations":[[:space:]]*[0-9]*' "$SCOPE_FILE" | grep -o '[0-9]*$' || echo "?")
+    max_nodes=$(grep -o '"max_nodes":[[:space:]]*[0-9]*' "$SCOPE_FILE" | grep -o '[0-9]*$' || echo "?")
 
     echo ""
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo "  CARTOGRAPHER --init complete"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    echo "  Queued:      ${#all_scope_files[@]} files"
-    echo "  Boundaries:  $bp_count packages discovered"
-    echo "  Budget:      $(grep -o '"max_iterations":[[:space:]]*[0-9]*' "$SCOPE_FILE" | grep -o '[0-9]*$') iterations, $(grep -o '"max_nodes":[[:space:]]*[0-9]*' "$SCOPE_FILE" | grep -o '[0-9]*$') nodes"
+    echo "  Queued:      $local_count files"
+    echo "  Budget:      $max_iter iterations, $max_nodes nodes"
     echo ""
     echo "  Run ./cartographer/explore.sh to start exploring."
     echo ""
@@ -583,14 +315,15 @@ NC='\033[0m'
 run_agent() {
     local prompt_file="$1"
     local log_file="$2"
-    local iteration="$3"
+    local batch_files="$3"
 
     local prompt_content
     prompt_content=$(cat "$prompt_file")
 
     local full_prompt="$prompt_content
 
-Iteration $iteration. Read up to 6 files. Save after EACH node.
+Explore these files:
+$batch_files
 "
 
     if [ "$PIPE_MODE" = "stdin" ]; then
@@ -601,18 +334,19 @@ Iteration $iteration. Read up to 6 files. Save after EACH node.
 }
 
 # ============================================================
-# Initialize if needed
+# Validate state
 # ============================================================
 
-if [ ! -f "$INDEX_FILE" ]; then
-    SEED=$(grep -o '"seed":[[:space:]]*"[^"]*"' "$SCOPE_FILE" | grep -o '"[^"]*"$' | tr -d '"')
-    if [ -z "$SEED" ]; then
-        echo "Error: No seed found in scope.json and exploration not initialized"
+for f in "$SCOPE_FILE" "$QUEUE_ALL" "$INDEX_FILE" "$PROMPT_FILE"; do
+    if [ ! -f "$f" ]; then
+        echo -e "${RED}Error: $(basename "$f") not found at $f${NC}"
+        echo "Run ./cartographer/explore.sh --init first."
         exit 1
     fi
-    echo -e "${CYAN}Initializing exploration from seed: $SEED${NC}"
-    init_exploration "$EXPLORATION_DIR" "$SEED"
-fi
+done
+
+# Ensure queue_explored exists
+[ -f "$QUEUE_EXPLORED" ] || touch "$QUEUE_EXPLORED"
 
 # ============================================================
 # Logging
@@ -623,19 +357,12 @@ SESSION_LOG="$LOG_DIR/cartographer_session_$(date '+%Y%m%d_%H%M%S').log"
 exec > >(tee -a "$SESSION_LOG") 2>&1
 
 # ============================================================
-# Validate files
-# ============================================================
-
-for f in "$SCOPE_FILE" "$QUEUE_FILE" "$INDEX_FILE" "$STATS_FILE" "$PROMPT_FILE"; do
-    if [ ! -f "$f" ]; then
-        echo -e "${RED}Error: $(basename "$f") not found at $f${NC}"
-        exit 1
-    fi
-done
-
-# ============================================================
 # Banner
 # ============================================================
+
+DISCOVERED=$(wc -l < "$QUEUE_ALL" | tr -d ' ')
+EXPLORED=$(wc -l < "$QUEUE_EXPLORED" | tr -d ' ')
+PENDING=$((DISCOVERED - EXPLORED))
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -644,10 +371,10 @@ echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━
 echo ""
 echo -e "${BLUE}Provider:${NC}       $PROVIDER ($CLI_CMD)"
 echo -e "${BLUE}Max iterations:${NC} $MAX_ITERATIONS"
-echo -e "${BLUE}Scope:${NC}          $(basename "$SCOPE_FILE")"
+echo -e "${BLUE}Scope:${NC}          $DISCOVERED files, $PENDING pending"
 echo -e "${BLUE}Log:${NC}            $SESSION_LOG"
 echo ""
-echo -e "${CYAN}Single-agent loop: read queue → explore nodes → save → repeat${NC}"
+echo -e "${CYAN}Script-driven loop: compute pending → batch to agent → check output → repeat${NC}"
 echo -e "${YELLOW}Press Ctrl+C to stop${NC}"
 echo ""
 
@@ -660,54 +387,49 @@ MAX_CONSECUTIVE_FAILURES=3
 
 for i in $(seq 1 "$MAX_ITERATIONS"); do
 
-    # --- Pre-check: queue empty? ---
-    PENDING=$(queue_pending_count "$QUEUE_FILE")
-    if [ "$PENDING" -eq 0 ]; then
-        echo -e "${GREEN}Queue empty. Exploration complete.${NC}"
+    # --- Compute pending batch ---
+    PENDING_FILES=$(comm -23 <(sort "$QUEUE_ALL") <(sort "$QUEUE_EXPLORED"))
+    BATCH=$(echo "$PENDING_FILES" | head -n "$BATCH_SIZE")
+
+    if [ -z "$BATCH" ]; then
+        echo -e "${GREEN}All files explored. Done.${NC}"
         break
     fi
 
-    # --- Pre-check: budget exhausted? ---
-    if is_budget_exhausted "$STATS_FILE" "$SCOPE_FILE"; then
+    # --- Budget check ---
+    if is_budget_exhausted "$QUEUE_EXPLORED" "$SCOPE_FILE" "$i"; then
         echo -e "${YELLOW}Budget exhausted. Stopping.${NC}"
         break
     fi
 
+    BATCH_COUNT=$(echo "$BATCH" | wc -l | tr -d ' ')
+    PENDING_COUNT=$(echo "$PENDING_FILES" | wc -l | tr -d ' ')
     TIMESTAMP=$(date '+%Y-%m-%d %H:%M:%S')
 
     echo ""
     echo -e "${PURPLE}════════════════════ ITERATION $i / $MAX_ITERATIONS ════════════════════${NC}"
     echo -e "${BLUE}[$TIMESTAMP]${NC}"
-    echo -e "  Pending nodes: $PENDING"
+    echo -e "  Pending: $PENDING_COUNT files, batch: $BATCH_COUNT"
     echo ""
 
     LOG_FILE="$LOG_DIR/cartographer_iter_${i}_$(date '+%Y%m%d_%H%M%S').log"
 
     # --- Run agent ---
-    AGENT_OUTPUT=""
-    if AGENT_OUTPUT=$(cd "$PROJECT_ROOT" && run_agent "$PROMPT_FILE" "$LOG_FILE" "$i"); then
+    if cd "$PROJECT_ROOT" && run_agent "$PROMPT_FILE" "$LOG_FILE" "$BATCH"; then
 
-        # Check for completion signals
-        SIGNAL=""
-        if SIGNAL=$(detect_completion "$LOG_FILE"); then
-            case "$SIGNAL" in
-                MAP_COMPLETE)
-                    echo -e "${GREEN}Map complete! All in-scope nodes explored.${NC}"
-                    break
-                    ;;
-                BUDGET_REACHED)
-                    echo -e "${YELLOW}Budget limit reached. Check findings.md for coverage.${NC}"
-                    break
-                    ;;
-                CONTEXT_FULL)
-                    echo -e "${CYAN}Context full — agent checkpointed. Continuing next iteration.${NC}"
-                    CONSECUTIVE_FAILURES=0
-                    ;;
-            esac
-        else
-            echo -e "${GREEN}Iteration $i completed${NC}"
-            CONSECUTIVE_FAILURES=0
-        fi
+        # Check which files got node output
+        NEWLY_EXPLORED=0
+        while IFS= read -r file; do
+            [ -z "$file" ] && continue
+            local_sanitized=$(sanitize_node_name "$file")
+            if [ -f "$NODES_DIR/${local_sanitized}.json" ]; then
+                echo "$file" >> "$QUEUE_EXPLORED"
+                NEWLY_EXPLORED=$((NEWLY_EXPLORED + 1))
+            fi
+        done <<< "$BATCH"
+
+        echo -e "${GREEN}Iteration $i: $NEWLY_EXPLORED/$BATCH_COUNT files explored${NC}"
+        CONSECUTIVE_FAILURES=0
 
     else
         echo -e "${RED}Agent failed on iteration $i${NC}"
@@ -726,15 +448,14 @@ done
 # Final banner
 # ============================================================
 
-TOTAL_EXPLORED=$(grep -o '"total_nodes_explored":[[:space:]]*[0-9]*' "$STATS_FILE" 2>/dev/null | grep -o '[0-9]*$' || echo "?")
-TOTAL_DISCOVERED=$(grep -o '"total_nodes_discovered":[[:space:]]*[0-9]*' "$STATS_FILE" 2>/dev/null | grep -o '[0-9]*$' || echo "?")
+TOTAL_DISCOVERED=$(wc -l < "$QUEUE_ALL" | tr -d ' ')
+TOTAL_EXPLORED=$(wc -l < "$QUEUE_EXPLORED" | tr -d ' ')
 
 echo ""
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e "${GREEN}              CARTOGRAPHER LOOP FINISHED                       ${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
-echo -e "  Nodes explored:    $TOTAL_EXPLORED"
-echo -e "  Nodes discovered:  $TOTAL_DISCOVERED"
-echo -e "  Output:            cartographer/exploration/"
+echo -e "  Files explored:   $TOTAL_EXPLORED / $TOTAL_DISCOVERED"
+echo -e "  Output:           cartographer/exploration/"
 echo ""

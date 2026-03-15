@@ -53,6 +53,17 @@ assert_file_exists() {
     fi
 }
 
+assert_file_not_exists() {
+    local label="$1" path="$2"
+    if [ ! -f "$path" ]; then
+        echo "  PASS: $label"
+        PASS=$((PASS + 1))
+    else
+        echo "  FAIL: $label (file exists but shouldn't: $path)"
+        FAIL=$((FAIL + 1))
+    fi
+}
+
 assert_dir_exists() {
     local label="$1" path="$2"
     if [ -d "$path" ]; then
@@ -71,7 +82,6 @@ assert_json_valid() {
         FAIL=$((FAIL + 1))
         return
     fi
-    # Try python first, fall back to jq
     if command -v python3 &>/dev/null; then
         if python3 -c "import json; json.load(open('$path'))" 2>/dev/null; then
             echo "  PASS: $label"
@@ -111,27 +121,68 @@ echo ""
 
 echo "--- queue_pending_count ---"
 
-test_queue_pending_count_with_items() {
+test_queue_pending_count_all_pending() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    printf 'a.go\nb.go\nc.go\n' > "$tmpdir/all.txt"
+    touch "$tmpdir/explored.txt"
+
     local result
-    result=$(queue_pending_count "$FIXTURES/queue_with_pending.json")
-    assert_eq "queue with 1 pending item returns 1" "1" "$result"
+    result=$(queue_pending_count "$tmpdir/all.txt" "$tmpdir/explored.txt")
+    assert_eq "all files pending returns 3" "3" "$result"
+
+    rm -rf "$tmpdir"
 }
 
-test_queue_pending_count_empty() {
+test_queue_pending_count_some_explored() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    printf 'a.go\nb.go\nc.go\n' > "$tmpdir/all.txt"
+    printf 'a.go\n' > "$tmpdir/explored.txt"
+
     local result
-    result=$(queue_pending_count "$FIXTURES/queue_empty.json")
-    assert_eq "empty queue returns 0" "0" "$result"
+    result=$(queue_pending_count "$tmpdir/all.txt" "$tmpdir/explored.txt")
+    assert_eq "1 explored, 2 pending" "2" "$result"
+
+    rm -rf "$tmpdir"
 }
 
-test_queue_pending_count_missing_file() {
+test_queue_pending_count_all_explored() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    printf 'a.go\nb.go\n' > "$tmpdir/all.txt"
+    printf 'a.go\nb.go\n' > "$tmpdir/explored.txt"
+
     local result
-    result=$(queue_pending_count "/nonexistent/file.json")
-    assert_eq "missing file returns 0" "0" "$result"
+    result=$(queue_pending_count "$tmpdir/all.txt" "$tmpdir/explored.txt")
+    assert_eq "all explored returns 0" "0" "$result"
+
+    rm -rf "$tmpdir"
 }
 
-test_queue_pending_count_with_items
-test_queue_pending_count_empty
-test_queue_pending_count_missing_file
+test_queue_pending_count_missing_all_file() {
+    local result
+    result=$(queue_pending_count "/nonexistent/all.txt" "/nonexistent/explored.txt")
+    assert_eq "missing all file returns 0" "0" "$result"
+}
+
+test_queue_pending_count_missing_explored_file() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    printf 'a.go\nb.go\n' > "$tmpdir/all.txt"
+
+    local result
+    result=$(queue_pending_count "$tmpdir/all.txt" "$tmpdir/nonexistent.txt")
+    assert_eq "missing explored file means all pending" "2" "$result"
+
+    rm -rf "$tmpdir"
+}
+
+test_queue_pending_count_all_pending
+test_queue_pending_count_some_explored
+test_queue_pending_count_all_explored
+test_queue_pending_count_missing_all_file
+test_queue_pending_count_missing_explored_file
 
 # ============================================================
 # is_budget_exhausted tests
@@ -141,35 +192,59 @@ echo ""
 echo "--- is_budget_exhausted ---"
 
 test_budget_not_exhausted() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    printf 'a.go\n' > "$tmpdir/explored.txt"  # 1 explored
+
     local rc=0
-    is_budget_exhausted "$FIXTURES/stats_under_budget.json" "$FIXTURES/scope.json" || rc=$?
+    is_budget_exhausted "$tmpdir/explored.txt" "$FIXTURES/scope.json" 2 || rc=$?
     assert_exit_code "under budget returns 1 (false)" 1 $rc
+
+    rm -rf "$tmpdir"
 }
 
 test_budget_exhausted_by_nodes() {
-    # stats_over_budget has total_nodes_explored=5, scope max_nodes=5
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    # scope.json has max_nodes=5, write 5 lines
+    printf 'a.go\nb.go\nc.go\nd.go\ne.go\n' > "$tmpdir/explored.txt"
+
     local rc=0
-    is_budget_exhausted "$FIXTURES/stats_over_budget.json" "$FIXTURES/scope.json" || rc=$?
+    is_budget_exhausted "$tmpdir/explored.txt" "$FIXTURES/scope.json" 2 || rc=$?
     assert_exit_code "at max_nodes returns 0 (true)" 0 $rc
+
+    rm -rf "$tmpdir"
 }
 
 test_budget_exhausted_by_iterations() {
-    # stats_over_budget has last_iteration=10, scope max_iterations=10
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    printf 'a.go\n' > "$tmpdir/explored.txt"  # under max_nodes
+
+    # scope.json has max_iterations=10
     local rc=0
-    is_budget_exhausted "$FIXTURES/stats_over_budget.json" "$FIXTURES/scope.json" || rc=$?
+    is_budget_exhausted "$tmpdir/explored.txt" "$FIXTURES/scope.json" 10 || rc=$?
     assert_exit_code "at max_iterations returns 0 (true)" 0 $rc
+
+    rm -rf "$tmpdir"
 }
 
-test_budget_missing_files() {
+test_budget_missing_scope() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    touch "$tmpdir/explored.txt"
+
     local rc=0
-    is_budget_exhausted "/nonexistent" "/nonexistent2" || rc=$?
-    assert_exit_code "missing files returns 1 (false / not exhausted)" 1 $rc
+    is_budget_exhausted "$tmpdir/explored.txt" "/nonexistent/scope.json" 1 || rc=$?
+    assert_exit_code "missing scope returns 1 (false / not exhausted)" 1 $rc
+
+    rm -rf "$tmpdir"
 }
 
 test_budget_not_exhausted
 test_budget_exhausted_by_nodes
 test_budget_exhausted_by_iterations
-test_budget_missing_files
+test_budget_missing_scope
 
 # ============================================================
 # sanitize_node_name tests
@@ -206,429 +281,6 @@ test_sanitize_simple_path
 test_sanitize_deep_path
 test_sanitize_single_file
 test_sanitize_dots_in_path
-
-# ============================================================
-# detect_completion tests
-# ============================================================
-
-echo ""
-echo "--- detect_completion ---"
-
-test_detect_map_complete() {
-    local result
-    result=$(detect_completion "All nodes explored. <promise>MAP_COMPLETE</promise>")
-    local rc=$?
-    assert_exit_code "MAP_COMPLETE returns 0" 0 $rc
-    assert_eq "MAP_COMPLETE signal detected" "MAP_COMPLETE" "$result"
-}
-
-test_detect_budget_reached() {
-    local result
-    result=$(detect_completion "Budget limit. <promise>BUDGET_REACHED</promise>")
-    local rc=$?
-    assert_exit_code "BUDGET_REACHED returns 0" 0 $rc
-    assert_eq "BUDGET_REACHED signal detected" "BUDGET_REACHED" "$result"
-}
-
-test_detect_context_full() {
-    local result
-    result=$(detect_completion "Context heavy. <promise>CONTEXT_FULL</promise>")
-    local rc=$?
-    assert_exit_code "CONTEXT_FULL returns 0" 0 $rc
-    assert_eq "CONTEXT_FULL signal detected" "CONTEXT_FULL" "$result"
-}
-
-test_detect_no_signal() {
-    local rc=0
-    detect_completion "Just normal output with no signals" >/dev/null 2>&1 || rc=$?
-    assert_exit_code "no signal returns 1" 1 $rc
-}
-
-test_detect_from_file() {
-    local tmpfile
-    tmpfile=$(mktemp)
-    echo "Explored 3 nodes. <promise>MAP_COMPLETE</promise>" > "$tmpfile"
-    local result
-    result=$(detect_completion "$tmpfile")
-    local rc=$?
-    rm -f "$tmpfile"
-    assert_exit_code "file input returns 0" 0 $rc
-    assert_eq "detects signal from file" "MAP_COMPLETE" "$result"
-}
-
-test_detect_map_complete
-test_detect_budget_reached
-test_detect_context_full
-test_detect_no_signal
-test_detect_from_file
-
-# ============================================================
-# init_exploration tests
-# ============================================================
-
-echo ""
-echo "--- init_exploration ---"
-
-test_init_creates_structure() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-
-    init_exploration "$tmpdir" "src/main.go"
-
-    assert_dir_exists "creates nodes dir" "$tmpdir/nodes"
-    assert_dir_exists "creates edges dir" "$tmpdir/edges"
-    assert_file_exists "creates queue.json" "$tmpdir/queue.json"
-    assert_file_exists "creates index.json" "$tmpdir/index.json"
-    assert_file_exists "creates stats.json" "$tmpdir/stats.json"
-    assert_file_exists "creates findings.md" "$tmpdir/findings.md"
-
-    rm -rf "$tmpdir"
-}
-
-test_init_seeds_valid_json() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-
-    init_exploration "$tmpdir" "src/main.go"
-
-    assert_json_valid "queue.json is valid JSON" "$tmpdir/queue.json"
-    assert_json_valid "index.json is valid JSON" "$tmpdir/index.json"
-    assert_json_valid "stats.json is valid JSON" "$tmpdir/stats.json"
-
-    rm -rf "$tmpdir"
-}
-
-test_init_queue_has_seed() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-
-    init_exploration "$tmpdir" "src/main.go"
-
-    local has_seed
-    has_seed=$(grep -c 'src/main.go' "$tmpdir/queue.json")
-    assert_eq "queue.json contains seed" "1" "$has_seed"
-
-    local pending_count
-    pending_count=$(queue_pending_count "$tmpdir/queue.json")
-    assert_eq "queue has 1 pending item" "1" "$pending_count"
-
-    rm -rf "$tmpdir"
-}
-
-test_init_stats_zeroed() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-
-    init_exploration "$tmpdir" "src/main.go"
-
-    local explored
-    explored=$(grep -o '"total_nodes_explored":[[:space:]]*[0-9]*' "$tmpdir/stats.json" | grep -o '[0-9]*$')
-    assert_eq "stats starts with 0 explored" "0" "$explored"
-
-    rm -rf "$tmpdir"
-}
-
-test_init_multiple_seeds() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-
-    init_exploration "$tmpdir" "a.mjs" "b.mjs" "c.mjs"
-
-    local pending_count
-    pending_count=$(queue_pending_count "$tmpdir/queue.json")
-    assert_eq "multiple seeds: queue has 3 pending items" "3" "$pending_count"
-
-    assert_json_valid "multiple seeds: queue.json is valid JSON" "$tmpdir/queue.json"
-
-    local discovered
-    discovered=$(grep -o '"total_nodes_discovered":[[:space:]]*[0-9]*' "$tmpdir/stats.json" | grep -o '[0-9]*$')
-    assert_eq "multiple seeds: stats counts all seeds" "3" "$discovered"
-
-    rm -rf "$tmpdir"
-}
-
-test_init_creates_structure
-test_init_seeds_valid_json
-test_init_queue_has_seed
-test_init_stats_zeroed
-test_init_multiple_seeds
-
-# ============================================================
-# discover_boundaries tests
-# ============================================================
-
-echo ""
-echo "--- discover_boundaries ---"
-
-test_discover_finds_siblings() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/src/report" "$tmpdir/src/graph-utl" "$tmpdir/src/utl" "$tmpdir/src/validate"
-
-    local result
-    result=$(discover_boundaries "src/report/**" "$tmpdir")
-    local count
-    count=$(echo "$result" | grep -c '.' || true)
-    assert_eq "finds sibling dirs" "3" "$count"
-
-    rm -rf "$tmpdir"
-}
-
-test_discover_excludes_scope_dir() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/src/report" "$tmpdir/src/graph-utl" "$tmpdir/src/utl"
-
-    local result
-    result=$(discover_boundaries "src/report/**" "$tmpdir")
-    local has_report
-    has_report=$(echo "$result" | grep -c 'src/report$' || true)
-    assert_eq "excludes scope dir from output" "0" "$has_report"
-
-    rm -rf "$tmpdir"
-}
-
-test_discover_no_siblings() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/src/report"
-
-    local result
-    result=$(discover_boundaries "src/report/**" "$tmpdir")
-    assert_eq "no siblings returns empty" "" "$result"
-
-    rm -rf "$tmpdir"
-}
-
-test_discover_missing_parent() {
-    local result
-    result=$(discover_boundaries "nonexistent/path/**" "/tmp/nowhere_$$")
-    assert_eq "missing parent returns empty" "" "$result"
-}
-
-test_discover_finds_siblings
-test_discover_excludes_scope_dir
-test_discover_no_siblings
-test_discover_missing_parent
-
-# ============================================================
-# detect_ignore_patterns tests
-# ============================================================
-
-echo ""
-echo "--- detect_ignore_patterns ---"
-
-test_ignore_js() {
-    local result
-    result=$(detect_ignore_patterns "foo.mjs")
-    local has_node_modules
-    has_node_modules=$(echo "$result" | grep -c 'node_modules' || true)
-    assert_eq "JS extension includes node_modules" "1" "$has_node_modules"
-}
-
-test_ignore_go() {
-    local result
-    result=$(detect_ignore_patterns "foo.go")
-    local has_test
-    has_test=$(echo "$result" | grep -c '_test.go' || true)
-    assert_eq "Go extension includes _test.go" "1" "$has_test"
-}
-
-test_ignore_unknown() {
-    local result
-    result=$(detect_ignore_patterns "foo.rs")
-    local has_vendor
-    has_vendor=$(echo "$result" | grep -c 'vendor' || true)
-    assert_eq "unknown extension includes vendor" "1" "$has_vendor"
-}
-
-test_ignore_js
-test_ignore_go
-test_ignore_unknown
-
-# ============================================================
-# complete_scope tests
-# ============================================================
-
-echo ""
-echo "--- complete_scope ---"
-
-test_complete_scope_writes_valid_json() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/project/src/report" "$tmpdir/project/src/graph-utl" "$tmpdir/project/src/utl"
-
-    cat > "$tmpdir/scope.json" << 'EOF'
-{
-  "seed": ["src/report/index.mjs", "src/report/dot/index.mjs"],
-  "boundaries": {
-    "explore_within": ["src/report/**"]
-  }
-}
-EOF
-
-    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
-    assert_json_valid "complete_scope writes valid JSON" "$tmpdir/scope.json"
-
-    rm -rf "$tmpdir"
-}
-
-test_complete_scope_preserves_seed() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/project/src/report"
-
-    cat > "$tmpdir/scope.json" << 'EOF'
-{
-  "seed": ["src/report/index.mjs"],
-  "boundaries": {
-    "explore_within": ["src/report/**"]
-  }
-}
-EOF
-
-    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
-    local has_seed
-    has_seed=$(grep -c 'src/report/index.mjs' "$tmpdir/scope.json")
-    assert_eq "preserves seed in output" "1" "$has_seed"
-
-    rm -rf "$tmpdir"
-}
-
-test_complete_scope_adds_boundaries() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/project/src/report" "$tmpdir/project/src/graph-utl" "$tmpdir/project/src/utl"
-
-    cat > "$tmpdir/scope.json" << 'EOF'
-{
-  "seed": ["src/report/index.mjs"],
-  "boundaries": {
-    "explore_within": ["src/report/**"]
-  }
-}
-EOF
-
-    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
-    local has_graphutl
-    has_graphutl=$(grep -c 'graph-utl' "$tmpdir/scope.json")
-    assert_eq "adds discovered boundary (graph-utl)" "1" "$has_graphutl"
-
-    local has_utl
-    has_utl=$(grep -c '"src/utl"' "$tmpdir/scope.json")
-    assert_eq "adds discovered boundary (utl)" "1" "$has_utl"
-
-    rm -rf "$tmpdir"
-}
-
-test_complete_scope_fills_budget() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/project/src/report"
-
-    cat > "$tmpdir/scope.json" << 'EOF'
-{
-  "seed": "src/report/index.mjs",
-  "boundaries": {
-    "explore_within": ["src/report/**"]
-  }
-}
-EOF
-
-    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
-    local has_max_iter
-    has_max_iter=$(grep -c '"max_iterations"' "$tmpdir/scope.json")
-    assert_eq "fills max_iterations default" "1" "$has_max_iter"
-
-    local has_max_nodes
-    has_max_nodes=$(grep -c '"max_nodes"' "$tmpdir/scope.json")
-    assert_eq "fills max_nodes default" "1" "$has_max_nodes"
-
-    rm -rf "$tmpdir"
-}
-
-test_complete_scope_string_seed() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/project/src/report"
-
-    cat > "$tmpdir/scope.json" << 'EOF'
-{
-  "seed": "src/report/index.mjs",
-  "boundaries": {
-    "explore_within": ["src/report/**"]
-  }
-}
-EOF
-
-    complete_scope "$tmpdir/scope.json" "$tmpdir/project"
-    assert_json_valid "string seed produces valid JSON" "$tmpdir/scope.json"
-
-    local has_seed
-    has_seed=$(grep -c 'src/report/index.mjs' "$tmpdir/scope.json")
-    assert_eq "string seed is preserved" "1" "$has_seed"
-
-    rm -rf "$tmpdir"
-}
-
-test_complete_scope_writes_valid_json
-test_complete_scope_preserves_seed
-test_complete_scope_adds_boundaries
-test_complete_scope_fills_budget
-test_complete_scope_string_seed
-
-# ============================================================
-# --init integration test
-# ============================================================
-
-echo ""
-echo "--- --init integration ---"
-
-test_init_mode_integration() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    mkdir -p "$tmpdir/project/src/report" "$tmpdir/project/src/utl" "$tmpdir/project/src/lib"
-
-    # Create minimal scope.json
-    local edir="$tmpdir/exploration"
-    mkdir -p "$edir"
-
-    cat > "$edir/scope.json" << 'EOF'
-{
-  "seed": ["src/report/index.mjs", "src/report/dot/index.mjs"],
-  "boundaries": {
-    "explore_within": ["src/report/**"]
-  }
-}
-EOF
-
-    # Run complete_scope + init_exploration (simulating --init logic)
-    complete_scope "$edir/scope.json" "$tmpdir/project"
-
-    # Extract seeds from the seed line
-    local seeds=()
-    while IFS= read -r s; do
-        [ -n "$s" ] && seeds+=("$s")
-    done < <(grep '"seed"' "$edir/scope.json" | grep -o '"[^"]*"' | grep -v '"seed"' | tr -d '"')
-
-    init_exploration "$edir" "${seeds[@]}"
-
-    assert_json_valid "--init: scope.json is valid" "$edir/scope.json"
-    assert_json_valid "--init: queue.json is valid" "$edir/queue.json"
-    assert_file_exists "--init: stats.json exists" "$edir/stats.json"
-
-    local pending
-    pending=$(queue_pending_count "$edir/queue.json")
-    assert_eq "--init: queue has all seeds" "2" "$pending"
-
-    local has_boundary
-    has_boundary=$(grep -c 'boundary_packages' "$edir/scope.json")
-    assert_eq "--init: scope has boundary_packages" "1" "$has_boundary"
-
-    rm -rf "$tmpdir"
-}
-
-test_init_mode_integration
 
 # ============================================================
 # discover_scope_files tests
@@ -719,6 +371,271 @@ EOF
 test_discover_scope_files_finds_mjs
 test_discover_scope_files_excludes_ignored
 test_discover_scope_files_empty_dir
+
+# ============================================================
+# --init: creates queue files
+# ============================================================
+
+echo ""
+echo "--- --init integration ---"
+
+test_init_creates_queue_files() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/project/src/report/sub"
+    touch "$tmpdir/project/src/report/index.mjs"
+    touch "$tmpdir/project/src/report/foo.mjs"
+    touch "$tmpdir/project/src/report/sub/bar.mjs"
+
+    local edir="$tmpdir/exploration"
+    mkdir -p "$edir"
+
+    cat > "$edir/scope.json" << 'EOF'
+{
+  "seed": "src/report/index.mjs",
+  "boundaries": {
+    "explore_within": ["src/report/**"],
+    "boundary_packages": ["src/utl"],
+    "ignore": ["**/*.md"]
+  },
+  "budget": {
+    "max_iterations": 10,
+    "max_nodes": 50
+  }
+}
+EOF
+
+    # Override paths and run --init logic inline (simulating)
+    local SCOPE_FILE="$edir/scope.json"
+    local QUEUE_ALL="$edir/queue_all.txt"
+    local QUEUE_EXPLORED="$edir/queue_explored.txt"
+    local INDEX_FILE="$edir/index.json"
+    local FINDINGS_FILE="$edir/findings.md"
+    local NODES_DIR="$edir/nodes"
+    local EDGES_DIR="$edir/edges"
+    local PROJECT_ROOT="$tmpdir/project"
+
+    # Run the init logic (same as --init block in explore.sh)
+    rm -rf "$NODES_DIR" "$EDGES_DIR"
+    rm -f "$QUEUE_ALL" "$QUEUE_EXPLORED" "$INDEX_FILE" "$FINDINGS_FILE"
+
+    discover_scope_files "$SCOPE_FILE" "$PROJECT_ROOT" > "$QUEUE_ALL"
+    touch "$QUEUE_EXPLORED"
+    echo '{}' > "$INDEX_FILE"
+    mkdir -p "$NODES_DIR" "$EDGES_DIR"
+
+    assert_file_exists "queue_all.txt exists" "$QUEUE_ALL"
+    assert_file_exists "queue_explored.txt exists" "$QUEUE_EXPLORED"
+    assert_file_exists "index.json exists" "$INDEX_FILE"
+    assert_dir_exists "nodes/ dir exists" "$NODES_DIR"
+    assert_dir_exists "edges/ dir exists" "$EDGES_DIR"
+
+    local all_count
+    all_count=$(wc -l < "$QUEUE_ALL" | tr -d ' ')
+    assert_eq "queue_all.txt has 3 files" "3" "$all_count"
+
+    local explored_count
+    explored_count=$(wc -l < "$QUEUE_EXPLORED" | tr -d ' ')
+    assert_eq "queue_explored.txt is empty" "0" "$explored_count"
+
+    assert_json_valid "index.json is valid JSON" "$INDEX_FILE"
+
+    rm -rf "$tmpdir"
+}
+
+test_init_creates_queue_files
+
+# ============================================================
+# --init: validates complete scope
+# ============================================================
+
+echo ""
+echo "--- --init scope validation ---"
+
+test_init_validates_complete_scope() {
+    # Test that missing fields are detected
+    # We test the validation logic directly (grepping for fields)
+
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    # Missing boundary_packages
+    cat > "$tmpdir/scope_incomplete.json" << 'EOF'
+{
+  "seed": "src/main.go",
+  "boundaries": {
+    "explore_within": ["src/**"],
+    "ignore": []
+  },
+  "budget": {
+    "max_iterations": 10,
+    "max_nodes": 50
+  }
+}
+EOF
+
+    local missing=""
+    grep -q '"seed"' "$tmpdir/scope_incomplete.json" || missing="$missing seed"
+    grep -q '"explore_within"' "$tmpdir/scope_incomplete.json" || missing="$missing explore_within"
+    grep -q '"boundary_packages"' "$tmpdir/scope_incomplete.json" || missing="$missing boundary_packages"
+    grep -q '"ignore"' "$tmpdir/scope_incomplete.json" || missing="$missing ignore"
+    grep -q '"budget"' "$tmpdir/scope_incomplete.json" || missing="$missing budget"
+
+    assert_eq "detects missing boundary_packages" " boundary_packages" "$missing"
+
+    # Complete scope — no missing fields
+    cat > "$tmpdir/scope_complete.json" << 'EOF'
+{
+  "seed": "src/main.go",
+  "boundaries": {
+    "explore_within": ["src/**"],
+    "boundary_packages": ["lib/auth"],
+    "ignore": ["**/*.md"]
+  },
+  "budget": {
+    "max_iterations": 10,
+    "max_nodes": 50
+  }
+}
+EOF
+
+    missing=""
+    grep -q '"seed"' "$tmpdir/scope_complete.json" || missing="$missing seed"
+    grep -q '"explore_within"' "$tmpdir/scope_complete.json" || missing="$missing explore_within"
+    grep -q '"boundary_packages"' "$tmpdir/scope_complete.json" || missing="$missing boundary_packages"
+    grep -q '"ignore"' "$tmpdir/scope_complete.json" || missing="$missing ignore"
+    grep -q '"budget"' "$tmpdir/scope_complete.json" || missing="$missing budget"
+
+    assert_eq "complete scope has no missing fields" "" "$missing"
+
+    rm -rf "$tmpdir"
+}
+
+test_init_validates_complete_scope
+
+# ============================================================
+# Batch explored detection
+# ============================================================
+
+echo ""
+echo "--- batch explored detection ---"
+
+test_batch_explored_detection() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+    mkdir -p "$tmpdir/nodes"
+    touch "$tmpdir/explored.txt"
+
+    # Simulate: batch has 3 files, only 2 got node output
+    local batch
+    batch=$(printf 'src/a.go\nsrc/b.go\nsrc/c.go\n')
+
+    # Create node files for a and c (but not b)
+    echo '{}' > "$tmpdir/nodes/src__a.go.json"
+    echo '{}' > "$tmpdir/nodes/src__c.go.json"
+
+    # Run the detection logic
+    while IFS= read -r file; do
+        [ -z "$file" ] && continue
+        local sanitized
+        sanitized=$(sanitize_node_name "$file")
+        if [ -f "$tmpdir/nodes/${sanitized}.json" ]; then
+            echo "$file" >> "$tmpdir/explored.txt"
+        fi
+    done <<< "$batch"
+
+    local explored_count
+    explored_count=$(wc -l < "$tmpdir/explored.txt" | tr -d ' ')
+    assert_eq "only files with node output marked explored" "2" "$explored_count"
+
+    # Verify b.go is NOT in explored
+    local has_b
+    has_b=$(grep -c 'src/b.go' "$tmpdir/explored.txt" || true)
+    assert_eq "b.go not in explored" "0" "$has_b"
+
+    # Verify a.go and c.go ARE in explored
+    local has_a has_c
+    has_a=$(grep -c 'src/a.go' "$tmpdir/explored.txt" || true)
+    has_c=$(grep -c 'src/c.go' "$tmpdir/explored.txt" || true)
+    assert_eq "a.go in explored" "1" "$has_a"
+    assert_eq "c.go in explored" "1" "$has_c"
+
+    rm -rf "$tmpdir"
+}
+
+test_batch_explored_detection
+
+# ============================================================
+# Pending computation with comm
+# ============================================================
+
+echo ""
+echo "--- pending computation ---"
+
+test_pending_computation() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    printf 'a.go\nb.go\nc.go\nd.go\ne.go\n' > "$tmpdir/all.txt"
+    printf 'b.go\nd.go\n' > "$tmpdir/explored.txt"
+
+    local pending
+    pending=$(comm -23 <(sort "$tmpdir/all.txt") <(sort "$tmpdir/explored.txt"))
+
+    local count
+    count=$(echo "$pending" | wc -l | tr -d ' ')
+    assert_eq "pending count is 3" "3" "$count"
+
+    # Verify exact pending set
+    local has_a has_c has_e
+    has_a=$(echo "$pending" | grep -c '^a\.go$' || true)
+    has_c=$(echo "$pending" | grep -c '^c\.go$' || true)
+    has_e=$(echo "$pending" | grep -c '^e\.go$' || true)
+    assert_eq "a.go is pending" "1" "$has_a"
+    assert_eq "c.go is pending" "1" "$has_c"
+    assert_eq "e.go is pending" "1" "$has_e"
+
+    # Verify explored files NOT in pending
+    local has_b has_d
+    has_b=$(echo "$pending" | grep -c '^b\.go$' || true)
+    has_d=$(echo "$pending" | grep -c '^d\.go$' || true)
+    assert_eq "b.go not pending" "0" "$has_b"
+    assert_eq "d.go not pending" "0" "$has_d"
+
+    rm -rf "$tmpdir"
+}
+
+test_pending_computation_empty_explored() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    printf 'a.go\nb.go\n' > "$tmpdir/all.txt"
+    touch "$tmpdir/explored.txt"
+
+    local count
+    count=$(comm -23 <(sort "$tmpdir/all.txt") <(sort "$tmpdir/explored.txt") | wc -l | tr -d ' ')
+    assert_eq "empty explored means all pending" "2" "$count"
+
+    rm -rf "$tmpdir"
+}
+
+test_pending_computation_all_explored() {
+    local tmpdir
+    tmpdir=$(mktemp -d)
+
+    printf 'a.go\nb.go\n' > "$tmpdir/all.txt"
+    printf 'a.go\nb.go\n' > "$tmpdir/explored.txt"
+
+    local count
+    count=$(comm -23 <(sort "$tmpdir/all.txt") <(sort "$tmpdir/explored.txt") | wc -l | tr -d ' ')
+    assert_eq "all explored means 0 pending" "0" "$count"
+
+    rm -rf "$tmpdir"
+}
+
+test_pending_computation
+test_pending_computation_empty_explored
+test_pending_computation_all_explored
 
 # ============================================================
 # Summary

@@ -1,0 +1,11 @@
+{
+  "path": "tg-digest/internal/summarizer/service_test.go",
+  "type": "test",
+  "summary": "Comprehensive unit tests for Service covering summarization logic, queue processing, API errors, and local model configuration",
+  "exports": [],
+  "imports": ["context", "fmt", "path/filepath", "strings", "testing", "time", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require", "tg-digest/internal/storage"],
+  "imported_by": [],
+  "side_effects": ["creates temporary SQLite databases for testing", "tests API mock failures and error propagation"],
+  "config_deps": ["setupTestStore", "seedSingleMessage", "seedMultipleMessages", "mockClient", "countingMockClient"],
+  "notes": "Test suite validates: single message summarization, short message copy-verbatim behavior, 150-char threshold, API error handling, queue processing with time windows (today/yesterday), channel filtering, local model prompt preamble injection, and persistence to storage layer."
+}

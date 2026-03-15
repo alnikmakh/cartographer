@@ -1,0 +1,80 @@
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m                  CARTOGRAPHER LOOP STARTING                   [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;34mProvider:[0m       claude (claude)
+[0;34mMax iterations:[0m 3
+[0;34mScope:[0m          9 files, 9 pending
+[0;34mLog:[0m            /home/dev/test_run/cartographer/logs/cartographer_session_20260315_180205.log
+
+[0;36mScript-driven loop: compute pending → batch to agent → check output → repeat[0m
+[1;33mPress Ctrl+C to stop[0m
+
+
+[0;35m════════════════════ ITERATION 1 / 3 ════════════════════[0m
+[0;34m[2026-03-15 18:02:05][0m
+  Pending: 9 files, batch: 3
+
+Done mapping. Explored 3 files:
+
+| File | Summary |
+|------|---------|
+| **ollama.go** | HTTP client for Ollama API with chat completion, health checks, and model listing. Exports `OllamaClient`, `NewOllamaClient`. Reuses `openRouterRequest/Response` types from openrouter.go. |
+| **ollama_test.go** | 13 test cases covering ChatCompletion, HealthCheck, ListModels, HasModel with mocked HTTP servers. Error scenarios: connection refused, model not found, empty choices, invalid JSON, context timeout. |
+| **openrouter.go** | HTTP client for OpenRouter API plus shared request/response type definitions. Exports `OpenRouterClient`, 5 message/choice types. Creates Authorization header with API key. |
+
+All node/edge files written to `cartographer/exploration/`, index updated.
+[0;32mIteration 1: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 2 / 3 ════════════════════[0m
+[0;34m[2026-03-15 18:03:00][0m
+  Pending: 6 files, batch: 3
+
+Done! I've explored all three files and created the cartographic output:
+
+**openrouter_test.go** — Test suite with 6 functions testing the OpenRouter API client via httptest mocks. Covers: successful responses, auth errors, empty responses, network failures, invalid JSON, and context cancellation.
+
+**prompt.go** — Core prompt builder. Exports `BuildSingleMessagePrompt` which constructs system/user prompts for summarization. Imports `storage.Message` from boundary. Used by `service.go`.
+
+**prompt_test.go** — 3 tests validating prompt construction across different channels, source types ("telegram", "rss"), and edge cases (empty text validation).
+
+**Files written:**
+- 3 node files (`nodes/`)
+- 3 edge files (`edges/`)
+- Updated `index.json` with all entries
+[0;32mIteration 2: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 3 / 3 ════════════════════[0m
+[0;34m[2026-03-15 18:03:42][0m
+  Pending: 3 files, batch: 3
+
+## Exploration Complete
+
+I've mapped all three summarizer files. Here's the cartography:
+
+### Summary
+
+| File | Type | Purpose |
+|------|------|---------|
+| **summarizer.go** | source | Package root: Client interface + ChatRequest/ChatMessage/result types |
+| **service.go** | source | Service orchestrator: manages queue processing, calls Client interface, persists to storage |
+| **service_test.go** | test | 16 test cases covering single messages, queue processing, API errors, time windows, local model config |
+
+### Architecture
+- `summarizer.go` defines the **Client interface** (abstraction for Ollama/OpenRouter implementations)
+- `service.go` orchestrates via a 150-char threshold: short messages copy verbatim, long ones go to LLM
+- Two queue strategies: all messages or filtered by channel IDs
+- Time window: today + yesterday UTC
+- Queue stops on first API error (records partial progress)
+
+All node, edge, and index files written. Index now contains 9 files (6 previously explored + 3 new).
+[0;32mIteration 3: 3/3 files explored[0m
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m              CARTOGRAPHER LOOP FINISHED                       [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+  Files explored:   9 / 9
+  Output:           cartographer/exploration/
+

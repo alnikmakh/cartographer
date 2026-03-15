@@ -1,9 +1,0 @@
-{
-  "seed": "src/main.go",
-  "started": "2026-03-07",
-  "total_nodes_discovered": 3,
-  "total_nodes_explored": 1,
-  "total_edges": 4,
-  "last_iteration": 2,
-  "coverage_pct": 33.3
-}

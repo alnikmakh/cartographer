@@ -1,0 +1,4 @@
+[
+  {"to": "tg-digest/internal/summarizer/service.go", "relationship": "tests", "usage": "tests Service type and its methods (SummarizeMessage, SummarizeUnsummarized, SummarizeUnsummarizedForChannels)"},
+  {"to": "tg-digest/internal/storage", "relationship": "imports", "usage": "boundary — uses Store, Channel, Message, MessageSummary types for testing"}
+]

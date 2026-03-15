@@ -1,0 +1,12 @@
+Done! I've explored all three files and created the cartographic output:
+
+**openrouter_test.go** — Test suite with 6 functions testing the OpenRouter API client via httptest mocks. Covers: successful responses, auth errors, empty responses, network failures, invalid JSON, and context cancellation.
+
+**prompt.go** — Core prompt builder. Exports `BuildSingleMessagePrompt` which constructs system/user prompts for summarization. Imports `storage.Message` from boundary. Used by `service.go`.
+
+**prompt_test.go** — 3 tests validating prompt construction across different channels, source types ("telegram", "rss"), and edge cases (empty text validation).
+
+**Files written:**
+- 3 node files (`nodes/`)
+- 3 edge files (`edges/`)
+- Updated `index.json` with all entries

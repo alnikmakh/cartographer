@@ -1,0 +1,4 @@
+[
+  {"to": "tg-digest/internal/summarizer/ollama.go", "relationship": "tests", "usage": "Tests OllamaClient type and its methods"},
+  {"to": "tg-digest/internal/summarizer/summarizer.go", "relationship": "imports", "usage": "Uses ChatRequest and ChatMessage types"}
+]

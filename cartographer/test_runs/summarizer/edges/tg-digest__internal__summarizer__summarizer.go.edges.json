@@ -1,0 +1,5 @@
+[
+  {"to": "tg-digest/internal/summarizer/service.go", "relationship": "imported_by", "usage": "Service uses Client interface and result types"},
+  {"to": "tg-digest/internal/summarizer/ollama.go", "relationship": "imported_by", "usage": "implements Client interface"},
+  {"to": "tg-digest/internal/summarizer/openrouter.go", "relationship": "imported_by", "usage": "implements Client interface"}
+]

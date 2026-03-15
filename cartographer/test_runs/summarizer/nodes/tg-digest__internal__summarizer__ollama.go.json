@@ -1,0 +1,10 @@
+{
+  "path": "tg-digest/internal/summarizer/ollama.go",
+  "type": "source",
+  "summary": "HTTP client for Ollama API with chat completion, health checks, and model listing",
+  "exports": ["OllamaClient", "NewOllamaClient"],
+  "imports": ["bytes", "context", "encoding/json", "fmt", "io", "net/http", "strings", "time"],
+  "side_effects": ["Makes HTTP requests to external Ollama API endpoint", "Creates HTTP client with configurable timeout"],
+  "config_deps": ["baseURL (string)", "timeout (time.Duration)"],
+  "notes": "Implements OpenAI-compatible chat endpoint for Ollama. Uses openRouterRequest/Response types from openrouter.go. Methods: ChatCompletion, HealthCheck, ListModels, HasModel. Helper: isConnectionError for user-friendly error messages."
+}

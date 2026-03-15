@@ -1,0 +1,11 @@
+{
+  "path": "tg-digest/internal/summarizer/openrouter_test.go",
+  "type": "test",
+  "summary": "Unit tests for OpenRouter API client covering chat completion, error handling, network failures, and context cancellation",
+  "exports": [],
+  "imports": ["context", "encoding/json", "io", "net/http", "net/http/httptest", "testing", "time", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require"],
+  "imported_by": [],
+  "side_effects": ["creates test HTTP servers", "runs assertions"],
+  "config_deps": [],
+  "notes": "Test suite uses httptest to mock API responses. Tests cover: successful completion, authentication errors, empty responses, network errors, invalid JSON, and context cancellation. Tests verify HTTP method, headers, and request body format."
+}
