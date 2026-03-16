@@ -1,0 +1,37 @@
+{
+  "path": "internal/refresh/refresh.go",
+  "type": "source",
+  "summary": "Core refresh orchestrator with Service struct managing fetch→store pipeline",
+  "exports": [
+    "FetchedMessage",
+    "RefreshResult",
+    "Fetcher",
+    "Service",
+    "NewService",
+    "RefreshAll",
+    "RefreshFiltered",
+    "RefreshSources",
+    "RefreshAllSources"
+  ],
+  "imports": [
+    "context",
+    "fmt",
+    "hash/crc32",
+    "strconv",
+    "time",
+    "tg-digest/internal/source",
+    "tg-digest/internal/storage"
+  ],
+  "imported_by": [
+    "tg-digest/cmd/digest/main.go",
+    "tg-digest/internal/tui/types.go",
+    "tg-digest/internal/tui/app_test.go"
+  ],
+  "side_effects": [
+    "calls storage.Store methods to fetch channels and messages",
+    "calls Fetcher interface to fetch messages from sources",
+    "updates sync state checkpoints for incremental sync"
+  ],
+  "config_deps": [],
+  "notes": "Central orchestrator matching hints. Service struct with 4 refresh methods. Implements two fetch strategies: (1) Direct Telegram via Fetcher interface with afterMsgID-based incremental sync, (2) Generic Source interface with checkpoint-based sync (RFC/RSS/HackerNews). Both strategies: fetch→dedup via UNIQUE constraint→store→update checkpoint. FetchedMessage and RefreshResult are key value types. Heavy storage coupling (Channels, Messages, SyncState collections)."
+}

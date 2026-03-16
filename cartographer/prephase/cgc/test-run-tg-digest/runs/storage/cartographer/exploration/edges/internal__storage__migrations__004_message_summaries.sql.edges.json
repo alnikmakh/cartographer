@@ -1,0 +1,3 @@
+[
+  {"to": "internal/storage/migrations.go", "relationship": "executed_by", "usage": "runMigrations runner invokes all migrations in sequence"}
+]

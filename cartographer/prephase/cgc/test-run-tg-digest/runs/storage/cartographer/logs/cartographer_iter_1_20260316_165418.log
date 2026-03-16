@@ -1,0 +1,29 @@
+## Cartography Complete
+
+I've explored all three storage repository files and created complete node and edge documentation:
+
+### Files Explored
+
+1. **internal/storage/channels.go**
+   - Implements `ChannelRepository` interface
+   - Methods: Create, CreateNonTelegram, GetByID, GetByTelegramID, GetByUsername, List, Delete
+   - Handles nullable telegram_id column using sql.NullInt64
+
+2. **internal/storage/message_summaries.go**
+   - Implements `MessageSummaryRepository` interface
+   - Methods: Create (upsert via ON CONFLICT), GetByMessageID, GetByChannelAndDate, GetUnsummarizedMessages, GetUnsummarizedMessagesByChannels
+   - **Notable**: JOINs with messages table; uses dynamic SQL construction for channel filtering
+
+3. **internal/storage/messages.go**
+   - Implements `MessageRepository` interface
+   - Methods: Create (with deduplication), GetByChannelAndDate, GetLatestByChannel, GetDistinctDates, CountByChannel
+   - **Notable**: ON CONFLICT clause prevents duplicates via (channel_id, telegram_msg_id); SUBSTR used for date extraction
+
+### Key Architectural Observations
+
+- All three repos are instantiated in `storage.go`'s `Open()` function
+- Each implements its interface (ChannelRepository, MessageRepository, MessageSummaryRepository) defined in storage.go
+- **Coupling point**: message_summaries.go returns Message objects and JOINs with messages table
+- All support context-based cancellation and time-based filtering
+
+All output files written to `nodes/` and `edges/` directories with index.json updated.

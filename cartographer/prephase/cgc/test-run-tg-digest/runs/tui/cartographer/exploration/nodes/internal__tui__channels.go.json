@@ -1,0 +1,33 @@
+{
+  "path": "internal/tui/channels.go",
+  "type": "source",
+  "summary": "Bubble Tea sub-model for the Sources view: channel list navigation, delete confirmation, and three-step add-source wizard (type → name → url)",
+  "exports": [
+    "channelsModel",
+    "newChannelsModel",
+    "sourceTypeOptions"
+  ],
+  "imports": [
+    "fmt",
+    "strings",
+    "github.com/charmbracelet/bubbles/key",
+    "github.com/charmbracelet/bubbletea"
+  ],
+  "imported_by": [
+    "internal/tui/app.go",
+    "internal/tui/channels_test.go"
+  ],
+  "side_effects": [
+    "Implements Bubble Tea sub-model (Update, View)",
+    "Manages channel list state: cursor position, delete confirmation flag",
+    "Implements three-step add-source wizard with text input buffering",
+    "Renders source badges with type identifiers (TG, RSS, RD, HN)"
+  ],
+  "config_deps": [
+    "keys (keyMap from keys.go) — Up, Down, Delete, Add, Confirm, Cancel",
+    "titleStyle, helpDescStyle, sourceTypeBadgeStyle, selectedStyle, unselectedStyle, messageCountStyle, channelNameStyle (from styles.go)",
+    "sourceTypeBadge helper function (from dashboard.go, same package)",
+    "addStep type and constants (from types.go)"
+  ],
+  "notes": "channelsModel implements the Sources tab of the TUI. 7 functions: constructor, Update with three message types (channelsLoadedMsg, channelDeletedMsg, KeyMsg), three handlers for different modes (handleNormalKey, handleConfirmKey, handleAddKey), View, renderAddView. sourceTypeOptions = [telegram, rss, reddit, hackernews]. Add wizard collects sourceType, name (username), and url (varies: channel handle for TG, feed URL for RSS, subreddit for Reddit, feed type for HN). View shows channel list with badges and 'Added' dates, delete confirmation prompt."
+}

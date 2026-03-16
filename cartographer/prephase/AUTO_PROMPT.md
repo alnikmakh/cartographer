@@ -92,13 +92,7 @@ one file at a time. Cartographer needs a `scope.json`:
   "seed": "path/to/entry-point.ts",
   "boundaries": {
     "explore_within": ["path/to/package/**"],
-    "boundary_packages": ["path/to/neighbor", "..."],
-    "ignore": ["**/*.test.ts", "**/*.md"]
-  },
-  "budget": {
-    "max_iterations": 20,
-    "max_nodes": 60,
-    "max_depth_from_seed": 5
+    "boundary_packages": ["path/to/neighbor", "..."]
   },
   "hints": [
     "Observations about patterns to watch for during exploration"
@@ -106,28 +100,18 @@ one file at a time. Cartographer needs a `scope.json`:
 }
 ```
 
-## Budget Sizing
-
-Use this table to set budget values based on file count:
-
-| File count | max_nodes | max_iterations | max_depth_from_seed |
-|---|---|---|---|
-| 1-10 | count + 2 | ceil(count/3) + 2 | 3 |
-| 11-30 | count + 5 | ceil(count/3) + 3 | 5 |
-| 31-60 | count + 10 | ceil(count/3) + 5 | 6 |
-| 61-100 | count + 15 | ceil(count/3) + 7 | 7 |
-| 100+ | count + 20 | ceil(count/3) + 10 | 8 |
+Do NOT add a `budget` field. The exploration script computes its own
+iteration limits from the file count at runtime.
 
 ## Your Process
 
 1. Read the repomix structural output provided to you
 2. Apply the cluster detection method to identify all natural slices
 3. For each slice, determine:
-   - Name, thesis, seed, explore_within, boundary_packages, ignore
-   - Budget (using the sizing table above)
+   - Name, thesis, seed, explore_within, boundary_packages
    - Hints about coupling and patterns
 4. Validate file counts by running `find` on proposed explore_within
-   globs (exclude ignore patterns)
+   globs
 5. Write `cartographer/prephase/slices.json` with all slices
    (status: "proposed")
 6. Write individual scope files to
@@ -157,7 +141,6 @@ For each slice, print:
 **Boundaries:** <package list>
 **Hints:** <observations>
 **File count:** <N>
-**Budget:** max_nodes=<N>, max_iterations=<N>, max_depth=<N>
 ```
 
 Then print the execution order as a numbered list.

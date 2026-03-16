@@ -1,0 +1,15 @@
+{
+  "path": "internal/storage/migrations/004_message_summaries.sql",
+  "type": "schema_migration",
+  "summary": "Schema migration: creates per-message summaries table and drops legacy daily summaries",
+  "exports": [],
+  "imports": [],
+  "imported_by": ["internal/storage/migrations.go"],
+  "side_effects": [
+    "Creates message_summaries table with foreign key to messages",
+    "Adds index idx_message_summaries_message_id",
+    "Drops legacy summaries table"
+  ],
+  "config_deps": [],
+  "notes": "Migration 004 restructures the summaries model from daily aggregates to per-message summaries. Enables finer-grained summary storage and CASCADE deletion when messages are removed. The UNIQUE constraint on message_id ensures one summary per message."
+}

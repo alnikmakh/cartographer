@@ -1,0 +1,11 @@
+Done! I've explored all three files and written the complete mapping:
+
+**Summary:**
+
+1. **internal/refresh/refresh.go** — Core orchestrator with Service struct managing the fetch→store pipeline. Implements two strategies: direct Telegram fetch via Fetcher interface, and generic Source interface (RSS/Reddit/HackerNews). Heavy storage coupling with checkpoint-based incremental sync.
+
+2. **internal/refresh/refresh_test.go** — Comprehensive test suite covering RefreshAll and RefreshAllSources paths with mocks and integration tests. Tests deduplication, checkpoint behavior, and error continuation.
+
+3. **internal/refresh/telegram.go** — TelegramFetcher adapter wrapping the gotd/td Telegram API client. Implements the Fetcher interface and handles username resolution, message extraction, and MinID-based incremental sync.
+
+All node files, edges files, and index entries have been created in the exploration directory.

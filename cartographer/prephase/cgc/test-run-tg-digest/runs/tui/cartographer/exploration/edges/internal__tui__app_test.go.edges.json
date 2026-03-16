@@ -1,0 +1,7 @@
+[
+  {"to": "internal/tui/app.go", "relationship": "tests", "usage": "tests all major methods: NewApp, Init, Update (all message types), View, key handling"},
+  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "message types, view IDs, service interfaces (RefreshService, SummarizeService), SourceFilter"},
+  {"to": "internal/storage", "relationship": "imports", "usage": "boundary — setupTestStore creates temporary database, seedTestData inserts test data"},
+  {"to": "internal/refresh", "relationship": "imports", "usage": "RefreshResult type for mock responses"},
+  {"to": "internal/summarizer", "relationship": "imports", "usage": "SummarizeQueueResult type for mock responses"}
+]

@@ -1,0 +1,5 @@
+[
+  {"to": "internal/source/hackernews/hn.go", "relationship": "tests", "usage": "tests HNSource methods via mock server"},
+  {"to": "internal/source", "relationship": "imports", "usage": "source.Source interface for compile-time assertion"},
+  {"to": "net/http/httptest", "relationship": "external", "usage": "mock HTTP server for testing API calls"}
+]

@@ -1,0 +1,5 @@
+[
+  {"to": "fmt", "relationship": "imports", "usage": "string formatting in FilterLabel"},
+  {"to": "internal/tui/types.go", "relationship": "uses", "usage": "ChannelItem type in MatchingChannelIDs and MatchingSourceNames"},
+  {"to": "internal/tui/styles.go", "relationship": "calls", "usage": "sourceTypeBadge() function in FilterLabel for type badges"}
+]

@@ -1,0 +1,18 @@
+{
+  "seed": "internal/storage/storage.go",
+  "boundaries": {
+    "explore_within": ["internal/storage/**"],
+    "boundary_packages": []
+  },
+  "budget": {
+    "max_iterations": 4,
+    "max_nodes": 8,
+    "max_depth_from_seed": 3
+  },
+  "hints": [
+    "storage.go defines core types (Channel, Message, MessageSummary, SyncState) and the sqliteStore struct — start here",
+    "channels.go, messages.go, message_summaries.go, syncstate.go are repository implementations that embed/reference sqliteStore",
+    "migrations.go is called from storage.go during initialization",
+    "This is the most-depended-upon package (7 packages, 62+ inbound calls) — understanding its interface is prerequisite for all other slices"
+  ]
+}

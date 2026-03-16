@@ -1,0 +1,26 @@
+✓ Exploration complete.
+
+## Summary
+
+I've explored the three TUI configuration and type-definition files:
+
+**1. internal/tui/keys.go** — Configuration
+- Defines 18 key bindings (keyMap struct, keys variable)
+- Covers navigation, view switching, operations (Refresh/Summarize/Filter/Add/Delete/ExpandAll/CollapseAll)
+- Used by: app.go, channels.go, dashboard.go, filter_overlay.go, help.go
+
+**2. internal/tui/styles.go** — Configuration  
+- Defines 24 style rules + 5 base colors using lipgloss
+- Covers title/status bars, tabs, cards, lists, overlays, checkboxes, error/loading states
+- Used by: app.go, channels.go, dashboard.go, filter_overlay.go, help.go
+
+**3. internal/tui/types.go** — Message & Service Definitions
+- 14 Bubble Tea message types (data loads, control signals, operations)
+- Display models: SummaryItem, ChannelItem
+- Service interfaces: SummarizeService, RefreshService (abstract internal/summarizer and internal/refresh)
+- Used by: all TUI models + tests
+
+Outputs written:
+- 3 node files (with exports, imports, config deps, detailed notes)
+- 3 edge files (relationship maps to consumers and boundary modules)
+- index.json updated with all three entries

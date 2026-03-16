@@ -1,0 +1,8 @@
+[
+  {"to": "internal/storage/migrations.go", "relationship": "imports", "usage": "runMigrations() called during Open() initialization"},
+  {"to": "internal/storage/channels.go", "relationship": "delegates_to", "usage": "channelRepo implements ChannelRepository interface"},
+  {"to": "internal/storage/messages.go", "relationship": "delegates_to", "usage": "messageRepo implements MessageRepository interface"},
+  {"to": "internal/storage/message_summaries.go", "relationship": "delegates_to", "usage": "messageSummaryRepo implements MessageSummaryRepository interface"},
+  {"to": "internal/storage/syncstate.go", "relationship": "delegates_to", "usage": "syncStateRepo implements SyncStateRepository interface"},
+  {"to": "modernc.org/sqlite", "relationship": "imports", "usage": "SQLite driver initialization"}
+]

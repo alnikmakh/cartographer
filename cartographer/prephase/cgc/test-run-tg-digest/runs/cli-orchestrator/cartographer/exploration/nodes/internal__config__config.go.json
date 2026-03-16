@@ -1,0 +1,36 @@
+{
+  "path": "internal/config/config.go",
+  "type": "source",
+  "summary": "Configuration data structures and loader: defines Config + 6 sub-config types (Telegram, Storage, OpenRouter, Refresh, LLM, Source), Load() function with defaults/validation, and path expansion utility",
+  "exports": [
+    "Config",
+    "TelegramConfig",
+    "StorageConfig",
+    "OpenRouterConfig",
+    "RefreshConfig",
+    "LLMConfig",
+    "SourceConfig",
+    "Load",
+    "validate",
+    "expandPath"
+  ],
+  "imports": [
+    "fmt",
+    "os",
+    "path/filepath",
+    "strings",
+    "gopkg.in/yaml.v3"
+  ],
+  "imported_by": [
+    "cmd/digest/main.go",
+    "cmd/digest/main_test.go"
+  ],
+  "side_effects": [
+    "Reads YAML config file from disk via os.ReadFile()",
+    "Expands ~ in file paths to user home directory"
+  ],
+  "config_deps": [
+    "None — this file defines the config system, not consumed by it"
+  ],
+  "notes": "Central config data hub. Defines 7 exported types: Config wraps all sub-configs. Load() applies defaults for OpenRouter (model=anthropic/claude-3-haiku, base_url), LLM (default timeouts: 120s for Ollama, 30s for OpenRouter), Refresh (default interval_minutes=30). Backward-compat migration: if LLM.Provider empty but OpenRouter.APIKey set, migrates to new LLM config format. Validation checks required fields per provider (e.g., openrouter_api_key required for OpenRouter). SourceConfig supports type='telegram|rss|reddit|hackernews' with type-specific required fields (url for rss, subreddit for reddit, feed for hackernews)."
+}

@@ -1,0 +1,15 @@
+{
+  "path": "internal/storage/migrations/003_nullable_telegram_id.sql",
+  "type": "schema_migration",
+  "summary": "Schema migration: makes telegram_id nullable for non-Telegram sources via table recreation",
+  "exports": [],
+  "imports": [],
+  "imported_by": ["internal/storage/migrations.go"],
+  "side_effects": [
+    "Recreates channels table with nullable telegram_id",
+    "Migrates existing data preserving id and values",
+    "Adds unique index only on non-null telegram_ids"
+  ],
+  "config_deps": [],
+  "notes": "Migration 003 handles schema evolution for multi-source support. Uses table recreation pattern since SQLite lacks ALTER COLUMN. Conditional unique index idx_channels_telegram_id ensures Telegram channels remain unique while allowing non-Telegram sources to have null telegram_id."
+}

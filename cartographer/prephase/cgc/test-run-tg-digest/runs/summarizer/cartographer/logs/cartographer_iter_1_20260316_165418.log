@@ -1,0 +1,34 @@
+## Summary
+
+I've completed exploration of the three files:
+
+### **1. internal/summarizer/ollama.go**
+- **OllamaClient**: HTTP client for local Ollama API (chat completion, health check, model listing)
+- **Exports**: OllamaClient type, NewOllamaClient constructor
+- **Methods**: ChatCompletion (implements Client interface), HealthCheck, ListModels, HasModel
+- **Key detail**: Reuses openRouterRequest/Response types from openrouter.go for JSON marshaling
+- **No auth**: Unlike OpenRouter, doesn't use Authorization headers
+
+### **2. internal/summarizer/ollama_test.go**
+- **12 test functions** covering:
+  - Chat completion with mock server
+  - Health check (success and failure)
+  - Model listing and lookup
+  - Error cases: connection refused, model not found, empty choices, invalid JSON, context timeout
+- **Key detail**: Verifies no Authorization header (contrast with OpenRouter)
+
+### **3. internal/summarizer/openrouter.go**
+- **OpenRouterClient**: HTTP client for OpenRouter API
+- **Type definitions** (used by both clients):
+  - openRouterRequest, openRouterMessage
+  - openRouterResponse, openRouterChoice, openRouterChoiceMessage
+- **ChatCompletion method**: Implements Client interface, includes Bearer token auth
+- **Architecture note**: Message types are shared between both implementations via struct mapping
+
+**Key relationships documented**:
+- Both implement the `Client` interface from summarizer.go
+- Message types defined in openrouter.go are reused by ollama.go
+- service.go uses either client interchangeably
+- Ollama is local (no auth), OpenRouter is cloud-based (needs API key)
+
+All node, edge, and index files have been written to the exploration directory.

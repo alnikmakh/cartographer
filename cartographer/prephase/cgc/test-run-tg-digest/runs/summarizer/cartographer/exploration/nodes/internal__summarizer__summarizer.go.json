@@ -1,0 +1,11 @@
+{
+  "path": "internal/summarizer/summarizer.go",
+  "type": "source",
+  "summary": "Type definitions and interfaces: MessageSummarizeResult, SummarizeQueueResult, Client interface, ChatRequest, ChatMessage",
+  "exports": ["MessageSummarizeResult", "SummarizeQueueResult", "Client", "ChatRequest", "ChatMessage"],
+  "imports": ["context"],
+  "imported_by": ["internal/summarizer/service.go", "internal/summarizer/service_test.go", "internal/summarizer/ollama.go", "internal/summarizer/ollama_test.go", "internal/summarizer/openrouter.go", "internal/summarizer/openrouter_test.go", "internal/summarizer/prompt.go", "internal/summarizer/prompt_test.go"],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Matches hint: summarizer.go defines interfaces and types (ChatRequest, ChatMessage, MessageSummarizeResult, SummarizeQueueResult) — the contract. MessageSummarizeResult: returned by Service.SummarizeMessage with Summary text, Model name, Skipped flag. SummarizeQueueResult: returned by Service.SummarizeUnsummarized/ForChannels with counters (Total, Processed, Skipped, APIErrors) and LastError. Client interface: ChatCompletion(context, ChatRequest) → (string, error) — implemented by OllamaClient and OpenRouterClient. Pure type definitions, no logic or side effects."
+}

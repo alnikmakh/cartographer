@@ -1,0 +1,23 @@
+{
+  "path": "internal/tui/dashboard_test.go",
+  "type": "test",
+  "summary": "30+ comprehensive tests for dashboardModel covering date navigation, filtering, cursor/scroll behavior, expand/collapse state, text wrapping, and visual rendering",
+  "exports": [],
+  "imports": [
+    "fmt",
+    "strings",
+    "testing",
+    "time",
+    "github.com/charmbracelet/bubbletea",
+    "github.com/charmbracelet/lipgloss",
+    "github.com/stretchr/testify/assert"
+  ],
+  "imported_by": [
+    "internal/tui/app.go"
+  ],
+  "side_effects": [
+    "test suite execution"
+  ],
+  "config_deps": [],
+  "notes": "Tests dashboard.go sub-model. Coverage: 1) Date nav (◄/► key, LoadSummariesMsg generation), 2) Filtering (f-key cycle through source types: empty→telegram→rss→reddit→hackernews), 3) Cursor navigation (Up/Down clamp at bounds, reset on load), 4) Expand/collapse (Enter/l/e/c keys, state resets on load), 5) Scroll-to-cursor logic (keeps cursor visible), 6) Text wrapping with ANSI-aware width, 7) Rendering: collapsed cards show ▸, expanded show ▾, source badges, message counts. Key fixtures: makeSummaries(). Tests interactive filter overlay presence."
+}

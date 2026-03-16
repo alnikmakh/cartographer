@@ -1,0 +1,5 @@
+[
+  {"to": "internal/summarizer/prompt.go", "relationship": "imports", "usage": "line 46: calls BuildSingleMessagePrompt to construct system/user prompts; line 51: uses localModelPreamble constant"},
+  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses Client interface, ChatRequest, ChatMessage, MessageSummarizeResult, SummarizeQueueResult types"},
+  {"to": "tg-digest/internal/storage", "relationship": "boundary", "usage": "GetUnsummarizedMessages, GetUnsummarizedMessagesByChannels, Channels.GetByID, MessageSummaries.Create"}
+]

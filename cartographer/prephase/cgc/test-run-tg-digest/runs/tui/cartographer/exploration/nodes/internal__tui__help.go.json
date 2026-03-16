@@ -1,0 +1,11 @@
+{
+  "path": "internal/tui/help.go",
+  "type": "source",
+  "summary": "Bubble Tea model for help overlay view with keyboard shortcuts organized in three sections (Navigation, Dashboard, Sources)",
+  "exports": ["helpModel"],
+  "imports": ["strings", "github.com/charmbracelet/bubbles/key", "github.com/charmbracelet/bubbletea"],
+  "imported_by": ["internal/tui/app.go"],
+  "side_effects": [],
+  "config_deps": ["keys", "titleStyle", "helpKeyStyle", "helpDescStyle"],
+  "notes": "Implements tea.Model interface; helpModel is embedded in App struct. Update() handles Escape/Help key to close overlay (emits switchViewMsg). View() renders sections with key bindings from keys.go; uses three style variables from styles.go"
+}

@@ -10,11 +10,6 @@
       "tg-digest/internal/tui",
       "tg-digest/internal/telegram",
       "tg-digest/cmd"
-    ],
-    "ignore": ["**/*.md"]
-  },
-  "budget": {
-    "max_iterations": 5,
-    "max_nodes": 10
+    ]
   }
 }

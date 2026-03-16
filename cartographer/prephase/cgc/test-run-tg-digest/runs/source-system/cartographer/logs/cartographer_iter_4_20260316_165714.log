@@ -1,0 +1,14 @@
+Done! Mapped both Telegram source files.
+
+**Files explored:**
+1. **telegram.go** — TelegramSource adapter (pattern: wraps `refresh.Fetcher` boundary to implement `source.Source` interface; checkpoints are message IDs as strings)
+2. **telegram_test.go** — 6 test cases covering Type, Name, FetchMessages with various checkpoint states, error handling
+
+**Key findings:**
+- **Adapter pattern**: Converts from `refresh.FetchedMessage` → `source.SourceMessage`
+- **Checkpoint mechanism**: Telegram message ID as string; invalid/empty checkpoints parse to 0
+- **No Title field**: Telegram messages lack titles (unlike RSS/HN/Reddit)
+- **Boundary dependency**: Direct import from `internal/refresh` (Fetcher interface)
+- **No in-scope reverse dependencies**: Likely instantiated via Registry registration, not direct imports
+
+All outputs written: 2 node files, 2 edge files, index.json updated.

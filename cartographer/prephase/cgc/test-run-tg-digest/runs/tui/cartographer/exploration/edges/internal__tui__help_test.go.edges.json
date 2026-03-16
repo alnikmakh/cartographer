@@ -1,0 +1,3 @@
+[
+  {"to": "internal/tui/help.go", "relationship": "tests", "usage": "tests helpModel View and Update methods"}
+]

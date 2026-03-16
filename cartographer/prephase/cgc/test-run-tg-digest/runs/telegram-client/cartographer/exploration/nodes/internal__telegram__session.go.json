@@ -1,0 +1,11 @@
+{
+  "path": "internal/telegram/session.go",
+  "type": "source",
+  "summary": "File-based session storage implementing github.com/gotd/td/session interface for Telegram session persistence",
+  "exports": ["FileSessionStorage", "LoadSession", "StoreSession"],
+  "imports": ["context", "encoding/json", "os", "github.com/gotd/td/session"],
+  "imported_by": ["internal/telegram/client.go"],
+  "side_effects": ["file I/O operations (os.ReadFile, os.WriteFile)"],
+  "config_deps": ["FileSessionStorage.Path (file path to session storage)"],
+  "notes": "Implements session.SessionStorage interface from gotd library. Serializes/deserializes session bytes to JSON file. Key coupling: client.go instantiates FileSessionStorage with session file path. Error handling: maps os.IsNotExist to session.ErrNotFound for proper session initialization flow."
+}

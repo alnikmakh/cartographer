@@ -1,0 +1,11 @@
+{
+  "path": "internal/tui/keys.go",
+  "type": "source",
+  "summary": "Package-level keyMap struct and keys variable defining 18 key bindings for TUI navigation, view switching, and operations",
+  "exports": ["keyMap", "keys"],
+  "imports": ["github.com/charmbracelet/bubbles/key"],
+  "imported_by": ["internal/tui/app.go", "internal/tui/channels.go", "internal/tui/dashboard.go", "internal/tui/filter_overlay.go", "internal/tui/help.go"],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Core configuration for all keyboard interactions. Defines 18 key bindings: navigation (Up/Down/Left/Right), view control (Quit/Tab/Help), operations (Refresh/Summarize/Filter/Add/Delete), and expand/collapse (ExpandAll/CollapseAll). Stateless — pure key binding configuration. Each binding includes key triggers and help text (e.g., Quit maps to 'q' and 'ctrl+c', Up maps to 'up' and 'k')."
+}

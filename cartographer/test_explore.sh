@@ -185,68 +185,6 @@ test_queue_pending_count_missing_all_file
 test_queue_pending_count_missing_explored_file
 
 # ============================================================
-# is_budget_exhausted tests
-# ============================================================
-
-echo ""
-echo "--- is_budget_exhausted ---"
-
-test_budget_not_exhausted() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    printf 'a.go\n' > "$tmpdir/explored.txt"  # 1 explored
-
-    local rc=0
-    is_budget_exhausted "$tmpdir/explored.txt" "$FIXTURES/scope.json" 2 || rc=$?
-    assert_exit_code "under budget returns 1 (false)" 1 $rc
-
-    rm -rf "$tmpdir"
-}
-
-test_budget_exhausted_by_nodes() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    # scope.json has max_nodes=5, write 5 lines
-    printf 'a.go\nb.go\nc.go\nd.go\ne.go\n' > "$tmpdir/explored.txt"
-
-    local rc=0
-    is_budget_exhausted "$tmpdir/explored.txt" "$FIXTURES/scope.json" 2 || rc=$?
-    assert_exit_code "at max_nodes returns 0 (true)" 0 $rc
-
-    rm -rf "$tmpdir"
-}
-
-test_budget_exhausted_by_iterations() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    printf 'a.go\n' > "$tmpdir/explored.txt"  # under max_nodes
-
-    # scope.json has max_iterations=10
-    local rc=0
-    is_budget_exhausted "$tmpdir/explored.txt" "$FIXTURES/scope.json" 10 || rc=$?
-    assert_exit_code "at max_iterations returns 0 (true)" 0 $rc
-
-    rm -rf "$tmpdir"
-}
-
-test_budget_missing_scope() {
-    local tmpdir
-    tmpdir=$(mktemp -d)
-    touch "$tmpdir/explored.txt"
-
-    local rc=0
-    is_budget_exhausted "$tmpdir/explored.txt" "/nonexistent/scope.json" 1 || rc=$?
-    assert_exit_code "missing scope returns 1 (false / not exhausted)" 1 $rc
-
-    rm -rf "$tmpdir"
-}
-
-test_budget_not_exhausted
-test_budget_exhausted_by_nodes
-test_budget_exhausted_by_iterations
-test_budget_missing_scope
-
-# ============================================================
 # sanitize_node_name tests
 # ============================================================
 
@@ -301,8 +239,7 @@ test_discover_scope_files_finds_mjs() {
 {
   "seed": "src/report/index.mjs",
   "boundaries": {
-    "explore_within": ["src/report/**"],
-    "ignore": ["**/*.md", "**/node_modules/**"]
+    "explore_within": ["src/report/**"]
   }
 }
 EOF
@@ -315,7 +252,7 @@ EOF
     rm -rf "$tmpdir"
 }
 
-test_discover_scope_files_excludes_ignored() {
+test_discover_scope_files_includes_all_file_types() {
     local tmpdir
     tmpdir=$(mktemp -d)
     mkdir -p "$tmpdir/project/src/report"
@@ -328,8 +265,7 @@ test_discover_scope_files_excludes_ignored() {
 {
   "seed": "src/report/index.mjs",
   "boundaries": {
-    "explore_within": ["src/report/**"],
-    "ignore": ["**/*.md", "**/*.d.ts", "**/*.ts"]
+    "explore_within": ["src/report/**"]
   }
 }
 EOF
@@ -337,11 +273,11 @@ EOF
     local result count
     result=$(discover_scope_files "$tmpdir/scope.json" "$tmpdir/project")
     count=$(echo "$result" | wc -l)
-    assert_eq "excludes .md, .d.ts, .ts files" "1" "$(echo "$count" | tr -d ' ')"
+    assert_eq "includes all file types" "4" "$(echo "$count" | tr -d ' ')"
 
     local has_md
     has_md=$(echo "$result" | grep -c '\.md$' || true)
-    assert_eq "no .md in output" "0" "$has_md"
+    assert_eq "md files included" "1" "$has_md"
 
     rm -rf "$tmpdir"
 }
@@ -355,8 +291,7 @@ test_discover_scope_files_empty_dir() {
 {
   "seed": "src/report/index.mjs",
   "boundaries": {
-    "explore_within": ["src/report/**"],
-    "ignore": []
+    "explore_within": ["src/report/**"]
   }
 }
 EOF
@@ -369,7 +304,7 @@ EOF
 }
 
 test_discover_scope_files_finds_mjs
-test_discover_scope_files_excludes_ignored
+test_discover_scope_files_includes_all_file_types
 test_discover_scope_files_empty_dir
 
 # ============================================================
@@ -395,13 +330,8 @@ test_init_creates_queue_files() {
   "seed": "src/report/index.mjs",
   "boundaries": {
     "explore_within": ["src/report/**"],
-    "boundary_packages": ["src/utl"],
-    "ignore": ["**/*.md"]
+    "boundary_packages": ["src/utl"]
   },
-  "budget": {
-    "max_iterations": 10,
-    "max_nodes": 50
-  }
 }
 EOF
 
@@ -468,13 +398,8 @@ test_dry_run_prints_files() {
   "seed": "src/report/index.mjs",
   "boundaries": {
     "explore_within": ["src/report/**"],
-    "boundary_packages": ["src/util"],
-    "ignore": ["**/*.md"]
+    "boundary_packages": ["src/util"]
   },
-  "budget": {
-    "max_iterations": 10,
-    "max_nodes": 50
-  }
 }
 EOF
 
@@ -517,13 +442,8 @@ test_init_validates_complete_scope() {
 {
   "seed": "src/main.go",
   "boundaries": {
-    "explore_within": ["src/**"],
-    "ignore": []
+    "explore_within": ["src/**"]
   },
-  "budget": {
-    "max_iterations": 10,
-    "max_nodes": 50
-  }
 }
 EOF
 
@@ -531,8 +451,6 @@ EOF
     grep -q '"seed"' "$tmpdir/scope_incomplete.json" || missing="$missing seed"
     grep -q '"explore_within"' "$tmpdir/scope_incomplete.json" || missing="$missing explore_within"
     grep -q '"boundary_packages"' "$tmpdir/scope_incomplete.json" || missing="$missing boundary_packages"
-    grep -q '"ignore"' "$tmpdir/scope_incomplete.json" || missing="$missing ignore"
-    grep -q '"budget"' "$tmpdir/scope_incomplete.json" || missing="$missing budget"
 
     assert_eq "detects missing boundary_packages" " boundary_packages" "$missing"
 
@@ -542,13 +460,8 @@ EOF
   "seed": "src/main.go",
   "boundaries": {
     "explore_within": ["src/**"],
-    "boundary_packages": ["lib/auth"],
-    "ignore": ["**/*.md"]
+    "boundary_packages": ["lib/auth"]
   },
-  "budget": {
-    "max_iterations": 10,
-    "max_nodes": 50
-  }
 }
 EOF
 
@@ -556,8 +469,6 @@ EOF
     grep -q '"seed"' "$tmpdir/scope_complete.json" || missing="$missing seed"
     grep -q '"explore_within"' "$tmpdir/scope_complete.json" || missing="$missing explore_within"
     grep -q '"boundary_packages"' "$tmpdir/scope_complete.json" || missing="$missing boundary_packages"
-    grep -q '"ignore"' "$tmpdir/scope_complete.json" || missing="$missing ignore"
-    grep -q '"budget"' "$tmpdir/scope_complete.json" || missing="$missing budget"
 
     assert_eq "complete scope has no missing fields" "" "$missing"
 

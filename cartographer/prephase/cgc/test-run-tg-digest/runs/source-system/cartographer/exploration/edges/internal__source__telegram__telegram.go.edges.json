@@ -1,0 +1,12 @@
+[
+  {
+    "to": "internal/source",
+    "relationship": "imports",
+    "usage": "SourceMessage type and Source interface"
+  },
+  {
+    "to": "internal/refresh",
+    "relationship": "imports",
+    "usage": "boundary — Fetcher interface and FetchedMessage type"
+  }
+]

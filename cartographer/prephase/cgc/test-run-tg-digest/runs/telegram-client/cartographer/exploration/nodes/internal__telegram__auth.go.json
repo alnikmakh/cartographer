@@ -1,0 +1,27 @@
+{
+  "path": "internal/telegram/auth.go",
+  "type": "source",
+  "summary": "Terminal-based interactive authentication flow implementation",
+  "exports": [
+    "AuthFlow",
+    "TerminalAuth",
+    "NewTerminalAuth"
+  ],
+  "imports": [
+    "bufio",
+    "context",
+    "fmt",
+    "os",
+    "strings",
+    "github.com/gotd/td/telegram/auth",
+    "github.com/gotd/td/tg"
+  ],
+  "imported_by": [
+    "cmd/digest/main.go"
+  ],
+  "side_effects": [
+    "Interactive stdin/stdout prompts for user authentication"
+  ],
+  "config_deps": [],
+  "notes": "Implements AuthFlow interface from gotd/td. TerminalAuth prompts user for phone, 2FA password, and verification code during authentication. Supports only authentication with existing accounts (no sign-up). Used by client.Run() to authenticate with Telegram API."
+}

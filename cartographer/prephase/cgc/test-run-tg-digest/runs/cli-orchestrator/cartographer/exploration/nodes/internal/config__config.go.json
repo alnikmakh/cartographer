@@ -1,0 +1,11 @@
+{
+  "path": "internal/config/config.go",
+  "type": "source",
+  "summary": "Configuration data structures and loader: defines Config + 6 sub-config types, Load function, validation, path expansion, backward-compat migration",
+  "exports": ["Config", "TelegramConfig", "StorageConfig", "OpenRouterConfig", "RefreshConfig", "LLMConfig", "SourceConfig", "Load"],
+  "imports": ["fmt", "os", "path/filepath", "strings", "gopkg.in/yaml.v3"],
+  "imported_by": ["cmd/digest/main.go", "cmd/digest/main_test.go"],
+  "side_effects": ["Reads config file from disk", "Expands home directory paths (~/)", "Applies default values to config fields", "Validates configuration completeness and consistency"],
+  "config_deps": [],
+  "notes": "Central configuration package. Defines 6 specialized config types: TelegramConfig (API credentials, session), StorageConfig (DB path), RefreshConfig (auto-refresh settings), LLMConfig (provider: ollama/openrouter, timeouts), OpenRouterConfig (legacy/deprecated), SourceConfig (telegram/rss/reddit/hackernews metadata). Load() applies defaults: Ollama→localhost:11434, OpenRouter→openrouter.ai, timeouts based on provider (Ollama 120s, OpenRouter 30s), refresh interval defaults to 30 min. Backward-compat migration: old openrouter section → new llm section. Comprehensive validation of required fields per provider."
+}

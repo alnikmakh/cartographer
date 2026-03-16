@@ -1,0 +1,7 @@
+[
+  {
+    "to": "github.com/gotd/td/tg",
+    "relationship": "imports",
+    "usage": "boundary — provides tg.Client API methods (ContactsResolveUsername, MessagesGetHistory), tg.InputChannel, tg.InputPeerChannel, and message type classes (tg.Message, tg.MessageEmpty, tg.MessageService)"
+  }
+]

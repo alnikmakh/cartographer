@@ -1,0 +1,38 @@
+{
+  "internal/summarizer/ollama.go": {
+    "explored": true,
+    "one_line": "OllamaClient HTTP implementation of Client interface for Ollama API"
+  },
+  "internal/summarizer/ollama_test.go": {
+    "explored": true,
+    "one_line": "Test suite for OllamaClient with 12 test cases covering chat, health checks, and error handling"
+  },
+  "internal/summarizer/openrouter.go": {
+    "explored": true,
+    "one_line": "OpenRouterClient HTTP implementation of Client interface for OpenRouter API; defines shared request/response types"
+  },
+  "internal/summarizer/openrouter_test.go": {
+    "explored": true,
+    "one_line": "Test suite for OpenRouterClient with 6 test cases covering successful completions, API errors, and network failures"
+  },
+  "internal/summarizer/prompt.go": {
+    "explored": true,
+    "one_line": "Builds prompts for single-message summarization with system/user prompt templates"
+  },
+  "internal/summarizer/prompt_test.go": {
+    "explored": true,
+    "one_line": "Test suite for BuildSingleMessagePrompt covering validation, channel/source formatting, and source type handling"
+  },
+  "internal/summarizer/service.go": {
+    "explored": true,
+    "one_line": "Service orchestrates message summarization: fetches unsummarized messages, calls LLM, stores results"
+  },
+  "internal/summarizer/service_test.go": {
+    "explored": true,
+    "one_line": "Test suite for Service with 13 test cases covering single-message and queue summarization"
+  },
+  "internal/summarizer/summarizer.go": {
+    "explored": true,
+    "one_line": "Type definitions and interfaces: MessageSummarizeResult, SummarizeQueueResult, Client interface, ChatRequest, ChatMessage"
+  }
+}

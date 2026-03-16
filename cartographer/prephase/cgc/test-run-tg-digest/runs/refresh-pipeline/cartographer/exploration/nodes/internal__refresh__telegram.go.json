@@ -1,0 +1,31 @@
+{
+  "path": "internal/refresh/telegram.go",
+  "type": "source",
+  "summary": "TelegramFetcher adapter implementing Fetcher interface via gotd/td Telegram API client",
+  "exports": [
+    "TelegramFetcher",
+    "NewTelegramFetcher",
+    "FetchNewMessages",
+    "extractMessages"
+  ],
+  "imports": [
+    "context",
+    "fmt",
+    "strings",
+    "time",
+    "github.com/gotd/td/tg"
+  ],
+  "imported_by": [
+    "tg-digest/cmd/digest/main.go",
+    "tg-digest/internal/source/telegram/telegram.go"
+  ],
+  "side_effects": [
+    "calls Telegram API via gotd/td client to resolve channel usernames",
+    "calls Telegram API to fetch message history",
+    "parses Telegram message types (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages)"
+  ],
+  "config_deps": [
+    "github.com/gotd/td/tg.Client injected via NewTelegramFetcher"
+  ],
+  "notes": "Adapter matching hints (TelegramFetcher with 3 functions: NewTelegramFetcher, FetchNewMessages, extractMessages). Implements Fetcher interface defined in refresh.go. Uses gotd/td client for ContactsResolveUsername and MessagesGetHistory. Supports incremental sync via MinID parameter (afterMsgID > 0). Extracts only non-empty Message types, ignoring other message classes. Handles multiple Telegram API response types (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages)."
+}

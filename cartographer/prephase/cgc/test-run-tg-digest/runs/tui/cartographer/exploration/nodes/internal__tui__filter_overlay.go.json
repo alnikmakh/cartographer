@@ -1,0 +1,11 @@
+{
+  "path": "internal/tui/filter_overlay.go",
+  "type": "source",
+  "summary": "Bubble Tea model for interactive source filter picker overlay with checkbox list, cursor navigation, and state management",
+  "exports": ["filterOverlayModel", "filterOverlayConfirmMsg", "filterOverlayCancelMsg", "newFilterOverlayModel", "Update", "View", "buildFilter"],
+  "imports": ["fmt", "strings", "github.com/charmbracelet/bubbles/key", "github.com/charmbracelet/bubbletea", "github.com/charmbracelet/lipgloss"],
+  "imported_by": ["internal/tui/app.go", "internal/tui/dashboard.go", "internal/tui/filter_overlay_test.go"],
+  "side_effects": ["renders terminal UI with borders and styled text"],
+  "config_deps": ["keys.Down", "keys.Up", "keys.FilterPicker", "styles: titleStyle, helpDescStyle, selectedCardStyle, sourceTypeBadgeStyle, primaryColor"],
+  "notes": "Part of filtering subsystem (hint). filterOverlayModel is a Bubble Tea sub-model with sources list, selected map, and cursor position. Sends filterOverlayConfirmMsg (with constructed SourceFilter) on enter or filterOverlayCancelMsg on esc. buildFilter() converts selection to SourceFilter (all selected → empty filter meaning match-all)."
+}

@@ -1,0 +1,20 @@
+{
+  "path": "internal/summarizer/prompt_test.go",
+  "type": "test",
+  "summary": "Test suite for BuildSingleMessagePrompt with 3 test cases covering successful prompt construction, empty text error handling, and multiple source types",
+  "exports": [],
+  "imports": [
+    "strings",
+    "testing",
+    "time",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "tg-digest/internal/storage"
+  ],
+  "imported_by": [],
+  "side_effects": [
+    "Tests prompt building logic"
+  ],
+  "config_deps": [],
+  "notes": "Tests the prompt building function from prompt.go. Verifies that BuildSingleMessagePrompt correctly validates empty message text, includes channel name/source type in user prompt, and adapts to different source types (telegram, rss). Uses storage.Message test fixtures."
+}

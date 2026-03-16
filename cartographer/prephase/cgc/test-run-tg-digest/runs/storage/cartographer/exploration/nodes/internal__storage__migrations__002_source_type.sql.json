@@ -1,0 +1,15 @@
+{
+  "path": "internal/storage/migrations/002_source_type.sql",
+  "type": "sql_migration",
+  "summary": "Schema evolution: adds source_type to channels, refactors sync_state from last_msg_id to checkpoint TEXT",
+  "alterations": [
+    "ALTER TABLE channels ADD COLUMN source_type TEXT DEFAULT 'telegram'",
+    "sync_state table redesign: last_msg_id INTEGER -> checkpoint TEXT"
+  ],
+  "migration_pattern": [
+    "CREATE new table (sync_state_new with updated schema)",
+    "INSERT data with type conversion (CAST last_msg_id to TEXT)",
+    "DROP old table and RENAME new"
+  ],
+  "notes": "Second migration showing schema evolution. Adds multi-source support via source_type column. Refactors sync tracking from integer message IDs to arbitrary text checkpoints, enabling support for non-sequential source systems. Uses safe table recreation pattern to handle NOT NULL constraint on new checkpoint column."
+}

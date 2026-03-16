@@ -1,0 +1,11 @@
+[
+  {"to": "fmt", "relationship": "imports", "usage": "string formatting in View() for labels and counts"},
+  {"to": "strings", "relationship": "imports", "usage": "strings.Builder for view rendering"},
+  {"to": "github.com/charmbracelet/bubbles/key", "relationship": "imports", "usage": "key.Matches for input handling (Down, Up, space, a, n, enter, esc)"},
+  {"to": "github.com/charmbracelet/bubbletea", "relationship": "imports", "usage": "tea.Msg, tea.KeyMsg for Bubble Tea model interface"},
+  {"to": "github.com/charmbracelet/lipgloss", "relationship": "imports", "usage": "lipgloss.NewStyle() for box styling"},
+  {"to": "internal/tui/filter.go", "relationship": "imports", "usage": "SourceFilter type in filterOverlayConfirmMsg and buildFilter()"},
+  {"to": "internal/tui/types.go", "relationship": "uses", "usage": "ChannelItem type for sources list"},
+  {"to": "internal/tui/keys.go", "relationship": "uses", "usage": "keys.Down, keys.Up, keys.FilterPicker bindings"},
+  {"to": "internal/tui/styles.go", "relationship": "uses", "usage": "titleStyle, helpDescStyle, selectedCardStyle, sourceTypeBadgeStyle, primaryColor, sourceTypeBadge() function"}
+]

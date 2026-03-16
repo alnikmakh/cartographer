@@ -1,0 +1,14 @@
+Done! I've explored and documented all three files:
+
+**Outputs created:**
+
+1. **reddit_test.go** — Test suite validating RedditSource: mocked HTTP server responses, checkpoint-based filtering for incremental fetches, timestamp parsing, error handling (404, 429, malformed JSON), User-Agent requirement, and URL construction.
+
+2. **registry.go** — Core registry pattern holding Source slice with 6 methods: NewRegistry, Add (replaces by name), Remove, List, ListByType, GetByName. No external dependencies.
+
+3. **registry_test.go** — Registry test suite using mockSource test double. Tests add/list, type filtering, name lookup, remove, and duplicate-name replacement semantics.
+
+**Files written:**
+- 3 node files in `nodes/`
+- 3 edge files in `edges/`
+- Updated `index.json` with all 6 entries

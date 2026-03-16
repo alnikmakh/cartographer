@@ -1,0 +1,12 @@
+[
+  {
+    "to": "internal/source/telegram/telegram.go",
+    "relationship": "tests",
+    "usage": "tests TelegramSource type and NewTelegramSource constructor"
+  },
+  {
+    "to": "internal/refresh",
+    "relationship": "imports",
+    "usage": "boundary — FetchedMessage type for mock data"
+  }
+]

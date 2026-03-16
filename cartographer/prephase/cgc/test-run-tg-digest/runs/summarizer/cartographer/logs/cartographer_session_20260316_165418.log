@@ -1,0 +1,92 @@
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m                  CARTOGRAPHER LOOP STARTING                   [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;34mProvider:[0m       claude (claude)
+[0;34mMax iterations:[0m 6
+[0;34mScope:[0m          9 files, 9 pending
+[0;34mLog:[0m            /home/dev/project/cartographer/prephase/cgc/test-run-tg-digest/runs/summarizer/cartographer/logs/cartographer_session_20260316_165418.log
+
+[0;36mScript-driven loop: compute pending → batch to agent → check output → repeat[0m
+[1;33mPress Ctrl+C to stop[0m
+
+
+[0;35m════════════════════ ITERATION 1 / 6 ════════════════════[0m
+[0;34m[2026-03-16 16:54:18][0m
+  Pending: 9 files, batch: 3
+
+## Summary
+
+I've completed exploration of the three files:
+
+### **1. internal/summarizer/ollama.go**
+- **OllamaClient**: HTTP client for local Ollama API (chat completion, health check, model listing)
+- **Exports**: OllamaClient type, NewOllamaClient constructor
+- **Methods**: ChatCompletion (implements Client interface), HealthCheck, ListModels, HasModel
+- **Key detail**: Reuses openRouterRequest/Response types from openrouter.go for JSON marshaling
+- **No auth**: Unlike OpenRouter, doesn't use Authorization headers
+
+### **2. internal/summarizer/ollama_test.go**
+- **12 test functions** covering:
+  - Chat completion with mock server
+  - Health check (success and failure)
+  - Model listing and lookup
+  - Error cases: connection refused, model not found, empty choices, invalid JSON, context timeout
+- **Key detail**: Verifies no Authorization header (contrast with OpenRouter)
+
+### **3. internal/summarizer/openrouter.go**
+- **OpenRouterClient**: HTTP client for OpenRouter API
+- **Type definitions** (used by both clients):
+  - openRouterRequest, openRouterMessage
+  - openRouterResponse, openRouterChoice, openRouterChoiceMessage
+- **ChatCompletion method**: Implements Client interface, includes Bearer token auth
+- **Architecture note**: Message types are shared between both implementations via struct mapping
+
+**Key relationships documented**:
+- Both implement the `Client` interface from summarizer.go
+- Message types defined in openrouter.go are reused by ollama.go
+- service.go uses either client interchangeably
+- Ollama is local (no auth), OpenRouter is cloud-based (needs API key)
+
+All node, edge, and index files have been written to the exploration directory.
+[0;32mIteration 1: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 2 / 6 ════════════════════[0m
+[0;34m[2026-03-16 16:55:30][0m
+  Pending: 6 files, batch: 3
+
+✅ **Exploration complete.** I've documented all three files:
+
+**1. openrouter_test.go** — Test suite with 6 test cases for OpenRouterClient (successful completion, API errors, empty responses, network failures, invalid JSON, context cancellation). Tests verify request formatting and error handling.
+
+**2. prompt.go** — Exports `BuildSingleMessagePrompt()` function that builds LLM prompts. Defines system/user prompt templates (`singleMessageSystemPrompt`, `localModelPreamble`). Validates non-empty message text and formats user prompt with channel name and source type. Imports `storage.Message` from boundary package.
+
+**3. prompt_test.go** — Test suite with 3 test cases covering success case, empty text validation, and multiple source types (telegram, rss).
+
+All files have been added to the exploration index with node files, edge files, and updated index.json. The prompt.go/prompt_test.go pair forms a complete prompt-building component used by service.go (the seed file), while openrouter_test.go tests the OpenRouter backend client implementation (already explored).
+[0;32mIteration 2: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 3 / 6 ════════════════════[0m
+[0;34m[2026-03-16 16:56:30][0m
+  Pending: 3 files, batch: 3
+
+Exploration complete. I've documented all three files:
+
+**internal/summarizer/service.go** — The orchestration layer. Service struct with 5 public functions (NewService, SummarizeMessage, SummarizeUnsummarized, SummarizeUnsummarizedForChannels, WithLocalModel). Fetches unsummarized messages from storage, calls LLM via Client interface if message ≥150 chars, stores results. Time window: yesterday + today UTC.
+
+**internal/summarizer/service_test.go** — 13 test cases covering single-message summarization (success, short messages, API errors, storage) and queue processing (batch operations, filtering by channels, time window, error handling, local model preamble).
+
+**internal/summarizer/summarizer.go** — Pure contract definitions: MessageSummarizeResult (return from single-message calls), SummarizeQueueResult (return from queue calls), Client interface (ChatCompletion method), ChatRequest/ChatMessage types.
+
+All node and edge files written to `cartographer/exploration/nodes/` and `edges/`, and index.json updated.
+[0;32mIteration 3: 3/3 files explored[0m
+[0;32mAll files explored. Done.[0m
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m              CARTOGRAPHER LOOP FINISHED                       [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+  Files explored:   9 / 9
+  Output:           cartographer/exploration/
+

@@ -1,0 +1,19 @@
+{
+  "path": "internal/source/source.go",
+  "type": "source",
+  "summary": "Defines Source interface and SourceMessage type - the common abstraction for all content sources",
+  "exports": ["Source", "SourceMessage"],
+  "imports": ["context", "time"],
+  "imported_by": [
+    "internal/source/rss/rss.go",
+    "internal/source/rss/rss_test.go",
+    "internal/source/hackernews/hn.go",
+    "internal/source/hackernews/hn_test.go",
+    "internal/source/reddit/reddit.go",
+    "internal/source/reddit/reddit_test.go",
+    "internal/source/telegram/telegram.go"
+  ],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Core abstraction for the source package. Source interface defines: Type() string, Name() string, FetchMessages(ctx context.Context, checkpoint string, limit int) ([]SourceMessage, string, error). SourceMessage is the canonical data model with ExternalID, Text, Title, URL, Author, Timestamp. All source implementations (rss, hackernews, reddit, telegram) follow this contract."
+}

@@ -1,0 +1,53 @@
+{
+  "path": "cmd/digest/main.go",
+  "type": "source",
+  "summary": "Application entry point and orchestrator: handles CLI flags, config loading, Telegram client setup, message fetching/storage, TUI launch, and LLM-based summarization with adapter wrappers for service integration",
+  "exports": [
+    "main",
+    "buildLLMClient",
+    "storeChannel",
+    "storeMessages",
+    "updateSyncState",
+    "ensureSourceChannel",
+    "registryRefreshAdapter",
+    "summarizeServiceAdapter"
+  ],
+  "imports": [
+    "context",
+    "flag",
+    "fmt",
+    "log",
+    "os",
+    "os/signal",
+    "strconv",
+    "time",
+    "github.com/charmbracelet/bubbletea",
+    "github.com/gotd/td/tg",
+    "tg-digest/internal/config",
+    "tg-digest/internal/refresh",
+    "tg-digest/internal/source",
+    "tg-digest/internal/source/hackernews",
+    "tg-digest/internal/source/reddit",
+    "tg-digest/internal/source/rss",
+    "tg-digest/internal/source/telegram",
+    "tg-digest/internal/storage",
+    "tg-digest/internal/summarizer",
+    "tg-digest/internal/telegram",
+    "tg-digest/internal/tui"
+  ],
+  "imported_by": [],
+  "side_effects": [
+    "Parses CLI flags (config, channel, limit, debug, summarize, tui)",
+    "Loads config file via config.Load()",
+    "Opens database connection via storage.Open()",
+    "Instantiates Telegram client and authenticates via telegram.NewClient()",
+    "Launches TUI app with tea.NewProgram()",
+    "Fetches and stores Telegram messages",
+    "Calls LLM summarization on unsummarized messages"
+  ],
+  "config_deps": [
+    "Uses config.Load() to load Config struct",
+    "Depends on all sub-config types: TelegramConfig, StorageConfig, OpenRouterConfig, RefreshConfig, LLMConfig, SourceConfig"
+  ],
+  "notes": "Highest fan-out file (10 boundary packages). Classic orchestrator/wiring pattern. Two custom adapter types (registryRefreshAdapter, summarizeServiceAdapter) bridge boundary packages to TUI interfaces. buildLLMClient(ctx, cfg.LLM) is the central point for LLM provider setup (Ollama vs OpenRouter). Dual-mode: CLI-only fetch or interactive TUI with refresh/summarization."
+}

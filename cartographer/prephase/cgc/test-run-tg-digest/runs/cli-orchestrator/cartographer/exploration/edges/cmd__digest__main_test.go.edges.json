@@ -1,0 +1,22 @@
+[
+  {
+    "to": "cmd/digest/main.go",
+    "relationship": "tests",
+    "usage": "Tests buildLLMClient() function from same package"
+  },
+  {
+    "to": "tg-digest/internal/config",
+    "relationship": "imports",
+    "usage": "Uses config.LLMConfig struct to set up test cases"
+  },
+  {
+    "to": "github.com/stretchr/testify/assert",
+    "relationship": "imports",
+    "usage": "external — assert helpers for test assertions"
+  },
+  {
+    "to": "github.com/stretchr/testify/require",
+    "relationship": "imports",
+    "usage": "external — require helpers for test assertions"
+  }
+]

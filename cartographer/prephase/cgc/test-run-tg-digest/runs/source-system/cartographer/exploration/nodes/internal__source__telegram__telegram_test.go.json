@@ -1,0 +1,19 @@
+{
+  "path": "internal/source/telegram/telegram_test.go",
+  "type": "test",
+  "summary": "Test suite for TelegramSource covering Type, Name, FetchMessages with checkpoints, empty results, errors, and invalid checkpoints",
+  "exports": [],
+  "imports": [
+    "context",
+    "fmt",
+    "testing",
+    "time",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "tg-digest/internal/refresh"
+  ],
+  "imported_by": [],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Test double mockFetcher implements refresh.Fetcher interface. Six test cases: Type(), Name(), FetchMessages with empty checkpoint (verifies afterMsgID=0), FetchMessages with checkpoint='100' (verifies parsing and passing to fetcher), FetchMessages with no results (checkpoint unchanged), error handling from fetcher, invalid checkpoint handling (parses to 0). Verifies all parameters passed to fetcher.FetchNewMessages and output SourceMessage fields including empty Title field."
+}

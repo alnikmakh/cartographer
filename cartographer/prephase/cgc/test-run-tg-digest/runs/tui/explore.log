@@ -1,0 +1,179 @@
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m                  CARTOGRAPHER LOOP STARTING                   [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;34mProvider:[0m       claude (claude)
+[0;34mMax iterations:[0m 10
+[0;34mScope:[0m          15 files, 15 pending
+[0;34mLog:[0m            /home/dev/project/cartographer/prephase/cgc/test-run-tg-digest/runs/tui/cartographer/logs/cartographer_session_20260316_165418.log
+
+[0;36mScript-driven loop: compute pending → batch to agent → check output → repeat[0m
+[1;33mPress Ctrl+C to stop[0m
+
+
+[0;35m════════════════════ ITERATION 1 / 10 ════════════════════[0m
+[0;34m[2026-03-16 16:54:18][0m
+  Pending: 15 files, batch: 3
+
+Done! I've explored all three TUI files and created the mapping:
+
+**Summary of explored files:**
+
+1. **internal/tui/app.go** — Root Bubbletea model (Init/Update/View) managing dual views (dashboard + channels), data-loading commands (load summaries, load channels, refresh, summarize, add source), and auto-refresh scheduling via optional services.
+
+2. **internal/tui/app_test.go** — 28 tests covering view switching, key bindings (quit, help, tab), error auto-clear, loading states, refresh/summarize operations with mocks, filtering, and multi-source integration with real storage fixtures.
+
+3. **internal/tui/channels.go** — Sources view sub-model implementing channel list navigation, delete confirmation, and three-step add-source wizard (type selection → name input → URL input). Renders badges for source types (TG, RSS, RD, HN).
+
+**Key architectural notes:**
+- App uses the option pattern (WithRefresh, WithSummarize) for dependency injection
+- Bidirectional message flow: app.go routes KeyMsgs to active sub-views; sub-views return specialized messages (loadSummariesMsg, deleteChannelMsg, addSourceMsg) to app
+- channels.go implements the add-source wizard with state machine (addStep tracks which prompt is active)
+- All three files depend on types.go (message types, service interfaces), keys.go (keybindings), and styles.go (UI styling)
+
+**Output files written:**
+- 3 node files in `nodes/`
+- 3 edge files in `edges/`
+- Updated `index.json` with all three files marked explored
+[0;32mIteration 1: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 2 / 10 ════════════════════[0m
+[0;34m[2026-03-16 16:55:48][0m
+  Pending: 12 files, batch: 3
+
+Done! I've completed the exploration of all three files:
+
+## Summary
+
+**channels_test.go**: 17 tests covering the channels sub-model — rendering, cursor navigation, delete confirmation flow (d→y/esc), add-source 3-step wizard (a→type→name→url), and source type badges.
+
+**dashboard.go**: Dashboard view sub-model with:
+- Date navigation (◄/► keys)
+- Expandable summary cards (Enter/l/e/c keys)
+- Filter cycling (f cycles through source types: empty→telegram→rss→reddit→hackernews)
+- Advanced filter overlay (shift+f)
+- Scroll-to-cursor logic with ANSI-aware text wrapping
+- Visual rendering: collapsed ▸/expanded ▾ arrows, source badges, message counts
+
+**dashboard_test.go**: 30+ tests covering date navigation, filtering, cursor/scroll behavior, expand/collapse state management, text wrapping in narrow terminals, and visual rendering.
+
+### Key Architectural Pattern
+Both `channels.go` and `dashboard.go` are sub-models within the root `app.go` Bubble Tea model, handling independent views with their own Update/View methods. They share the message vocabulary defined in `types.go` and styling from `styles.go`.
+
+### Files Written
+- `nodes/internal__tui__channels_test.go.json`
+- `nodes/internal__tui__dashboard.go.json`
+- `nodes/internal__tui__dashboard_test.go.json`
+- `edges/internal__tui__channels_test.go.edges.json`
+- `edges/internal__tui__dashboard.go.edges.json`
+- `edges/internal__tui__dashboard_test.go.edges.json`
+- Updated `index.json` with entries for all three files
+[0;32mIteration 2: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 3 / 10 ════════════════════[0m
+[0;34m[2026-03-16 16:56:55][0m
+  Pending: 9 files, batch: 3
+
+Completed exploration of the filtering subsystem! Here's the summary:
+
+## Files Explored
+
+### 1. **internal/tui/filter.go**
+- **Purpose**: Core data model for source filtering with type and name matching
+- **Key Exports**: `SourceFilter` struct, `Match()`, `MatchingChannelIDs()`, `MatchingSourceNames()`, `FilterLabel()`
+- **Pattern**: Zero-value filter = match-all; used to resolve UI selections to SQL queries and refresh service parameters
+- **Used by**: app.go (refresh/summarize commands), dashboard.go (filter display), filter_overlay.go (state management)
+
+### 2. **internal/tui/filter_overlay.go**
+- **Purpose**: Interactive Bubble Tea sub-model for picking sources to filter
+- **Key Exports**: `filterOverlayModel` (with Update/View), two message types (`filterOverlayConfirmMsg`, `filterOverlayCancelMsg`)
+- **Behavior**: Checkbox list with cursor nav (↑/↓), toggle (space), select-all (a), select-none (n), confirm (enter) → constructs SourceFilter
+- **Integration**: Triggered via keys.FilterPicker (F key) in dashboard; sends confirmation message up to app/dashboard handlers
+
+### 3. **internal/tui/filter_overlay_test.go**
+- **Coverage**: 9 tests covering init state, navigation, selection logic, state transitions, and filter construction
+- **Key Test**: Verifies that "all selected" → empty filter (match-all semantics)
+
+## Dependency Graph
+- **filter.go** ← (used by) app.go, dashboard.go, filter_overlay.go
+- **filter_overlay.go** ← (used by) app.go, dashboard.go
+- Both depend on styles.go (badges, colors) and keys.go (keybindings)
+
+All node/edge files written to `nodes/` and `edges/` directories. Index updated.
+[0;32mIteration 3: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 4 / 10 ════════════════════[0m
+[0;34m[2026-03-16 16:58:03][0m
+  Pending: 6 files, batch: 3
+
+Done! I've mapped all three files:
+
+## Summary
+
+**1. filter_test.go** — 13 tests for SourceFilter
+- Tests type/name matching, empty filter behavior, intersection logic
+- Uses testify assertions
+
+**2. help.go** — Help overlay Bubble Tea model (HINT MATCH: "help.go (helpModel, 3 functions)")
+- Exports: `helpModel` struct
+- Implements `tea.Model` interface (Update, View)
+- Update: handles Escape/Help keys → emits `switchViewMsg` to close
+- View: renders 3 sections (Navigation, Dashboard, Sources) with keybindings from `keys.go`
+- Dependencies: `keys`, `titleStyle`, `helpKeyStyle`, `helpDescStyle` (from styles.go)
+- Embedded in App struct (line 22, initialized in app.go:67)
+
+**3. help_test.go** — 5 tests for helpModel
+- Tests view sections, key binding labels, Escape/?-key handling
+
+### Files written:
+- `nodes/internal__tui__filter_test.go.json`
+- `nodes/internal__tui__help.go.json`
+- `nodes/internal__tui__help_test.go.json`
+- `edges/internal__tui__filter_test.go.edges.json`
+- `edges/internal__tui__help.go.edges.json`
+- `edges/internal__tui__help_test.go.edges.json`
+- Updated `index.json` with all three entries
+[0;32mIteration 4: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 5 / 10 ════════════════════[0m
+[0;34m[2026-03-16 16:59:03][0m
+  Pending: 3 files, batch: 3
+
+✓ Exploration complete.
+
+## Summary
+
+I've explored the three TUI configuration and type-definition files:
+
+**1. internal/tui/keys.go** — Configuration
+- Defines 18 key bindings (keyMap struct, keys variable)
+- Covers navigation, view switching, operations (Refresh/Summarize/Filter/Add/Delete/ExpandAll/CollapseAll)
+- Used by: app.go, channels.go, dashboard.go, filter_overlay.go, help.go
+
+**2. internal/tui/styles.go** — Configuration  
+- Defines 24 style rules + 5 base colors using lipgloss
+- Covers title/status bars, tabs, cards, lists, overlays, checkboxes, error/loading states
+- Used by: app.go, channels.go, dashboard.go, filter_overlay.go, help.go
+
+**3. internal/tui/types.go** — Message & Service Definitions
+- 14 Bubble Tea message types (data loads, control signals, operations)
+- Display models: SummaryItem, ChannelItem
+- Service interfaces: SummarizeService, RefreshService (abstract internal/summarizer and internal/refresh)
+- Used by: all TUI models + tests
+
+Outputs written:
+- 3 node files (with exports, imports, config deps, detailed notes)
+- 3 edge files (relationship maps to consumers and boundary modules)
+- index.json updated with all three entries
+[0;32mIteration 5: 3/3 files explored[0m
+[0;32mAll files explored. Done.[0m
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m              CARTOGRAPHER LOOP FINISHED                       [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+  Files explored:   15 / 15
+  Output:           cartographer/exploration/
+

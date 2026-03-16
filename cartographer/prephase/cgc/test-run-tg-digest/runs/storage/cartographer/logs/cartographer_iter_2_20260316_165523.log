@@ -1,0 +1,9 @@
+Done. All three files explored:
+
+**migrations.go** — Orchestrates embedded SQL migrations with transaction-per-file safety and idempotent tracking via a migrations table. Called by `storage.Open()` during DB initialization.
+
+**001_initial.sql** — Foundation schema: channels, messages, summaries, sync_state tables with cascade deletes and message query indexes.
+
+**002_source_type.sql** — Schema evolution: adds source_type column to channels (multi-source support) and refactors sync_state from integer last_msg_id to text checkpoint field (enabling arbitrary checkpoint semantics for different source types).
+
+All node, edge, and index files written.

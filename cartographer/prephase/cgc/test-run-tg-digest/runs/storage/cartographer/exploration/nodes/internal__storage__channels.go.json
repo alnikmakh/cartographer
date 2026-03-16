@@ -1,0 +1,28 @@
+{
+  "path": "internal/storage/channels.go",
+  "type": "source",
+  "summary": "Channel repository implementation for CRUD operations on channels",
+  "exports": [
+    "Create",
+    "CreateNonTelegram",
+    "GetByID",
+    "GetByTelegramID",
+    "GetByUsername",
+    "List",
+    "Delete",
+    "scanChannel"
+  ],
+  "imports": [
+    "context",
+    "database/sql",
+    "fmt"
+  ],
+  "imported_by": [
+    "internal/storage/storage.go"
+  ],
+  "side_effects": [
+    "Database operations (INSERT, SELECT, DELETE on channels table)"
+  ],
+  "config_deps": [],
+  "notes": "Implements ChannelRepository interface. The channelRepo struct is instantiated in storage.go's Open() function. Uses sql.NullInt64 to handle nullable telegram_id column. scanChannel is a helper for reading rows. All methods support context for cancellation."
+}

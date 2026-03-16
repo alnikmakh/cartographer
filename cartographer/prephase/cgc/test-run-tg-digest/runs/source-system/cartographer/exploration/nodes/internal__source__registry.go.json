@@ -1,0 +1,21 @@
+{
+  "path": "internal/source/registry.go",
+  "type": "source",
+  "summary": "Registry struct for managing and querying registered Source implementations by name and type",
+  "exports": [
+    "Registry",
+    "NewRegistry",
+    "Add",
+    "Remove",
+    "List",
+    "ListByType",
+    "GetByName"
+  ],
+  "imports": [],
+  "imported_by": [
+    "internal/source/registry_test.go"
+  ],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Core registry pattern for source lifecycle. Registry.Add replaces existing source with same Name(). List() returns copy for safety. ListByType filters by source.Type(). GetByName returns nil if not found. Remove uses slice reslicing. Works with Source interface abstraction."
+}

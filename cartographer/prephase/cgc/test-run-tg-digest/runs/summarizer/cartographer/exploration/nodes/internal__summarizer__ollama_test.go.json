@@ -1,0 +1,10 @@
+{
+  "path": "internal/summarizer/ollama_test.go",
+  "type": "test",
+  "summary": "Test suite for OllamaClient covering chat completion, health checks, model listing, and error handling",
+  "test_functions": ["TestOllamaClient_ChatCompletion", "TestOllamaClient_NoAuthHeader", "TestOllamaClient_ModelNotFound", "TestOllamaClient_ConnectionRefused", "TestOllamaClient_EmptyChoices", "TestOllamaClient_InvalidJSON", "TestOllamaClient_ContextTimeout", "TestOllamaClient_HealthCheck_OK", "TestOllamaClient_HealthCheck_Down", "TestOllamaClient_ListModels", "TestOllamaClient_HasModel_Found", "TestOllamaClient_HasModel_NotFound"],
+  "imports": ["context", "encoding/json", "io", "net/http", "net/http/httptest", "testing", "time", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require"],
+  "tested_subject": "OllamaClient",
+  "side_effects": ["Uses httptest.NewServer to mock HTTP responses"],
+  "notes": "Comprehensive test coverage including success cases, error cases (connection refused, model not found, empty choices, invalid JSON), and context timeouts. Tests verify no Authorization header is sent (contrast with OpenRouter)."
+}

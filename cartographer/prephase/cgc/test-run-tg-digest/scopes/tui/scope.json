@@ -1,0 +1,21 @@
+{
+  "seed": "internal/tui/app.go",
+  "boundaries": {
+    "explore_within": ["internal/tui/**"],
+    "boundary_packages": ["internal/storage", "cmd/digest"]
+  },
+  "budget": {
+    "max_iterations": 5,
+    "max_nodes": 11,
+    "max_depth_from_seed": 3
+  },
+  "hints": [
+    "app.go (App struct, 18 functions) is the central Bubbletea model — handles Init/Update/View plus commands",
+    "types.go defines all message types (15 types) — the Bubbletea message vocabulary",
+    "channels.go (channelsModel, 7 functions) and dashboard.go (dashboardModel, 6 functions) — two main views",
+    "filter.go (SourceFilter) and filter_overlay.go (filterOverlayModel) — filtering subsystem",
+    "keys.go (keyMap) and styles.go — configuration/presentation",
+    "Bidirectional coupling with cmd (tui->cmd: 4, cmd->tui: 3) — likely through adapter interfaces defined in main.go",
+    "help.go (helpModel, 3 functions) — help overlay view"
+  ]
+}

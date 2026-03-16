@@ -1,0 +1,29 @@
+[
+  {
+    "to": "internal/telegram/auth.go",
+    "relationship": "imports",
+    "usage": "AuthFlow interface parameter for Run() and authenticate() methods"
+  },
+  {
+    "to": "internal/storage",
+    "relationship": "boundary",
+    "used_exports": [],
+    "used_by": "cmd/digest/main.go passes storage.Store to related functions",
+    "notes": "Boundary package. Client works with message data but does not directly import storage."
+  },
+  {
+    "to": "github.com/gotd/td/telegram",
+    "relationship": "imports",
+    "usage": "boundary — provides telegram.Client and telegram.Options for Telegram API connection"
+  },
+  {
+    "to": "github.com/gotd/td/telegram/auth",
+    "relationship": "imports",
+    "usage": "boundary — provides auth.NewFlow and auth.SendCodeOptions for authentication"
+  },
+  {
+    "to": "github.com/gotd/td/tg",
+    "relationship": "imports",
+    "usage": "boundary — provides tg.Client for Telegram API calls"
+  }
+]

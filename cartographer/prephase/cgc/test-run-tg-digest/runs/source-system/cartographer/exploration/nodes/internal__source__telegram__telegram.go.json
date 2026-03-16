@@ -1,0 +1,20 @@
+{
+  "path": "internal/source/telegram/telegram.go",
+  "type": "source",
+  "summary": "TelegramSource adapter implementing Source interface by wrapping refresh.Fetcher with message ID-based checkpoints",
+  "exports": [
+    "TelegramSource",
+    "NewTelegramSource"
+  ],
+  "imports": [
+    "context",
+    "fmt",
+    "strconv",
+    "tg-digest/internal/refresh",
+    "tg-digest/internal/source"
+  ],
+  "imported_by": [],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Adapter pattern: wraps refresh.Fetcher to implement source.Source interface. Checkpoint is Telegram message ID stored as string. Invalid checkpoints parse to 0. Maps FetchedMessage to SourceMessage, tracks maxID for next checkpoint. No Title field in Telegram messages. Matches hint: 'source/telegram depends on refresh/telegram.go (fetcher interface)' — this file directly depends on refresh.Fetcher."
+}

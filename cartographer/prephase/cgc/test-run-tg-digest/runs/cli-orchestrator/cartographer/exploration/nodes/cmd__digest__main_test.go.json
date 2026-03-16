@@ -1,0 +1,30 @@
+{
+  "path": "cmd/digest/main_test.go",
+  "type": "test",
+  "summary": "Unit tests for buildLLMClient function: validates OpenRouter provider, Ollama provider (with health check and model verification), empty provider, and unknown provider error cases",
+  "exports": [
+    "TestBuildLLMClient_OpenRouter",
+    "TestBuildLLMClient_EmptyProvider",
+    "TestBuildLLMClient_UnknownProvider",
+    "TestBuildLLMClient_OllamaHealthy",
+    "TestBuildLLMClient_OllamaModelMissing"
+  ],
+  "imports": [
+    "context",
+    "encoding/json",
+    "net/http",
+    "net/http/httptest",
+    "testing",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "tg-digest/internal/config"
+  ],
+  "imported_by": [],
+  "side_effects": [
+    "Launches test HTTP servers (httptest.NewServer) for Ollama health check and model list endpoints"
+  ],
+  "config_deps": [
+    "Uses config.LLMConfig struct with fields: Provider, Model, OllamaURL, OpenRouterAPIKey, OpenRouterBase, TimeoutSeconds"
+  ],
+  "notes": "Tests the buildLLMClient() function exported from main.go. Uses httptest.NewServer to mock Ollama server responses for local model testing. Covers both happy paths (OpenRouter, Ollama healthy) and error paths (UnknownProvider, MissingModel)."
+}

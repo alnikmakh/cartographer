@@ -1,0 +1,5 @@
+[
+  {"to": "cmd/digest/main.go", "relationship": "imported_by", "usage": "Load configuration at startup to initialize all services"},
+  {"to": "cmd/digest/main_test.go", "relationship": "imported_by", "usage": "Test fixtures for LLMConfig"},
+  {"to": "gopkg.in/yaml.v3", "relationship": "imports", "usage": "YAML parsing and unmarshaling"}
+]

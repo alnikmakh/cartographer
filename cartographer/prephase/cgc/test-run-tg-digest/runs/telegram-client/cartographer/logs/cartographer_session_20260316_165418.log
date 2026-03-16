@@ -1,0 +1,80 @@
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m                  CARTOGRAPHER LOOP STARTING                   [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;34mProvider:[0m       claude (claude)
+[0;34mMax iterations:[0m 4
+[0;34mScope:[0m          4 files, 4 pending
+[0;34mLog:[0m            /home/dev/project/cartographer/prephase/cgc/test-run-tg-digest/runs/telegram-client/cartographer/logs/cartographer_session_20260316_165418.log
+
+[0;36mScript-driven loop: compute pending → batch to agent → check output → repeat[0m
+[1;33mPress Ctrl+C to stop[0m
+
+
+[0;35m════════════════════ ITERATION 1 / 4 ════════════════════[0m
+[0;34m[2026-03-16 16:54:18][0m
+  Pending: 4 files, batch: 3
+
+## Exploration Complete ✓
+
+I've successfully mapped all three files in the `internal/telegram` package:
+
+### Summary
+
+**1. auth.go** — Terminal-based interactive authentication
+- Exports: `AuthFlow` (interface), `TerminalAuth` (struct), `NewTerminalAuth` (constructor)
+- Implements the gotd/td `auth.UserAuthenticator` interface
+- Prompts user for phone number, 2FA password, and verification codes via stdin/stdout
+- Used by `client.go` during the authentication flow
+
+**2. client.go** — Main Telegram client wrapper (SEED FILE)
+- Exports: `Client` (struct), `NewClient` (constructor)
+- Wraps `gotd/td/telegram.Client` with session and authentication management
+- `Run()` method: handles session directory creation, authenticates with Telegram, and executes user-provided functions
+- Uses `FileSessionStorage` (session.go, boundary) for persistence
+- Config deps: `apiID`, `apiHash`, `sessionFile` 
+- Called from `cmd/digest/main.go` (lines 57, 129)
+
+**3. messages.go** — Message model and fetching operations
+- Exports: `Message` (struct: ID, Text, Timestamp), `ResolveChannel()`, `FetchMessages()`
+- `ResolveChannel()`: converts @username to `tg.InputChannel` via Telegram API
+- `FetchMessages()`: retrieves message history, filters empty/service messages
+- Handles three response types from Telegram API
+- Debug mode for detailed message filtering logs
+
+### Files Written
+- **3 node files** (one per source file)
+- **3 edge files** (dependency documentation)
+- **index.json** (updated with all three entries)
+[0;32mIteration 1: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 2 / 4 ════════════════════[0m
+[0;34m[2026-03-16 16:55:46][0m
+  Pending: 1 files, batch: 1
+
+## Exploration Complete: `internal/telegram/session.go`
+
+**Summary:**
+- **Type:** Session storage adapter
+- **Key responsibility:** Persist Telegram session data to disk using JSON serialization
+- **Interface:** Implements `session.SessionStorage` from `github.com/gotd/td/session`
+- **Usage:** Instantiated by `client.go` at line 39 with a configurable file path
+- **Side effects:** File I/O operations (reads/writes JSON)
+
+**Key architectural detail:** Maps OS "file not found" errors to `session.ErrNotFound`, which signals to the gotd library that this is a fresh session (no existing session file). This is critical for the authentication flow orchestrated in `client.go`.
+
+All outputs written:
+- ✅ Node file: `nodes/internal__telegram__session.go.json`
+- ✅ Edge file: `edges/internal__telegram__session.go.edges.json`
+- ✅ Index updated with exploration record
+[0;32mIteration 2: 1/1 files explored[0m
+[0;32mAll files explored. Done.[0m
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m              CARTOGRAPHER LOOP FINISHED                       [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+  Files explored:   4 / 4
+  Output:           cartographer/exploration/
+

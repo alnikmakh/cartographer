@@ -1,0 +1,20 @@
+Done! I've explored all three TUI files and created the mapping:
+
+**Summary of explored files:**
+
+1. **internal/tui/app.go** — Root Bubbletea model (Init/Update/View) managing dual views (dashboard + channels), data-loading commands (load summaries, load channels, refresh, summarize, add source), and auto-refresh scheduling via optional services.
+
+2. **internal/tui/app_test.go** — 28 tests covering view switching, key bindings (quit, help, tab), error auto-clear, loading states, refresh/summarize operations with mocks, filtering, and multi-source integration with real storage fixtures.
+
+3. **internal/tui/channels.go** — Sources view sub-model implementing channel list navigation, delete confirmation, and three-step add-source wizard (type selection → name input → URL input). Renders badges for source types (TG, RSS, RD, HN).
+
+**Key architectural notes:**
+- App uses the option pattern (WithRefresh, WithSummarize) for dependency injection
+- Bidirectional message flow: app.go routes KeyMsgs to active sub-views; sub-views return specialized messages (loadSummariesMsg, deleteChannelMsg, addSourceMsg) to app
+- channels.go implements the add-source wizard with state machine (addStep tracks which prompt is active)
+- All three files depend on types.go (message types, service interfaces), keys.go (keybindings), and styles.go (UI styling)
+
+**Output files written:**
+- 3 node files in `nodes/`
+- 3 edge files in `edges/`
+- Updated `index.json` with all three files marked explored

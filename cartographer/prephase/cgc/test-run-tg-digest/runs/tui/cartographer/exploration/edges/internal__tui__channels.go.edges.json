@@ -1,0 +1,8 @@
+[
+  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "ChannelItem (display-oriented channel), message types (channelsLoadedMsg, channelDeletedMsg, addSourceMsg), addStep type"},
+  {"to": "internal/tui/keys.go", "relationship": "imports", "usage": "keyMap bindings for navigation and actions (Up, Down, Delete, Add, Confirm, Cancel)"},
+  {"to": "internal/tui/styles.go", "relationship": "imports", "usage": "UI styles for title, help text, badges, selected/unselected items, message counts"},
+  {"to": "internal/tui/dashboard.go", "relationship": "imports", "usage": "sourceTypeBadge helper function (same package, no import needed)"},
+  {"to": "internal/tui/app.go", "relationship": "imported_by", "usage": "newChannelsModel instantiated in App constructor; channelsModel field in App struct"},
+  {"to": "internal/tui/channels_test.go", "relationship": "imported_by", "usage": "comprehensive test coverage for channelsModel"}
+]

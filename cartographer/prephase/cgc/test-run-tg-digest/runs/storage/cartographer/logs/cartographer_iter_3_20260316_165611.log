@@ -1,0 +1,9 @@
+Done. I've explored and mapped all three files:
+
+**Migration 003** (`internal/storage/migrations/003_nullable_telegram_id.sql`): Schema evolution that recreates the channels table to make `telegram_id` nullable, supporting multi-source compatibility. Uses conditional unique index to keep Telegram channels unique while allowing non-Telegram sources to have null `telegram_id`.
+
+**Migration 004** (`internal/storage/migrations/004_message_summaries.sql`): Restructures the summaries model from daily aggregates to per-message summaries. Creates `message_summaries` table with foreign key to `messages` and CASCADE delete behavior.
+
+**storage.go** (`internal/storage/storage.go`): Core entry point. Defines all repository interfaces (ChannelRepository, MessageRepository, MessageSummaryRepository, SyncStateRepository) and domain types (Channel, Message, MessageSummary, SyncState). The `Open()` function initializes the SQLite store and triggers migrations. Delegates to four repository implementations in sibling files. Supports dual `Create` modes in ChannelRepository to handle source_type diversity.
+
+All node files, edge files, and index entries created.

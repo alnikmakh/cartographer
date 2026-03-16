@@ -2,12 +2,6 @@
   "seed": "src/main.go",
   "boundaries": {
     "explore_within": ["src/**"],
-    "boundary_packages": ["lib/auth", "lib/db"],
-    "ignore": ["**/*_test.go", "**/vendor/**"]
-  },
-  "budget": {
-    "max_iterations": 10,
-    "max_nodes": 5,
-    "max_depth_from_seed": 3
+    "boundary_packages": ["lib/auth", "lib/db"]
   }
 }

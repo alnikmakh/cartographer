@@ -1,0 +1,18 @@
+{
+  "seed": "internal/refresh/refresh.go",
+  "boundaries": {
+    "explore_within": ["internal/refresh/**"],
+    "boundary_packages": ["internal/storage", "internal/telegram", "internal/source"]
+  },
+  "budget": {
+    "max_iterations": 3,
+    "max_nodes": 4,
+    "max_depth_from_seed": 3
+  },
+  "hints": [
+    "refresh.go has Service struct (5 functions), RefreshResult, FetchedMessage — the core orchestrator",
+    "telegram.go has TelegramFetcher (3 functions) — adapts internal/telegram.Client for the refresh pipeline",
+    "Heavy dependency on storage (17 cross-pkg calls) — manages channels, messages, and sync state",
+    "Small slice but high coupling — bridges telegram client and source system into storage"
+  ]
+}

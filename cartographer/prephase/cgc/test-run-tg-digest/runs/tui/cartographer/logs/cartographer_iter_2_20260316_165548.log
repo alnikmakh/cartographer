@@ -1,0 +1,27 @@
+Done! I've completed the exploration of all three files:
+
+## Summary
+
+**channels_test.go**: 17 tests covering the channels sub-model — rendering, cursor navigation, delete confirmation flow (d→y/esc), add-source 3-step wizard (a→type→name→url), and source type badges.
+
+**dashboard.go**: Dashboard view sub-model with:
+- Date navigation (◄/► keys)
+- Expandable summary cards (Enter/l/e/c keys)
+- Filter cycling (f cycles through source types: empty→telegram→rss→reddit→hackernews)
+- Advanced filter overlay (shift+f)
+- Scroll-to-cursor logic with ANSI-aware text wrapping
+- Visual rendering: collapsed ▸/expanded ▾ arrows, source badges, message counts
+
+**dashboard_test.go**: 30+ tests covering date navigation, filtering, cursor/scroll behavior, expand/collapse state management, text wrapping in narrow terminals, and visual rendering.
+
+### Key Architectural Pattern
+Both `channels.go` and `dashboard.go` are sub-models within the root `app.go` Bubble Tea model, handling independent views with their own Update/View methods. They share the message vocabulary defined in `types.go` and styling from `styles.go`.
+
+### Files Written
+- `nodes/internal__tui__channels_test.go.json`
+- `nodes/internal__tui__dashboard.go.json`
+- `nodes/internal__tui__dashboard_test.go.json`
+- `edges/internal__tui__channels_test.go.edges.json`
+- `edges/internal__tui__dashboard.go.edges.json`
+- `edges/internal__tui__dashboard_test.go.edges.json`
+- Updated `index.json` with entries for all three files

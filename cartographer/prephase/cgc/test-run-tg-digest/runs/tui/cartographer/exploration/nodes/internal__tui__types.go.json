@@ -1,0 +1,11 @@
+{
+  "path": "internal/tui/types.go",
+  "type": "source",
+  "summary": "Message types and service interfaces for Bubble Tea event flow; display data models (SummaryItem, ChannelItem); Summarize and Refresh service abstractions",
+  "exports": ["viewID", "SummaryItem", "ChannelItem", "SummarizeService", "RefreshService", "summariesLoadedMsg", "channelsLoadedMsg", "channelDeletedMsg", "errMsg", "switchViewMsg", "loadSummariesMsg", "loadChannelsMsg", "deleteChannelMsg", "errClearMsg", "refreshCompleteMsg", "autoRefreshTickMsg", "summarizeCompleteMsg", "addSourceMsg", "sourceAddedMsg"],
+  "imports": ["context", "time", "tg-digest/internal/refresh", "tg-digest/internal/summarizer"],
+  "imported_by": ["internal/tui/app.go", "internal/tui/channels.go", "internal/tui/dashboard.go", "internal/tui/filter_overlay.go", "internal/tui/filter.go", "internal/tui/help.go", "internal/tui/app_test.go", "internal/tui/channels_test.go", "internal/tui/dashboard_test.go", "internal/tui/filter_overlay_test.go", "internal/tui/filter_test.go", "internal/tui/help_test.go"],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Central message vocabulary for Bubble Tea event system. Constants define viewID enum (viewDashboard=0, viewChannels=1). Display models: SummaryItem (ChannelName, Summary, MessageCount, Date, SourceType), ChannelItem (ID, Title, Username, AddedAt, SourceType). Bubble Tea message types (14 total): data msgs (summariesLoadedMsg, channelsLoadedMsg, refreshCompleteMsg, summarizeCompleteMsg carry results from async operations), control msgs (switchViewMsg, loadSummariesMsg, loadChannelsMsg, deleteChannelMsg trigger operations), and operational msgs (addSourceMsg carries wizard completion, sourceAddedMsg signals success, errMsg/errClearMsg handle errors, autoRefreshTickMsg triggers periodic refresh). Service interfaces: SummarizeService (SummarizeUnsummarized, SummarizeFiltered), RefreshService (RefreshAll, RefreshFiltered) abstract calls to internal/summarizer and internal/refresh modules respectively. addStep enum defines wizard states (addStepType, addStepName, addStepURL)."
+}

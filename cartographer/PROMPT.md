@@ -13,7 +13,6 @@ files, in order. Do not skip any.
 Read `cartographer/exploration/scope.json` to learn:
 - `explore_within` — which directories are in scope
 - `boundary_packages` — neighbor packages (don't explore, just note)
-- `ignore` — skip these
 
 Read `cartographer/exploration/index.json` to see what's already done.
 

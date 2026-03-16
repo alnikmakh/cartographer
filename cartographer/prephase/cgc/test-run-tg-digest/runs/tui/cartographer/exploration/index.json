@@ -1,0 +1,62 @@
+{
+  "internal/tui/app.go": {
+    "explored": true,
+    "one_line": "Root Bubble Tea model with Init/Update/View, dual views (dashboard+channels), data-loading commands, and auto-refresh"
+  },
+  "internal/tui/app_test.go": {
+    "explored": true,
+    "one_line": "28 comprehensive tests covering view switching, key bindings, error handling, refresh/summarize operations, filtering, and multi-source integration"
+  },
+  "internal/tui/channels.go": {
+    "explored": true,
+    "one_line": "Sources view sub-model with channel list navigation, delete confirmation, and three-step add-source wizard"
+  },
+  "internal/tui/channels_test.go": {
+    "explored": true,
+    "one_line": "17 comprehensive tests for channelsModel covering rendering, cursor navigation, delete confirmation, add-source wizard flow, and source type badges"
+  },
+  "internal/tui/dashboard.go": {
+    "explored": true,
+    "one_line": "Dashboard view sub-model with date navigation (◄/►), expandable summary cards, filtering by source type, and filter overlay integration"
+  },
+  "internal/tui/dashboard_test.go": {
+    "explored": true,
+    "one_line": "30+ comprehensive tests for dashboardModel covering date navigation, filtering, cursor/scroll behavior, expand/collapse state, text wrapping, and visual rendering"
+  },
+  "internal/tui/filter.go": {
+    "explored": true,
+    "one_line": "Filter struct with type/name match logic; provides SQL query parameter helpers and UI display labels"
+  },
+  "internal/tui/filter_overlay.go": {
+    "explored": true,
+    "one_line": "Bubble Tea model for interactive source filter picker overlay with checkbox list and keyboard navigation"
+  },
+  "internal/tui/filter_overlay_test.go": {
+    "explored": true,
+    "one_line": "9 tests for filter overlay covering initialization, navigation, selection, confirm/cancel actions, and filter construction"
+  },
+  "internal/tui/filter_test.go": {
+    "explored": true,
+    "one_line": "13 tests for SourceFilter covering IsEmpty, Match, MatchingChannelIDs, MatchingSourceNames, and FilterLabel methods"
+  },
+  "internal/tui/help.go": {
+    "explored": true,
+    "one_line": "Bubble Tea model for help overlay with keyboard shortcuts organized in Navigation, Dashboard, and Sources sections"
+  },
+  "internal/tui/help_test.go": {
+    "explored": true,
+    "one_line": "5 tests for helpModel covering View rendering, key binding labels, and Update message handling"
+  },
+  "internal/tui/keys.go": {
+    "explored": true,
+    "one_line": "Package-level keyMap struct and keys variable; defines 18 key bindings for navigation, view switching, and TUI operations"
+  },
+  "internal/tui/styles.go": {
+    "explored": true,
+    "one_line": "Package-level style variables using lipgloss; defines 24 style rules and 5 base colors for all TUI component rendering"
+  },
+  "internal/tui/types.go": {
+    "explored": true,
+    "one_line": "Message types for Bubble Tea event flow; display data models (SummaryItem, ChannelItem); SummarizeService and RefreshService interfaces"
+  }
+}

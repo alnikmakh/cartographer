@@ -1,0 +1,46 @@
+{
+  "path": "internal/refresh/refresh_test.go",
+  "type": "test",
+  "summary": "Comprehensive test suite for refresh Service with mocks and integration tests",
+  "exports": [
+    "TestService_RefreshAll_Success",
+    "TestService_RefreshAll_NoChannels",
+    "TestService_RefreshAll_StoresMessages",
+    "TestService_RefreshAll_IncrementalSync",
+    "TestService_RefreshAll_UpdatesSyncState",
+    "TestService_RefreshAll_FetchErrorContinues",
+    "TestService_RefreshAll_StoresMessagesOnly",
+    "TestService_RefreshAllSources_Success",
+    "TestService_RefreshAllSources_IncrementalCheckpoint",
+    "TestService_RefreshAllSources_SourceError",
+    "TestService_RefreshAllSources_UnknownSourceSkipped",
+    "TestService_RefreshAllSources_RSSIntegration",
+    "TestService_RefreshAllSources_RedditIntegration",
+    "TestService_RefreshAllSources_HackerNewsIntegration"
+  ],
+  "imports": [
+    "context",
+    "fmt",
+    "net/http",
+    "net/http/httptest",
+    "path/filepath",
+    "strings",
+    "testing",
+    "time",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "tg-digest/internal/source",
+    "tg-digest/internal/source/hackernews",
+    "tg-digest/internal/source/reddit",
+    "tg-digest/internal/source/rss",
+    "tg-digest/internal/storage"
+  ],
+  "imported_by": [],
+  "side_effects": [
+    "creates temporary SQLite databases for testing",
+    "starts HTTP test servers for RSS/Reddit/HackerNews feed mocks",
+    "calls actual storage.Open and source implementations"
+  ],
+  "config_deps": [],
+  "notes": "Test coverage splits into two main groups: (1) RefreshAll tests (success, no channels, message storage, incremental sync via afterMsgID, sync state updates, error continuation), (2) RefreshAllSources tests (source registry flow, checkpoint dedup, source errors). Uses mockFetcher and mockSource for unit tests. Integration tests with real httptest servers for RSS/Reddit/HackerNews sources via source.NewRegistry pattern. Tests verify deduplication via UNIQUE constraint behavior and checkpoint-based sync prevents re-fetching."
+}

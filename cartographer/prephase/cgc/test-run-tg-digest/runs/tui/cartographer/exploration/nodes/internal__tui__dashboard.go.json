@@ -1,0 +1,29 @@
+{
+  "path": "internal/tui/dashboard.go",
+  "type": "source",
+  "summary": "Dashboard view sub-model with date navigation (◄/►), expandable summary cards, filtering by source type, and filter overlay integration",
+  "exports": [
+    "dashboardModel",
+    "newDashboardModel"
+  ],
+  "imports": [
+    "fmt",
+    "strings",
+    "time",
+    "github.com/charmbracelet/bubbles/key",
+    "github.com/charmbracelet/bubbletea",
+    "github.com/charmbracelet/lipgloss"
+  ],
+  "imported_by": [
+    "internal/tui/app.go"
+  ],
+  "side_effects": [
+    "modifies UI state based on key input",
+    "triggers date-based data reloading via loadSummariesMsg"
+  ],
+  "config_deps": [
+    "keys.go (key bindings: Left, Right, Down, Up, Toggle, ExpandAll, CollapseAll, Filter, FilterPicker)",
+    "styles.go (dateStyle, helpDescStyle, expandedArrowStyle, collapsedArrowStyle, sourceTypeBadgeStyle, selectedCardStyle, summaryTextStyle)"
+  ],
+  "notes": "Second main view (beside channels.go). Manages: 1) currentDate navigation (◄/►), 2) SummaryItem list with SourceFilter, 3) expand/collapse state per card (expanded map), 4) scroll-to-cursor logic, 5) filter cycling (f key cycles through source types), 6) filter overlay (shift+f). Key rendering: source badges ([TG], [RSS], [RD], [HN]), summary bullets with spacing, cursor highlighting. Filters summaries by SourceFilter.Types and ChannelName. Delegates overlay to filterOverlayModel."
+}

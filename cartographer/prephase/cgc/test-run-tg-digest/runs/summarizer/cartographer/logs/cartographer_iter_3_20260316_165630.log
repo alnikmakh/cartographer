@@ -1,0 +1,9 @@
+Exploration complete. I've documented all three files:
+
+**internal/summarizer/service.go** — The orchestration layer. Service struct with 5 public functions (NewService, SummarizeMessage, SummarizeUnsummarized, SummarizeUnsummarizedForChannels, WithLocalModel). Fetches unsummarized messages from storage, calls LLM via Client interface if message ≥150 chars, stores results. Time window: yesterday + today UTC.
+
+**internal/summarizer/service_test.go** — 13 test cases covering single-message summarization (success, short messages, API errors, storage) and queue processing (batch operations, filtering by channels, time window, error handling, local model preamble).
+
+**internal/summarizer/summarizer.go** — Pure contract definitions: MessageSummarizeResult (return from single-message calls), SummarizeQueueResult (return from queue calls), Client interface (ChatCompletion method), ChatRequest/ChatMessage types.
+
+All node and edge files written to `cartographer/exploration/nodes/` and `edges/`, and index.json updated.

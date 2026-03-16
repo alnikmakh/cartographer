@@ -42,12 +42,7 @@ All five fields are required — `--init` validates their presence.
   "seed": "myrepo/src/core/main.ts",
   "boundaries": {
     "explore_within": ["myrepo/src/core/**"],
-    "boundary_packages": ["myrepo/src/utils", "myrepo/src/db"],
-    "ignore": ["**/*.test.ts", "**/*.md"]
-  },
-  "budget": {
-    "max_iterations": 5,
-    "max_nodes": 20
+    "boundary_packages": ["myrepo/src/utils", "myrepo/src/db"]
   }
 }
 ```
@@ -65,16 +60,6 @@ describe. This is your slice. Use `**` suffix. Multiple globs OK:
 from but you don't want to fully explore. The agent creates
 minimal boundary nodes for these (just interface, no deep read).
 Look at the import statements in your slice to find these.
-
-**ignore** — file patterns to exclude from the queue. Only
-`**/*.ext` patterns work (the discover function matches on file
-extension). Patterns like `**/*_test.go` do NOT work due to a
-known limitation — the glob-to-grep conversion only handles
-extension-based patterns.
-
-**budget** — `max_iterations` caps loop iterations, `max_nodes`
-caps how many files get explored. Set both higher than the actual
-file count to avoid early cutoff.
 
 ### Sizing the slice
 
@@ -191,12 +176,7 @@ summarizer imports from.
       "tg-digest/internal/tui",
       "tg-digest/internal/telegram",
       "tg-digest/cmd"
-    ],
-    "ignore": ["**/*.md"]
-  },
-  "budget": {
-    "max_iterations": 5,
-    "max_nodes": 10
+    ]
   }
 }
 ```

@@ -1,0 +1,46 @@
+{
+  "internal/storage/channels.go": {
+    "explored": true,
+    "one_line": "Channel repository implementing CRUD operations on channels table"
+  },
+  "internal/storage/message_summaries.go": {
+    "explored": true,
+    "one_line": "Message summary repository with upsert and unsummarized message queries"
+  },
+  "internal/storage/messages.go": {
+    "explored": true,
+    "one_line": "Message repository with deduplication and date-based retrieval"
+  },
+  "internal/storage/migrations.go": {
+    "explored": true,
+    "one_line": "Database migration runner with idempotent tracking and transaction support"
+  },
+  "internal/storage/migrations/001_initial.sql": {
+    "explored": true,
+    "one_line": "Initial database schema: channels, messages, summaries, sync_state tables"
+  },
+  "internal/storage/migrations/002_source_type.sql": {
+    "explored": true,
+    "one_line": "Schema evolution: adds source_type column and refactors sync_state checkpoint"
+  },
+  "internal/storage/migrations/003_nullable_telegram_id.sql": {
+    "explored": true,
+    "one_line": "Schema migration: makes telegram_id nullable for non-Telegram sources via table recreation"
+  },
+  "internal/storage/migrations/004_message_summaries.sql": {
+    "explored": true,
+    "one_line": "Schema migration: creates per-message summaries table and drops legacy daily summaries"
+  },
+  "internal/storage/storage.go": {
+    "explored": true,
+    "one_line": "Core storage interface definitions and SQLite store initialization, entry point for all persistence"
+  },
+  "internal/storage/storage_test.go": {
+    "explored": true,
+    "one_line": "Integration tests for storage package covering channels, messages, summaries, and sync state repositories"
+  },
+  "internal/storage/syncstate.go": {
+    "explored": true,
+    "one_line": "SyncState repository implementation with Get and Upsert methods for tracking per-channel sync progress"
+  }
+}

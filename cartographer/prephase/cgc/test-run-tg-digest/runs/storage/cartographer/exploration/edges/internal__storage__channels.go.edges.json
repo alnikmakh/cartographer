@@ -1,0 +1,12 @@
+[
+  {
+    "to": "internal/storage/storage.go",
+    "relationship": "implements",
+    "usage": "Implements ChannelRepository interface, uses Channel type, channelRepo instantiated in Open()"
+  },
+  {
+    "to": "database/sql",
+    "relationship": "imports",
+    "usage": "Database operations (QueryRowContext, QueryContext, ExecContext)"
+  }
+]

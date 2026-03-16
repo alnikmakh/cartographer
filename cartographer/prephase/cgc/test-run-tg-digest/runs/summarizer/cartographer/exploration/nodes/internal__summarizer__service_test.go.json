@@ -1,0 +1,11 @@
+{
+  "path": "internal/summarizer/service_test.go",
+  "type": "test",
+  "summary": "Test suite for Service with 13 test cases covering single-message and queue summarization",
+  "exports": [],
+  "imports": ["context", "fmt", "path/filepath", "strings", "testing", "time", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require", "tg-digest/internal/storage"],
+  "imported_by": [],
+  "side_effects": ["creates temporary SQLite test databases", "seeds test fixtures (channels, messages)", "runs service methods with mock clients"],
+  "config_deps": ["storage.Store (via setupTestStore)", "mockClient", "countingMockClient"],
+  "notes": "Comprehensive test coverage: TestService_SummarizeMessage_Success, _ShortMessageCopiedVerbatim, _ExactThreshold (150 chars), _APIError, _StoresResult, _ShortMessageStoresResult; TestService_SummarizeUnsummarized_ProcessesQueue, _SkipsAlreadySummarized, _OnlyTodayAndYesterday, _StopsOnAPIError, _NoMessages, _ShortMessagesCounted; TestService_SummarizeUnsummarizedForChannels_NilProcessesAll, _FiltersByChannel; TestService_LocalModelPromptPreamble. Uses helper functions setupTestStore, seedSingleMessage, seedMultipleMessages."
+}

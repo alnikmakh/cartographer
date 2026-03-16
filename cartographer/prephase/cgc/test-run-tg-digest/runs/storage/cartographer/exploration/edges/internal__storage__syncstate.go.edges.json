@@ -1,0 +1,4 @@
+[
+  {"to": "internal/storage/storage.go", "relationship": "imports", "usage": "SyncState type and interface definition"},
+  {"to": "internal/storage/migrations", "relationship": "schema_dependency", "usage": "sync_state table created in migrations"}
+]

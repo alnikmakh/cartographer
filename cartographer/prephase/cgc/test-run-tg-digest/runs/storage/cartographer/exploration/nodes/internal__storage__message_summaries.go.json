@@ -1,0 +1,27 @@
+{
+  "path": "internal/storage/message_summaries.go",
+  "type": "source",
+  "summary": "Message summary repository implementation for storing and retrieving message summaries",
+  "exports": [
+    "Create",
+    "GetByMessageID",
+    "GetByChannelAndDate",
+    "GetUnsummarizedMessages",
+    "GetUnsummarizedMessagesByChannels"
+  ],
+  "imports": [
+    "context",
+    "database/sql",
+    "fmt",
+    "strings",
+    "time"
+  ],
+  "imported_by": [
+    "internal/storage/storage.go"
+  ],
+  "side_effects": [
+    "Database operations (INSERT with ON CONFLICT, SELECT with JOINs)"
+  ],
+  "config_deps": [],
+  "notes": "Implements MessageSummaryRepository interface. Uses ON CONFLICT clause to upsert summaries (automatic update if message_id exists). GetUnsummarizedMessages and GetUnsummarizedMessagesByChannels perform LEFT JOINs with messages table to find unsummarized messages. Includes dynamic SQL construction with string.Join for channel ID filtering."
+}

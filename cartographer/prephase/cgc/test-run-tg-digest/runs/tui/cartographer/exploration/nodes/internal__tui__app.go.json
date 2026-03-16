@@ -1,0 +1,38 @@
+{
+  "path": "internal/tui/app.go",
+  "type": "source",
+  "summary": "Root Bubble Tea model implementing Init/Update/View with dual-view support (dashboard+channels), command handlers for refresh/summarize/add-source, and auto-refresh scheduling",
+  "exports": [
+    "App",
+    "AppOption",
+    "WithRefresh",
+    "WithSummarize",
+    "NewApp"
+  ],
+  "imports": [
+    "context",
+    "fmt",
+    "strings",
+    "time",
+    "github.com/charmbracelet/bubbles/key",
+    "github.com/charmbracelet/bubbles/spinner",
+    "github.com/charmbracelet/bubbletea",
+    "github.com/charmbracelet/lipgloss",
+    "tg-digest/internal/storage"
+  ],
+  "imported_by": [
+    "cmd/digest/main.go (boundary)"
+  ],
+  "side_effects": [
+    "Implements tea.Model interface",
+    "Initializes spinner with Dot style",
+    "Manages RefreshService and SummarizeService dependency injection",
+    "Auto-refresh scheduling via tea.Tick",
+    "Directly uses storage.Store (Channels and MessageSummaries)"
+  ],
+  "config_deps": [
+    "keys (keyMap from keys.go)",
+    "spinnerStyle, loadingStyle, errorStyle, activeTabStyle, inactiveTabStyle, helpDescStyle, statusBarStyle (from styles.go)"
+  ],
+  "notes": "Central Bubbletea model as described in hints. 18 functions total: constructor, Init/Update/View, handleKeyMsg, renderTabBar/renderStatusBar, 7 data-loading commands (loadSummaries, loadChannels, deleteChannel, refresh, summarize, refreshFiltered, summarizeFiltered, addSource, scheduleAutoRefresh). Routes messages to child models (dashboard, channels, help). Uses option pattern for dependency injection (WithRefresh, WithSummarize)."
+}

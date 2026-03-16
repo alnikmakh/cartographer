@@ -1,0 +1,14 @@
+{
+  "path": "internal/summarizer/ollama.go",
+  "type": "source",
+  "summary": "HTTP client for Ollama API with chat completion, health check, and model listing",
+  "exports": ["OllamaClient", "NewOllamaClient"],
+  "public_methods": ["ChatCompletion", "HealthCheck", "ListModels", "HasModel"],
+  "private_helpers": ["isConnectionError"],
+  "imports": ["bytes", "context", "encoding/json", "fmt", "io", "net/http", "strings", "time"],
+  "same_package_deps": ["ChatRequest", "ChatMessage", "openRouterRequest", "openRouterMessage", "openRouterResponse"],
+  "imported_by": ["internal/summarizer/ollama_test.go", "internal/summarizer/service.go (via Client interface)"],
+  "side_effects": ["Makes HTTP requests to Ollama API"],
+  "config_deps": ["baseURL (passed to NewOllamaClient)", "timeout (passed to NewOllamaClient)"],
+  "notes": "Implements Client interface defined in summarizer.go. Reuses openRouter message types from openrouter.go for JSON marshaling/unmarshaling. Provides model discovery (ListModels, HasModel) and health checks not required by Client interface."
+}

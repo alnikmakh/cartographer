@@ -1,0 +1,7 @@
+[
+  {
+    "to": "tg-digest/internal/source",
+    "relationship": "imports",
+    "usage": "source.Source interface check, SourceMessage type assertions"
+  }
+]

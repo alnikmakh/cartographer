@@ -1,0 +1,16 @@
+{
+  "path": "internal/storage/migrations.go",
+  "type": "source",
+  "summary": "Database migration runner with idempotent tracking and transaction support",
+  "exports": ["runMigrations"],
+  "imports": ["context", "database/sql", "embed", "fmt", "sort"],
+  "imported_by": ["internal/storage/storage.go"],
+  "side_effects": [
+    "embeds SQL migration files at compile time",
+    "creates migrations tracking table on first run",
+    "executes SQL migration files in sorted order",
+    "records applied migrations to prevent re-execution"
+  ],
+  "config_deps": [],
+  "notes": "Implements idempotent migration system with transaction-per-migration isolation. Migrations are embedded via //go:embed and sorted alphabetically to ensure deterministic execution order. Migrations table tracks which files have been applied."
+}

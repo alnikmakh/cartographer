@@ -1,0 +1,22 @@
+[
+  {
+    "to": "internal/tui/channels.go",
+    "relationship": "tests",
+    "usage": "tests newChannelsModel, Update/View, cursor navigation, delete/add workflows"
+  },
+  {
+    "to": "internal/tui/types.go",
+    "relationship": "imports",
+    "usage": "ChannelItem, channelsLoadedMsg, addSourceMsg types"
+  },
+  {
+    "to": "github.com/charmbracelet/bubbletea",
+    "relationship": "external",
+    "usage": "KeyMsg, Cmd types for test inputs"
+  },
+  {
+    "to": "github.com/stretchr/testify/assert",
+    "relationship": "external",
+    "usage": "test assertions (assert.Contains, Equal, etc)"
+  }
+]

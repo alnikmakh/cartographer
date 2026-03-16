@@ -1,0 +1,19 @@
+{
+  "seed": "internal/source/registry.go",
+  "boundaries": {
+    "explore_within": ["internal/source/**"],
+    "boundary_packages": ["internal/storage", "internal/telegram", "internal/refresh"]
+  },
+  "budget": {
+    "max_iterations": 4,
+    "max_nodes": 8,
+    "max_depth_from_seed": 3
+  },
+  "hints": [
+    "source.go defines SourceMessage type — the common data model for all sources",
+    "registry.go has Registry struct (6 functions) — source registration and lookup",
+    "Four implementations in sub-packages: hackernews/hn.go (HNSource), reddit/reddit.go (RedditSource), rss/rss.go (RSSSource), telegram/telegram.go (TelegramSource)",
+    "source/telegram depends on refresh/telegram.go (fetcher interface) — watch for this bridge",
+    "hackernews and rss directly call storage types — may bypass the Source abstraction for sync state"
+  ]
+}

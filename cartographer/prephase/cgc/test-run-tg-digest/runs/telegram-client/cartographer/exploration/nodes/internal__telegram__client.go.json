@@ -1,0 +1,30 @@
+{
+  "path": "internal/telegram/client.go",
+  "type": "source",
+  "summary": "Telegram client wrapper around gotd/td library with session management",
+  "exports": [
+    "Client",
+    "NewClient"
+  ],
+  "imports": [
+    "context",
+    "os",
+    "path/filepath",
+    "github.com/gotd/td/telegram",
+    "github.com/gotd/td/telegram/auth",
+    "github.com/gotd/td/tg"
+  ],
+  "imported_by": [
+    "cmd/digest/main.go"
+  ],
+  "side_effects": [
+    "Creates session directory on disk",
+    "Establishes connection to Telegram API"
+  ],
+  "config_deps": [
+    "apiID - Telegram API ID",
+    "apiHash - Telegram API hash",
+    "sessionFile - path to session persistence file"
+  ],
+  "notes": "Seed file. Client struct wraps gotd/td Client and API. Run() method is entry point: handles session creation, authentication flow, and executes user-provided function with authenticated context. authenticate() method uses AuthFlow interface (from auth.go) to handle interactive 2FA flow. Internally uses FileSessionStorage (from session.go, not in exploration scope) for session persistence. Called from cmd/digest/main.go (lines 57, 129) and refresh package."
+}

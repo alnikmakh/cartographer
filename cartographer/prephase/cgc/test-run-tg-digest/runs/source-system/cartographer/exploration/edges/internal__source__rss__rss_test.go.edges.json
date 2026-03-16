@@ -1,0 +1,22 @@
+[
+  {
+    "to": "internal/source/rss/rss.go",
+    "relationship": "tests",
+    "usage": "comprehensive test coverage of RSSSource implementation"
+  },
+  {
+    "to": "internal/source/source.go",
+    "relationship": "imports",
+    "usage": "uses Source interface and SourceMessage type"
+  },
+  {
+    "to": "github.com/stretchr/testify/assert",
+    "relationship": "imports",
+    "usage": "external - assertion library for test conditions"
+  },
+  {
+    "to": "github.com/stretchr/testify/require",
+    "relationship": "imports",
+    "usage": "external - assertion library with test termination on failure"
+  }
+]

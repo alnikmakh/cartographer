@@ -1,0 +1,27 @@
+[
+  {
+    "to": "internal/tui/dashboard.go",
+    "relationship": "tests",
+    "usage": "tests newDashboardModel, Update/View, date nav, filtering, expand/collapse, cursor, scroll-to-cursor"
+  },
+  {
+    "to": "internal/tui/types.go",
+    "relationship": "imports",
+    "usage": "SummaryItem, SourceFilter types; summariesLoadedMsg message type"
+  },
+  {
+    "to": "github.com/charmbracelet/bubbletea",
+    "relationship": "external",
+    "usage": "tea.KeyMsg, tea.KeyDown/Up/Left/Right/Enter for input simulation"
+  },
+  {
+    "to": "github.com/charmbracelet/lipgloss",
+    "relationship": "external",
+    "usage": "lipgloss.Width for ANSI-aware line width assertions in text wrap tests"
+  },
+  {
+    "to": "github.com/stretchr/testify/assert",
+    "relationship": "external",
+    "usage": "test assertions (Contains, NotContains, Equal, Greater, etc)"
+  }
+]

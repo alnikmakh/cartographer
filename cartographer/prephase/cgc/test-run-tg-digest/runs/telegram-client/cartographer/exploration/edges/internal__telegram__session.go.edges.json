@@ -1,0 +1,12 @@
+[
+  {
+    "to": "internal/telegram/client.go",
+    "relationship": "imported_by",
+    "usage": "client.go instantiates FileSessionStorage with session file path at line 39"
+  },
+  {
+    "to": "github.com/gotd/td/session",
+    "relationship": "imports",
+    "usage": "implements session.SessionStorage interface and uses session.ErrNotFound"
+  }
+]

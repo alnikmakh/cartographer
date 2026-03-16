@@ -1,0 +1,15 @@
+## Exploration Complete: `internal/telegram/session.go`
+
+**Summary:**
+- **Type:** Session storage adapter
+- **Key responsibility:** Persist Telegram session data to disk using JSON serialization
+- **Interface:** Implements `session.SessionStorage` from `github.com/gotd/td/session`
+- **Usage:** Instantiated by `client.go` at line 39 with a configurable file path
+- **Side effects:** File I/O operations (reads/writes JSON)
+
+**Key architectural detail:** Maps OS "file not found" errors to `session.ErrNotFound`, which signals to the gotd library that this is a fresh session (no existing session file). This is critical for the authentication flow orchestrated in `client.go`.
+
+All outputs written:
+- ✅ Node file: `nodes/internal__telegram__session.go.json`
+- ✅ Edge file: `edges/internal__telegram__session.go.edges.json`
+- ✅ Index updated with exploration record

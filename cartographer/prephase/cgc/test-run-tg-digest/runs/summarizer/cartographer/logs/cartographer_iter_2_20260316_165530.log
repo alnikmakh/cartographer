@@ -1,0 +1,9 @@
+✅ **Exploration complete.** I've documented all three files:
+
+**1. openrouter_test.go** — Test suite with 6 test cases for OpenRouterClient (successful completion, API errors, empty responses, network failures, invalid JSON, context cancellation). Tests verify request formatting and error handling.
+
+**2. prompt.go** — Exports `BuildSingleMessagePrompt()` function that builds LLM prompts. Defines system/user prompt templates (`singleMessageSystemPrompt`, `localModelPreamble`). Validates non-empty message text and formats user prompt with channel name and source type. Imports `storage.Message` from boundary package.
+
+**3. prompt_test.go** — Test suite with 3 test cases covering success case, empty text validation, and multiple source types (telegram, rss).
+
+All files have been added to the exploration index with node files, edge files, and updated index.json. The prompt.go/prompt_test.go pair forms a complete prompt-building component used by service.go (the seed file), while openrouter_test.go tests the OpenRouter backend client implementation (already explored).

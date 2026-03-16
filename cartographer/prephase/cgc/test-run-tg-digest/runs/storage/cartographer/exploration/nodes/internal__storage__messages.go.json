@@ -1,0 +1,26 @@
+{
+  "path": "internal/storage/messages.go",
+  "type": "source",
+  "summary": "Message repository implementation for storing and retrieving Telegram messages",
+  "exports": [
+    "Create",
+    "GetByChannelAndDate",
+    "GetLatestByChannel",
+    "GetDistinctDates",
+    "CountByChannel"
+  ],
+  "imports": [
+    "context",
+    "database/sql",
+    "fmt",
+    "time"
+  ],
+  "imported_by": [
+    "internal/storage/storage.go"
+  ],
+  "side_effects": [
+    "Database operations (INSERT with deduplication, SELECT queries)"
+  ],
+  "config_deps": [],
+  "notes": "Implements MessageRepository interface. Create() uses ON CONFLICT(channel_id, telegram_msg_id) DO NOTHING for automatic deduplication of duplicate messages. GetDistinctDates uses SUBSTR to extract date portion from sent_at timestamp (works around potential SQLite DATE() parsing issues with Go time format). All retrieval methods support time-based filtering."
+}

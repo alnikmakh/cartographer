@@ -1,0 +1,5 @@
+[
+  {"to": "internal/storage/storage.go", "relationship": "imported_by", "usage": "called by Open() during database initialization"},
+  {"to": "internal/storage/migrations/001_initial.sql", "relationship": "embeds", "usage": "executed on first migration run"},
+  {"to": "internal/storage/migrations/002_source_type.sql", "relationship": "embeds", "usage": "executed as second migration if not already applied"}
+]

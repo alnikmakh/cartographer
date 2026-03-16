@@ -1,0 +1,207 @@
+{
+  "source_file": "tg-digest",
+  "extraction_mode": "cgc",
+  "extracted_at": "2026-03-16T00:00:00Z",
+  "analyzed_areas": [],
+  "slices": [
+    {
+      "name": "Storage Foundation",
+      "slug": "storage",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the persistence layer: SQLite store initialization, migrations, and the repository pattern (channels, messages, message_summaries, syncstate) that every other package depends on.",
+      "seed": "tg-digest/internal/storage/storage.go",
+      "explore_within": [
+        "tg-digest/internal/storage/**"
+      ],
+      "boundary_packages": [],
+      "file_count": 6,
+      "budget": {
+        "max_nodes": 8,
+        "max_iterations": 4,
+        "max_depth_from_seed": 3
+      },
+      "hints": [
+        "storage.go defines core types (Channel, Message, MessageSummary, SyncState) and the sqliteStore struct — start here",
+        "channels.go, messages.go, message_summaries.go, syncstate.go are repository implementations that embed/reference sqliteStore",
+        "migrations.go is called from storage.go during initialization",
+        "This is the most-depended-upon package (7 packages, 62+ inbound calls) — understanding its interface is prerequisite for all other slices"
+      ]
+    },
+    {
+      "name": "Telegram Client",
+      "slug": "telegram-client",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the low-level Telegram API client: authentication flow, session persistence, message fetching, and how it wraps the underlying TDLib/MTProto layer.",
+      "seed": "tg-digest/internal/telegram/client.go",
+      "explore_within": [
+        "tg-digest/internal/telegram/**"
+      ],
+      "boundary_packages": [
+        "tg-digest/internal/storage"
+      ],
+      "file_count": 4,
+      "budget": {
+        "max_nodes": 6,
+        "max_iterations": 4,
+        "max_depth_from_seed": 3
+      },
+      "hints": [
+        "client.go has 4 functions — likely the Client struct with connect/disconnect/fetch methods",
+        "auth.go has TerminalAuth (7 functions) — interactive authentication flow",
+        "session.go has FileSessionStorage (2 functions) — session persistence",
+        "messages.go has Message type (3 functions) — message data model separate from storage.Message",
+        "Called heavily from cmd (12 calls) and from refresh (1 call via telegram.go adapter)"
+      ]
+    },
+    {
+      "name": "Source System",
+      "slug": "source-system",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the content source abstraction: the Source interface, Registry pattern, and the four implementations (Telegram, HackerNews, Reddit, RSS) that normalize external content into SourceMessages.",
+      "seed": "tg-digest/internal/source/registry.go",
+      "explore_within": [
+        "tg-digest/internal/source/**"
+      ],
+      "boundary_packages": [
+        "tg-digest/internal/storage",
+        "tg-digest/internal/telegram",
+        "tg-digest/internal/refresh"
+      ],
+      "file_count": 6,
+      "budget": {
+        "max_nodes": 8,
+        "max_iterations": 4,
+        "max_depth_from_seed": 3
+      },
+      "hints": [
+        "source.go defines SourceMessage type — the common data model for all sources",
+        "registry.go has Registry struct (6 functions) — source registration and lookup",
+        "Four implementations in sub-packages: hackernews/hn.go (HNSource), reddit/reddit.go (RedditSource), rss/rss.go (RSSSource), telegram/telegram.go (TelegramSource)",
+        "source/telegram depends on refresh/telegram.go (fetcher interface) — watch for this bridge",
+        "hackernews and rss directly call storage types — may bypass the Source abstraction for sync state"
+      ]
+    },
+    {
+      "name": "Summarizer",
+      "slug": "summarizer",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the LLM summarization pipeline: the Summarizer interface, Service orchestrator, prompt construction, and the two LLM backends (Ollama local, OpenRouter cloud).",
+      "seed": "tg-digest/internal/summarizer/service.go",
+      "explore_within": [
+        "tg-digest/internal/summarizer/**"
+      ],
+      "boundary_packages": [
+        "tg-digest/internal/storage",
+        "tg-digest/internal/source"
+      ],
+      "file_count": 5,
+      "budget": {
+        "max_nodes": 7,
+        "max_iterations": 4,
+        "max_depth_from_seed": 3
+      },
+      "hints": [
+        "summarizer.go defines interfaces and types (ChatRequest, ChatMessage, MessageSummarizeResult, SummarizeQueueResult) — the contract",
+        "service.go has Service struct (5 functions) — orchestrates fetching unsummarized messages, calling LLM, storing results",
+        "prompt.go (1 function) — likely builds the LLM prompt from messages",
+        "ollama.go (OllamaClient, 6 functions) and openrouter.go (OpenRouterClient, 2 functions) — two backend implementations",
+        "Service calls storage (14 calls) and source/registry (2 calls) — reads messages and writes summaries"
+      ]
+    },
+    {
+      "name": "Refresh Pipeline",
+      "slug": "refresh-pipeline",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the message refresh orchestration: how Service coordinates fetching new messages from sources and persisting them to storage, including the TelegramFetcher adapter.",
+      "seed": "tg-digest/internal/refresh/refresh.go",
+      "explore_within": [
+        "tg-digest/internal/refresh/**"
+      ],
+      "boundary_packages": [
+        "tg-digest/internal/storage",
+        "tg-digest/internal/telegram",
+        "tg-digest/internal/source"
+      ],
+      "file_count": 2,
+      "budget": {
+        "max_nodes": 4,
+        "max_iterations": 3,
+        "max_depth_from_seed": 3
+      },
+      "hints": [
+        "refresh.go has Service struct (5 functions), RefreshResult, FetchedMessage — the core orchestrator",
+        "telegram.go has TelegramFetcher (3 functions) — adapts internal/telegram.Client for the refresh pipeline",
+        "Heavy dependency on storage (17 cross-pkg calls) — manages channels, messages, and sync state",
+        "Small slice but high coupling — bridges telegram client and source system into storage"
+      ]
+    },
+    {
+      "name": "TUI",
+      "slug": "tui",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the terminal UI layer: the Bubbletea App model, view composition (channels, dashboard, filter, help), message types, key bindings, and how it triggers refresh/summarize operations.",
+      "seed": "tg-digest/internal/tui/app.go",
+      "explore_within": [
+        "tg-digest/internal/tui/**"
+      ],
+      "boundary_packages": [
+        "tg-digest/internal/storage",
+        "tg-digest/cmd/digest"
+      ],
+      "file_count": 9,
+      "budget": {
+        "max_nodes": 11,
+        "max_iterations": 5,
+        "max_depth_from_seed": 3
+      },
+      "hints": [
+        "app.go (App struct, 18 functions) is the central Bubbletea model — handles Init/Update/View plus commands",
+        "types.go defines all message types (15 types) — the Bubbletea message vocabulary",
+        "channels.go (channelsModel, 7 functions) and dashboard.go (dashboardModel, 6 functions) — two main views",
+        "filter.go (SourceFilter) and filter_overlay.go (filterOverlayModel) — filtering subsystem",
+        "keys.go (keyMap) and styles.go — configuration/presentation",
+        "Bidirectional coupling with cmd (tui->cmd: 4, cmd->tui: 3) — likely through adapter interfaces defined in main.go",
+        "help.go (helpModel, 3 functions) — help overlay view"
+      ]
+    },
+    {
+      "name": "CLI Orchestrator",
+      "slug": "cli-orchestrator",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the application entry point: how main.go wires together config, storage, telegram, sources, refresh, summarizer, and TUI — including the adapter types that bridge packages.",
+      "seed": "tg-digest/cmd/digest/main.go",
+      "explore_within": [
+        "tg-digest/cmd/digest/**",
+        "tg-digest/internal/config/**"
+      ],
+      "boundary_packages": [
+        "tg-digest/internal/storage",
+        "tg-digest/internal/telegram",
+        "tg-digest/internal/summarizer",
+        "tg-digest/internal/source",
+        "tg-digest/internal/refresh",
+        "tg-digest/internal/tui"
+      ],
+      "file_count": 2,
+      "budget": {
+        "max_nodes": 4,
+        "max_iterations": 3,
+        "max_depth_from_seed": 3
+      },
+      "hints": [
+        "main.go is the highest fan-out file (10 packages) — classic orchestrator/wiring",
+        "Defines summarizeServiceAdapter and registryRefreshAdapter — bridges between packages",
+        "10 functions including main, buildLLMClient, ensureSourceChannel, storeChannel, storeMessages, updateSyncState",
+        "config.go (Config + 6 sub-config types, 3 functions) — loaded at startup, used to configure all services",
+        "Run this slice LAST — by then all boundary packages are mapped"
+      ]
+    }
+  ]
+}

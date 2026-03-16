@@ -1,0 +1,25 @@
+{
+  "path": "internal/telegram/messages.go",
+  "type": "source",
+  "summary": "Message data model and Telegram channel/message fetching operations",
+  "exports": [
+    "Message",
+    "ResolveChannel",
+    "FetchMessages"
+  ],
+  "imports": [
+    "context",
+    "fmt",
+    "strings",
+    "time",
+    "github.com/gotd/td/tg"
+  ],
+  "imported_by": [
+    "cmd/digest/main.go"
+  ],
+  "side_effects": [
+    "API calls to Telegram to resolve usernames and fetch message history"
+  ],
+  "config_deps": [],
+  "notes": "Defines Message struct (ID, Text, Timestamp) as application-level message model, separate from storage.Message. ResolveChannel() converts @username string to tg.InputChannel by calling Telegram API. FetchMessages() retrieves message history from a channel, filters out empty/service messages via extractMessages() helper. Handles different response types from Telegram API (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages). Includes debug mode for detailed logging of message filtering."
+}

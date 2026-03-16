@@ -1,0 +1,19 @@
+{
+  "path": "internal/storage/storage_test.go",
+  "type": "test",
+  "summary": "Integration tests for storage package covering channels, messages, summaries, and sync state repositories",
+  "exports": [],
+  "imports": [
+    "context",
+    "fmt",
+    "path/filepath",
+    "testing",
+    "time",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require"
+  ],
+  "imported_by": [],
+  "side_effects": ["creates ephemeral SQLite databases in temp directories", "exercises full Store interface"],
+  "config_deps": [],
+  "notes": "Tests core storage patterns via ephemeral Store instances. Helpers: openTestStore (temp DB), seedChannelAndMessages. Tests Channel source types (default 'telegram', custom 'rss'), SyncState with string checkpoints, MessageSummary CRUD and filtering, GetUnsummarizedMessages/ByChannels with channel ID filtering. Confirms upsert semantics: Create() on duplicate message IDs replaces prior summary."
+}

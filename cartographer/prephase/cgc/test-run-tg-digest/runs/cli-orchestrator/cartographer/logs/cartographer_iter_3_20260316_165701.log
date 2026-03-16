@@ -1,0 +1,7 @@
+**Explored:** `internal/config/config_test.go`
+
+**Node created:** Test suite with 40 functions covering config.Load validation, defaults, error cases, source types (RSS/Reddit/HackerNews), LLM providers (Ollama/OpenRouter), and backward compatibility.
+
+**Edges:** Tests config.go and depends on testify for assertions.
+
+**Index updated** with exploration entry. All three outputs written.

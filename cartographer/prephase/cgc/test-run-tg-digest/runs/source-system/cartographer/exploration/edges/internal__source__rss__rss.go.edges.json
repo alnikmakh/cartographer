@@ -1,0 +1,17 @@
+[
+  {
+    "to": "internal/source/source.go",
+    "relationship": "imports",
+    "usage": "implements Source interface, returns SourceMessage type"
+  },
+  {
+    "to": "github.com/mmcdole/gofeed",
+    "relationship": "imports",
+    "usage": "external dependency - parses RSS 2.0 and Atom feed XML"
+  },
+  {
+    "to": "internal/source/registry.go",
+    "relationship": "imported_by",
+    "usage": "boundary - RSSSource is registered and managed by registry"
+  }
+]

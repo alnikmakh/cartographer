@@ -1,0 +1,13 @@
+[
+  {"to": "tg-digest/internal/config", "relationship": "imports", "usage": "Load configuration from file"},
+  {"to": "tg-digest/internal/storage", "relationship": "imports", "usage": "Boundary — database operations (channels, messages, sync state)"},
+  {"to": "tg-digest/internal/telegram", "relationship": "imports", "usage": "Boundary — Telegram client, message fetching, channel resolution"},
+  {"to": "tg-digest/internal/refresh", "relationship": "imports", "usage": "Boundary — refresh pipeline and source fetching"},
+  {"to": "tg-digest/internal/source", "relationship": "imports", "usage": "Boundary — source registry and source interface"},
+  {"to": "tg-digest/internal/source/hackernews", "relationship": "imports", "usage": "Boundary — HackerNews source factory"},
+  {"to": "tg-digest/internal/source/reddit", "relationship": "imports", "usage": "Boundary — Reddit source factory"},
+  {"to": "tg-digest/internal/source/rss", "relationship": "imports", "usage": "Boundary — RSS source factory"},
+  {"to": "tg-digest/internal/source/telegram", "relationship": "imports", "usage": "Boundary — Telegram source factory"},
+  {"to": "tg-digest/internal/summarizer", "relationship": "imports", "usage": "Boundary — LLM summarization service"},
+  {"to": "tg-digest/internal/tui", "relationship": "imports", "usage": "Boundary — TUI application and interfaces"}
+]

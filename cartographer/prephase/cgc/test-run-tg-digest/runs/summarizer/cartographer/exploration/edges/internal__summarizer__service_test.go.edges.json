@@ -1,0 +1,5 @@
+[
+  {"to": "internal/summarizer/service.go", "relationship": "tests", "usage": "tests NewService, WithLocalModel, SummarizeMessage, SummarizeUnsummarized, SummarizeUnsummarizedForChannels"},
+  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses MessageSummarizeResult, SummarizeQueueResult, ChatRequest types in assertions"},
+  {"to": "tg-digest/internal/storage", "relationship": "boundary", "usage": "setupTestStore opens temp database; creates test Channel, Message, MessageSummary fixtures"}
+]

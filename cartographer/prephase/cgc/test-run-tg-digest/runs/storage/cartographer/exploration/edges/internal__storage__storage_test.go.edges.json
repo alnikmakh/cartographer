@@ -1,0 +1,5 @@
+[
+  {"to": "internal/storage/storage.go", "relationship": "imports", "usage": "Store, Channel, Message, MessageSummary, SyncState types"},
+  {"to": "github.com/stretchr/testify/assert", "relationship": "imports", "usage": "test assertions"},
+  {"to": "github.com/stretchr/testify/require", "relationship": "imports", "usage": "test assertions and error checks"}
+]

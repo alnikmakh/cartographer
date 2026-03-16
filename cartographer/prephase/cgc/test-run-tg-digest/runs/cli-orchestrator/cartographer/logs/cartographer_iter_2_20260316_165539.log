@@ -1,0 +1,32 @@
+## ✓ Mapping Complete
+
+Successfully created node and edge files for all three files:
+
+### **cmd/digest/main.go** 
+- **Type**: Source (orchestrator)
+- **Exports**: 8 items (main, buildLLMClient, adapter types, helpers)
+- **Imports**: 12 packages (10 boundary, 2 external)
+- **Key Pattern**: Classic high-fan-out orchestrator with two adapter types (registryRefreshAdapter, summarizeServiceAdapter) bridging boundary packages to TUI interfaces
+- **Config**: All 6 sub-config types used
+- **Modes**: CLI-only fetch or interactive TUI with refresh/summarization
+
+### **cmd/digest/main_test.go**
+- **Type**: Test
+- **Exports**: 5 test functions covering buildLLMClient
+- **Coverage**: OpenRouter, Ollama (healthy/missing model), empty provider, unknown provider error
+- **Mock Strategy**: httptest.NewServer for Ollama responses
+
+### **internal/config/config.go**
+- **Type**: Source (config hub)
+- **Exports**: 7 types + Load + validate + expandPath
+- **Key Features**:
+  - Backward-compat migration: old OpenRouter → new LLM format
+  - Smart defaults: 120s timeout for Ollama, 30s for OpenRouter, 30min refresh interval
+  - SourceConfig supports 4 types: telegram, rss, reddit, hackernews (each with type-specific validation)
+
+**All files written to:**
+- `nodes/cmd__digest__main.go.json` | `edges/cmd__digest__main.go.edges.json`
+- `nodes/cmd__digest__main_test.go.json` | `edges/cmd__digest__main_test.go.edges.json`
+- `nodes/internal__config__config.go.json` | `edges/internal__config__config.go.edges.json`
+
+Index.json already has all entries marked explored=true.

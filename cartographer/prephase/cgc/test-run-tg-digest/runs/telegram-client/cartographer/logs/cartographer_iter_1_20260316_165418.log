@@ -1,0 +1,31 @@
+## Exploration Complete ✓
+
+I've successfully mapped all three files in the `internal/telegram` package:
+
+### Summary
+
+**1. auth.go** — Terminal-based interactive authentication
+- Exports: `AuthFlow` (interface), `TerminalAuth` (struct), `NewTerminalAuth` (constructor)
+- Implements the gotd/td `auth.UserAuthenticator` interface
+- Prompts user for phone number, 2FA password, and verification codes via stdin/stdout
+- Used by `client.go` during the authentication flow
+
+**2. client.go** — Main Telegram client wrapper (SEED FILE)
+- Exports: `Client` (struct), `NewClient` (constructor)
+- Wraps `gotd/td/telegram.Client` with session and authentication management
+- `Run()` method: handles session directory creation, authenticates with Telegram, and executes user-provided functions
+- Uses `FileSessionStorage` (session.go, boundary) for persistence
+- Config deps: `apiID`, `apiHash`, `sessionFile` 
+- Called from `cmd/digest/main.go` (lines 57, 129)
+
+**3. messages.go** — Message model and fetching operations
+- Exports: `Message` (struct: ID, Text, Timestamp), `ResolveChannel()`, `FetchMessages()`
+- `ResolveChannel()`: converts @username to `tg.InputChannel` via Telegram API
+- `FetchMessages()`: retrieves message history, filters empty/service messages
+- Handles three response types from Telegram API
+- Debug mode for detailed message filtering logs
+
+### Files Written
+- **3 node files** (one per source file)
+- **3 edge files** (dependency documentation)
+- **index.json** (updated with all three entries)

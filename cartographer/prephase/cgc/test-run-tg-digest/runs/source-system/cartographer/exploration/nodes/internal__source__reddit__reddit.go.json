@@ -1,0 +1,11 @@
+{
+  "path": "internal/source/reddit/reddit.go",
+  "type": "source",
+  "summary": "Reddit source implementation fetching posts via JSON API",
+  "exports": ["RedditSource", "NewRedditSource"],
+  "imports": ["tg-digest/internal/source"],
+  "imported_by": ["internal/source/reddit/reddit_test.go"],
+  "side_effects": ["HTTP calls to www.reddit.com", "sets User-Agent header"],
+  "config_deps": ["baseURL", "subreddit", "sort"],
+  "notes": "Implements source.Source interface. Checkpoint is float64-encoded created_utc timestamp (unix). Filters posts by timestamp. Handles rate limiting (429 error) and 404 (missing subreddit). Text composition differs by post type: self-posts include title+selftext, link posts include title+URL. User-Agent header required to avoid Reddit 429 responses. Default sort='hot', limit=25."
+}

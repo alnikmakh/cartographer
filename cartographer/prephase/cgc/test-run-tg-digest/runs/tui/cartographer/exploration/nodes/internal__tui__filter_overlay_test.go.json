@@ -1,0 +1,11 @@
+{
+  "path": "internal/tui/filter_overlay_test.go",
+  "type": "test",
+  "summary": "Unit tests for filterOverlayModel covering initialization, keyboard navigation, selection operations (toggle/all/none), confirm/cancel actions, and filter construction",
+  "exports": ["TestFilterOverlay_InitialStateAllSelected", "TestFilterOverlay_InitialStateWithExistingFilter", "TestFilterOverlay_NavigateDownUp", "TestFilterOverlay_ToggleSpace", "TestFilterOverlay_SelectAll", "TestFilterOverlay_SelectNone", "TestFilterOverlay_ConfirmAllSelected_EmptyFilter", "TestFilterOverlay_ConfirmSubset_NameFilter", "TestFilterOverlay_Cancel", "makeOverlay"],
+  "imports": ["testing", "github.com/charmbracelet/bubbletea", "github.com/stretchr/testify/assert"],
+  "imported_by": [],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "9 test cases covering: initial state with empty/existing filter, cursor navigation (j/k keys), space toggle, a/n select-all/none, enter to confirm (empty filter when all selected vs name-based filter when subset), and esc to cancel. Uses makeOverlay() helper with 3 test sources (telegram, rss, reddit)."
+}

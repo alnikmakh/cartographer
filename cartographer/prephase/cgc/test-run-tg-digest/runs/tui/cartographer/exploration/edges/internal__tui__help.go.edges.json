@@ -1,0 +1,6 @@
+[
+  {"to": "internal/tui/keys.go", "relationship": "imports", "usage": "reads keyMap bindings for help section display"},
+  {"to": "internal/tui/styles.go", "relationship": "imports", "usage": "titleStyle, helpKeyStyle, helpDescStyle for rendering"},
+  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "emits switchViewMsg to close help overlay"},
+  {"to": "internal/tui/app.go", "relationship": "imported_by", "usage": "help field embedded in App; newHelpModel called in App.Init()"}
+]

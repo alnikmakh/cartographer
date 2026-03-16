@@ -1,0 +1,3 @@
+[
+  {"to": "internal/summarizer/ollama.go", "relationship": "tests", "usage": "tests OllamaClient struct and its methods"}
+]

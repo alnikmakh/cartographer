@@ -1,0 +1,42 @@
+[
+  {
+    "to": "internal/refresh/refresh.go",
+    "relationship": "imports",
+    "usage": "tests Service, FetchedMessage, RefreshResult, Fetcher interface"
+  },
+  {
+    "to": "tg-digest/internal/storage",
+    "relationship": "imports",
+    "usage": "test setup — creates temporary store, seeds channels, calls storage.Open, Messages/Channels/SyncState collections"
+  },
+  {
+    "to": "tg-digest/internal/source",
+    "relationship": "imports",
+    "usage": "mockSource interface implementation, source.NewRegistry for integration tests"
+  },
+  {
+    "to": "tg-digest/internal/source/rss",
+    "relationship": "imports",
+    "usage": "integration test — rss.NewRSSSource with httptest mock server"
+  },
+  {
+    "to": "tg-digest/internal/source/reddit",
+    "relationship": "imports",
+    "usage": "integration test — reddit.NewRedditSource with httptest mock server"
+  },
+  {
+    "to": "tg-digest/internal/source/hackernews",
+    "relationship": "imports",
+    "usage": "integration test — hackernews.NewHNSource with httptest mock server"
+  },
+  {
+    "to": "github.com/stretchr/testify/assert",
+    "relationship": "imports",
+    "usage": "assertion library"
+  },
+  {
+    "to": "github.com/stretchr/testify/require",
+    "relationship": "imports",
+    "usage": "assertion library with require semantics"
+  }
+]

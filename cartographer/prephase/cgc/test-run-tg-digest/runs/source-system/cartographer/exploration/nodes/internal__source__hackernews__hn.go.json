@@ -1,0 +1,11 @@
+{
+  "path": "internal/source/hackernews/hn.go",
+  "type": "source",
+  "summary": "HackerNews source implementation fetching stories via concurrent API calls",
+  "exports": ["HNSource", "NewHNSource"],
+  "imports": ["tg-digest/internal/source"],
+  "imported_by": ["internal/source/hackernews/hn_test.go"],
+  "side_effects": ["HTTP calls to hacker-news.firebaseio.com"],
+  "config_deps": ["baseURL"],
+  "notes": "Implements source.Source interface. Fetches via concurrent goroutines with 10-item semaphore. Checkpoint is string-encoded max item ID (int). Filters deleted/dead items and non-story types. Preserves order via insertion sort after concurrent fetch. Text composition varies by presence of URL and text fields."
+}

@@ -1,0 +1,10 @@
+{
+  "path": "internal/source/hackernews/hn_test.go",
+  "type": "test",
+  "summary": "Test suite for HNSource with mock Firebase server",
+  "imports": ["tg-digest/internal/source", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require"],
+  "imported_by": [],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Compile-time check verifies HNSource implements source.Source interface. Uses httptest mock server. Tests: constructor defaults, interface compliance, concurrent fetch with limiter, checkpoint filtering (partial and full), text composition logic, timestamp parsing, URL construction, order preservation, error handling (network, invalid JSON, missing items), item filtering (deleted, dead, non-story types)."
+}

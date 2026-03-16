@@ -43,13 +43,7 @@ actual source code one file at a time. Cartographer needs a
   "seed": "path/to/entry-point.ts",
   "boundaries": {
     "explore_within": ["path/to/package/**"],
-    "boundary_packages": ["path/to/neighbor", "..."],
-    "ignore": ["**/*.test.ts", "**/*.md"]
-  },
-  "budget": {
-    "max_iterations": 20,
-    "max_nodes": 60,
-    "max_depth_from_seed": 5
+    "boundary_packages": ["path/to/neighbor", "..."]
   }
 }
 ```
@@ -59,10 +53,6 @@ actual source code one file at a time. Cartographer needs a
 | `seed` | Starting file. Explores outward from here. |
 | `explore_within` | Globs for files that get FULL exploration (read source, trace all deps). The core area. |
 | `boundary_packages` | Packages where cartographer records interfaces (used exports, who uses them) but does NOT explore internally. The walls. |
-| `ignore` | Skipped entirely. Zero tokens spent. |
-| `max_iterations` | Agent loop iterations before stopping. |
-| `max_nodes` | Max files to fully explore. |
-| `max_depth_from_seed` | Hops from seed before halting expansion. |
 
 ## What You're Reading
 
@@ -138,6 +128,9 @@ When you see a coherent slice, propose it with:
 6. **Hints** — observations about coupling, patterns, or complexity
    cartographer should watch for during exploration
 
+Do NOT add an `ignore` field. Everything under `explore_within` gets
+explored. Boundaries already restrict the agent from going outside.
+
 ## Finalizing a Slice
 
 When the user agrees on a slice, produce two things:
@@ -148,13 +141,7 @@ When the user agrees on a slice, produce two things:
   "seed": "...",
   "boundaries": {
     "explore_within": ["..."],
-    "boundary_packages": ["..."],
-    "ignore": ["..."]
-  },
-  "budget": {
-    "max_iterations": 20,
-    "max_nodes": 60,
-    "max_depth_from_seed": 5
+    "boundary_packages": ["..."]
   },
   "hints": [
     "Watch for shared session state between auth middleware and user service",
@@ -170,24 +157,6 @@ coupling to watch for during exploration.
 **2. Description** — human-readable paragraph explaining: what this
 slice covers, why these boundaries, what cartographer should find,
 and any caveats.
-
-## Budget Sizing
-
-Use this table to set budget values based on file count (the number
-of files matching `explore_within` globs, excluding `ignore`):
-
-| File count | max_nodes | max_iterations | max_depth_from_seed |
-|---|---|---|---|
-| 1-10 | count + 2 | ceil(count/3) + 2 | 3 |
-| 11-30 | count + 5 | ceil(count/3) + 3 | 5 |
-| 31-60 | count + 10 | ceil(count/3) + 5 | 6 |
-| 61-100 | count + 15 | ceil(count/3) + 7 | 7 |
-| 100+ | count + 20 | ceil(count/3) + 10 | 8 |
-
-Rationale: explore.sh uses BATCH_SIZE=3, so iterations ≈
-ceil(files/3) plus buffer for failures and boundary recording.
-max_nodes includes headroom for boundary nodes discovered during
-exploration.
 
 ## Slice Execution Order
 

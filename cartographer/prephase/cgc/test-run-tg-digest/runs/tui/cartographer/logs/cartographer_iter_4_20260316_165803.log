@@ -1,0 +1,27 @@
+Done! I've mapped all three files:
+
+## Summary
+
+**1. filter_test.go** — 13 tests for SourceFilter
+- Tests type/name matching, empty filter behavior, intersection logic
+- Uses testify assertions
+
+**2. help.go** — Help overlay Bubble Tea model (HINT MATCH: "help.go (helpModel, 3 functions)")
+- Exports: `helpModel` struct
+- Implements `tea.Model` interface (Update, View)
+- Update: handles Escape/Help keys → emits `switchViewMsg` to close
+- View: renders 3 sections (Navigation, Dashboard, Sources) with keybindings from `keys.go`
+- Dependencies: `keys`, `titleStyle`, `helpKeyStyle`, `helpDescStyle` (from styles.go)
+- Embedded in App struct (line 22, initialized in app.go:67)
+
+**3. help_test.go** — 5 tests for helpModel
+- Tests view sections, key binding labels, Escape/?-key handling
+
+### Files written:
+- `nodes/internal__tui__filter_test.go.json`
+- `nodes/internal__tui__help.go.json`
+- `nodes/internal__tui__help_test.go.json`
+- `edges/internal__tui__filter_test.go.edges.json`
+- `edges/internal__tui__help.go.edges.json`
+- `edges/internal__tui__help_test.go.edges.json`
+- Updated `index.json` with all three entries

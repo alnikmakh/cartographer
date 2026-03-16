@@ -1,0 +1,7 @@
+Exploration complete. I've documented:
+
+1. **storage_test.go** — Integration tests exercising the full Store interface with ephemeral databases. Tests Channel source types, SyncState checkpoints, and MessageSummary operations (CRUD, filtering, unsummarized queries). Confirms upsert behavior on duplicate message IDs.
+
+2. **syncstate.go** — SyncStateRepository implementation using SQLite ON CONFLICT for idempotent upserts. Checkpoint is a flexible string type (etag, versions, etc.). Get() returns nil for not-found (no error). Part of the repository pattern family.
+
+Both files written to nodes/, edges/, and index.json updated.

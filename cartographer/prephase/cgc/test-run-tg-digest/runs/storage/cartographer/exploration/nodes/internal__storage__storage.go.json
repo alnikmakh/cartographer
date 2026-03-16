@@ -1,0 +1,44 @@
+{
+  "path": "internal/storage/storage.go",
+  "type": "source",
+  "summary": "Core storage interface definitions and SQLite store initialization, entry point for all persistence operations",
+  "exports": [
+    "Store",
+    "ChannelRepository",
+    "MessageRepository",
+    "MessageSummaryRepository",
+    "SyncStateRepository",
+    "Channel",
+    "Message",
+    "MessageSummary",
+    "SyncState",
+    "Open"
+  ],
+  "imports": [
+    "context",
+    "database/sql",
+    "fmt",
+    "os",
+    "path/filepath",
+    "strings",
+    "time",
+    "modernc.org/sqlite"
+  ],
+  "imported_by": [
+    "internal/refresh/refresh_test.go",
+    "internal/tui/app_test.go",
+    "internal/summarizer/service_test.go",
+    "internal/storage/channels.go",
+    "internal/storage/messages.go",
+    "internal/storage/message_summaries.go",
+    "internal/storage/syncstate.go"
+  ],
+  "side_effects": [
+    "Opens SQLite database file at dbPath",
+    "Runs migrations via runMigrations()",
+    "Initializes repository implementations",
+    "Sets database connection pool (MaxOpenConns=1)"
+  ],
+  "config_deps": ["dbPath (expands ~)"],
+  "notes": "Core package interface. Defines all repository contracts and domain types (Channel, Message, MessageSummary, SyncState). sqliteStore struct implements Store and is responsible for lifecycle: initialization with Open() invokes runMigrations to ensure schema is up-to-date. Matches hints: storage.go is the prerequisite for all other slices. ChannelRepository has dual Create methods (Create and CreateNonTelegram) supporting source_type diversity. MessageSummaryRepository has channel-filtered and unsummarized queries supporting the per-message summaries model introduced in migration 004."
+}

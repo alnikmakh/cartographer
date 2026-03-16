@@ -1,0 +1,12 @@
+[
+  {
+    "to": "internal/storage",
+    "relationship": "imports",
+    "usage": "boundary — uses storage.Message struct for message data"
+  },
+  {
+    "to": "internal/summarizer/service.go",
+    "relationship": "imported_by",
+    "usage": "service calls BuildSingleMessagePrompt to construct prompts before sending to LLM"
+  }
+]

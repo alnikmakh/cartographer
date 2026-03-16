@@ -1,0 +1,26 @@
+Completed exploration of the filtering subsystem! Here's the summary:
+
+## Files Explored
+
+### 1. **internal/tui/filter.go**
+- **Purpose**: Core data model for source filtering with type and name matching
+- **Key Exports**: `SourceFilter` struct, `Match()`, `MatchingChannelIDs()`, `MatchingSourceNames()`, `FilterLabel()`
+- **Pattern**: Zero-value filter = match-all; used to resolve UI selections to SQL queries and refresh service parameters
+- **Used by**: app.go (refresh/summarize commands), dashboard.go (filter display), filter_overlay.go (state management)
+
+### 2. **internal/tui/filter_overlay.go**
+- **Purpose**: Interactive Bubble Tea sub-model for picking sources to filter
+- **Key Exports**: `filterOverlayModel` (with Update/View), two message types (`filterOverlayConfirmMsg`, `filterOverlayCancelMsg`)
+- **Behavior**: Checkbox list with cursor nav (↑/↓), toggle (space), select-all (a), select-none (n), confirm (enter) → constructs SourceFilter
+- **Integration**: Triggered via keys.FilterPicker (F key) in dashboard; sends confirmation message up to app/dashboard handlers
+
+### 3. **internal/tui/filter_overlay_test.go**
+- **Coverage**: 9 tests covering init state, navigation, selection logic, state transitions, and filter construction
+- **Key Test**: Verifies that "all selected" → empty filter (match-all semantics)
+
+## Dependency Graph
+- **filter.go** ← (used by) app.go, dashboard.go, filter_overlay.go
+- **filter_overlay.go** ← (used by) app.go, dashboard.go
+- Both depend on styles.go (badges, colors) and keys.go (keybindings)
+
+All node/edge files written to `nodes/` and `edges/` directories. Index updated.

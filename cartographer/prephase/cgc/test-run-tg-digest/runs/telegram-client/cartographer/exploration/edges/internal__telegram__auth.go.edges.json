@@ -1,0 +1,17 @@
+[
+  {
+    "to": "internal/telegram/client.go",
+    "relationship": "imported_by",
+    "usage": "AuthFlow interface passed to Client.Run() method for authentication"
+  },
+  {
+    "to": "github.com/gotd/td/telegram/auth",
+    "relationship": "imports",
+    "usage": "boundary — provides auth.UserAuthenticator interface and auth.UserInfo type"
+  },
+  {
+    "to": "github.com/gotd/td/tg",
+    "relationship": "imports",
+    "usage": "boundary — provides tg.HelpTermsOfService type for terms acceptance"
+  }
+]

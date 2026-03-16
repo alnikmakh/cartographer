@@ -1,0 +1,4 @@
+[
+  {"to": "internal/storage/migrations.go", "relationship": "embedded_by", "usage": "executed as second migration by runMigrations()"},
+  {"to": "internal/storage/storage.go", "relationship": "impacts", "usage": "defines SyncState.Checkpoint string field and Channel.SourceType field"}
+]

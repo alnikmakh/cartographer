@@ -1,0 +1,31 @@
+## Exploration Complete ✓
+
+I've successfully analyzed all three source files. Here's what was documented:
+
+### Files Explored
+
+1. **internal/source/hackernews/hn.go** — HackerNews source with:
+   - Concurrent fetch (10-item semaphore)
+   - String-encoded ID checkpoints
+   - Filters for deleted/dead/non-story items
+   - Order preservation via insertion sort
+
+2. **internal/source/hackernews/hn_test.go** — Comprehensive test suite with:
+   - 19 test cases covering all scenarios
+   - Mock Firebase API server
+   - Interface compliance verification
+   - Tests for checkpoint filtering, text composition, error handling
+
+3. **internal/source/reddit/reddit.go** — Reddit source with:
+   - Float64-encoded timestamp checkpoints (unix)
+   - Rate limiting (429) and 404 handling
+   - User-Agent requirement (Reddit API enforcement)
+   - Conditional text composition (self vs link posts)
+
+### Key Architectural Patterns
+
+Both HNSource and RedditSource implement the `source.Source` interface (Type, Name, FetchMessages). They differ in checkpoint mechanisms:
+- **HN**: max item ID (int → string)
+- **Reddit**: max created_utc timestamp (float64 → string)
+
+All three files output written to `nodes/`, `edges/`, and `index.json` in the exploration directory.

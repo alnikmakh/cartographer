@@ -1,0 +1,7 @@
+[
+  {
+    "to": "internal/summarizer/openrouter.go",
+    "relationship": "tests",
+    "usage": "Tests NewOpenRouterClient and ChatCompletion method"
+  }
+]

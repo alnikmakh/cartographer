@@ -1,0 +1,6 @@
+[
+  {"to": "internal/source", "relationship": "imports", "usage": "source.Source interface, source.SourceMessage type definition"},
+  {"to": "internal/source/registry.go", "relationship": "design_pattern", "usage": "HNSource is one of four Source implementations registered via Registry pattern"},
+  {"to": "net/http", "relationship": "external", "usage": "HTTP client for Firebase API calls to hacker-news.firebaseio.com"},
+  {"to": "encoding/json", "relationship": "external", "usage": "JSON unmarshaling of story IDs and item data"}
+]

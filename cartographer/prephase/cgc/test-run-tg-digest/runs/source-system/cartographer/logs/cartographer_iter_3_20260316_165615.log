@@ -1,0 +1,9 @@
+Done. I've explored all three files and documented:
+
+**internal/source/source.go** — Core abstraction defining the `Source` interface (Type, Name, FetchMessages) and `SourceMessage` struct. All source implementations depend on this.
+
+**internal/source/rss/rss.go** — RSSSource implementation with HTTP-level caching (ETag/Last-Modified conditional requests), RFC3339-based checkpoints for incremental sync, gofeed parsing for RSS 2.0 and Atom, and text content fallback (Content > Description > Title).
+
+**internal/source/rss/rss_test.go** — Comprehensive test suite covering RSS2/Atom parsing, HTTP 304 Not Modified handling, checkpoint filtering (prevents duplicate delivery), error scenarios (network, malformed XML), and limit enforcement.
+
+All node files, edge files, and index.json updated.

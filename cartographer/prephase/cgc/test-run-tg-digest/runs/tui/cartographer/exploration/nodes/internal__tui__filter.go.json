@@ -1,0 +1,11 @@
+{
+  "path": "internal/tui/filter.go",
+  "type": "source",
+  "summary": "Filter struct with match logic for sources by type and name; provides UI labels and SQL query helpers",
+  "exports": ["SourceFilter", "IsEmpty", "Match", "MatchingChannelIDs", "MatchingSourceNames", "FilterLabel"],
+  "imports": ["fmt"],
+  "imported_by": ["internal/tui/app.go", "internal/tui/dashboard.go", "internal/tui/filter_overlay.go", "internal/tui/filter_test.go", "internal/tui/filter_overlay_test.go"],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Core filtering logic: SourceFilter has two maps (Types, Names). Zero value = match-all. Match() checks both; MatchingChannelIDs() and MatchingSourceNames() resolve filters to concrete query parameters. FilterLabel() generates UI text."
+}

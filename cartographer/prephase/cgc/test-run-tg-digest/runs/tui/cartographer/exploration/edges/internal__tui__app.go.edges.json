@@ -1,0 +1,10 @@
+[
+  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "message types (summariesLoadedMsg, channelsLoadedMsg, etc.) and service interfaces"},
+  {"to": "internal/tui/keys.go", "relationship": "imports", "usage": "keyMap for key bindings in handleKeyMsg"},
+  {"to": "internal/tui/styles.go", "relationship": "imports", "usage": "UI styles (spinner, loading, error, tab, status bar)"},
+  {"to": "internal/tui/dashboard.go", "relationship": "imports", "usage": "dashboardModel for dashboard view"},
+  {"to": "internal/tui/channels.go", "relationship": "imports", "usage": "channelsModel for sources/channels view"},
+  {"to": "internal/tui/help.go", "relationship": "imports", "usage": "helpModel for help overlay"},
+  {"to": "internal/storage", "relationship": "imports", "usage": "boundary — loads/deletes channels, retrieves message summaries"},
+  {"to": "cmd/digest/main.go", "relationship": "imported_by", "usage": "NewApp constructor called to instantiate TUI"}
+]

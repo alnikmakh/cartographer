@@ -1,0 +1,11 @@
+{
+  "path": "internal/summarizer/service.go",
+  "type": "source",
+  "summary": "Service orchestrates message summarization pipeline: fetches unsummarized messages, calls LLM, stores results",
+  "exports": ["Service", "ServiceOption", "WithLocalModel", "NewService", "SummarizeMessage", "SummarizeUnsummarized", "SummarizeUnsummarizedForChannels"],
+  "imports": ["tg-digest/internal/storage"],
+  "imported_by": ["internal/summarizer/service_test.go", "internal/summarizer/prompt.go"],
+  "side_effects": ["calls Client.ChatCompletion for LLM requests", "calls storage.Store for message and channel operations"],
+  "config_deps": ["Client interface", "storage.Store"],
+  "notes": "Matches hint: Service struct (NewService) with 5 public functions. Orchestrates fetching unsummarized messages, calling LLM via Client interface, storing results to storage. Implements 150-char threshold: short messages copied verbatim without LLM call. Time window filters messages from yesterday+today UTC. SummarizeUnsummarizedForChannels allows filtering by specific channel IDs. WithLocalModel() option adds preamble for local LLM inference."
+}

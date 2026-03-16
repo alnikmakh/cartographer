@@ -1,0 +1,67 @@
+[
+  {
+    "to": "tg-digest/internal/config",
+    "relationship": "imports",
+    "usage": "Load config via config.Load(); uses all config types (Telegram, Storage, OpenRouter, LLM, Refresh, Sources)"
+  },
+  {
+    "to": "tg-digest/internal/telegram",
+    "relationship": "imports",
+    "usage": "boundary — NewClient, NewTerminalAuth, ResolveChannel, FetchMessages, Message type"
+  },
+  {
+    "to": "tg-digest/internal/storage",
+    "relationship": "imports",
+    "usage": "boundary — storage.Open(), Channels/Messages/SyncState DAOs, Store interface"
+  },
+  {
+    "to": "tg-digest/internal/refresh",
+    "relationship": "imports",
+    "usage": "boundary — NewTelegramFetcher, NewService, RefreshService interface, RefreshResult"
+  },
+  {
+    "to": "tg-digest/internal/source",
+    "relationship": "imports",
+    "usage": "boundary — Registry type and interface, Source.Name() method"
+  },
+  {
+    "to": "tg-digest/internal/source/telegram",
+    "relationship": "imports",
+    "usage": "boundary — NewTelegramSource for source registry"
+  },
+  {
+    "to": "tg-digest/internal/source/rss",
+    "relationship": "imports",
+    "usage": "boundary — NewRSSSource for source registry"
+  },
+  {
+    "to": "tg-digest/internal/source/reddit",
+    "relationship": "imports",
+    "usage": "boundary — NewRedditSource for source registry"
+  },
+  {
+    "to": "tg-digest/internal/source/hackernews",
+    "relationship": "imports",
+    "usage": "boundary — NewHNSource for source registry"
+  },
+  {
+    "to": "tg-digest/internal/summarizer",
+    "relationship": "imports",
+    "usage": "boundary — NewService, NewOllamaClient, NewOpenRouterClient, Client interface, SummarizeQueueResult"
+  },
+  {
+    "to": "tg-digest/internal/tui",
+    "relationship": "imports",
+    "usage": "boundary — NewApp, RefreshService interface, SummarizeService interface, AppOption, WithRefresh, WithSummarize"
+  },
+  {
+    "to": "github.com/charmbracelet/bubbletea",
+    "relationship": "imports",
+    "usage": "external — tea.NewProgram, tea.WithAltScreen for TUI rendering"
+  },
+  {
+    "to": "github.com/gotd/td/tg",
+    "relationship": "imports",
+    "usage": "external — tg.InputChannel type from Telegram client library"
+  }
+]

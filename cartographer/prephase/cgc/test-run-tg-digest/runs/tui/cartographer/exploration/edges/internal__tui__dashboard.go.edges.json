@@ -1,0 +1,42 @@
+[
+  {
+    "to": "internal/tui/types.go",
+    "relationship": "imports",
+    "usage": "SummaryItem, SourceFilter, ChannelItem types; filterOverlayConfirmMsg, filterOverlayCancelMsg, summariesLoadedMsg, loadSummariesMsg message types"
+  },
+  {
+    "to": "internal/tui/filter.go",
+    "relationship": "imports",
+    "usage": "SourceFilter type for filtering summaries by source type and channel"
+  },
+  {
+    "to": "internal/tui/filter_overlay.go",
+    "relationship": "imports",
+    "usage": "filterOverlayModel for advanced filtering UI (shift+f key)"
+  },
+  {
+    "to": "internal/tui/keys.go",
+    "relationship": "imports",
+    "usage": "keys keyMap for key binding constants (Left, Right, Down, Up, Toggle, etc)"
+  },
+  {
+    "to": "internal/tui/styles.go",
+    "relationship": "imports",
+    "usage": "style definitions (dateStyle, helpDescStyle, selectedCardStyle, expandedArrowStyle, etc)"
+  },
+  {
+    "to": "internal/tui/app.go",
+    "relationship": "imported_by",
+    "usage": "newDashboardModel called during app initialization; Update/View called in app event loop"
+  },
+  {
+    "to": "github.com/charmbracelet/bubbletea",
+    "relationship": "external",
+    "usage": "tea.Msg, tea.Cmd, tea.KeyMsg interface implementation"
+  },
+  {
+    "to": "github.com/charmbracelet/lipgloss",
+    "relationship": "external",
+    "usage": "lipgloss.Width for ANSI-aware text width calculation in render layout"
+  }
+]

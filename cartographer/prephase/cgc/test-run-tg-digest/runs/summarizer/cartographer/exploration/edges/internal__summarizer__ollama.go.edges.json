@@ -1,0 +1,4 @@
+[
+  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses ChatRequest, ChatMessage types; implements Client interface"},
+  {"to": "internal/summarizer/openrouter.go", "relationship": "imports", "usage": "reuses openRouterRequest, openRouterMessage, openRouterResponse types for JSON serialization"}
+]

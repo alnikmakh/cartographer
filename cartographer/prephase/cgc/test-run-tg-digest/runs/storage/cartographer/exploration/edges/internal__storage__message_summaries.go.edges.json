@@ -1,0 +1,22 @@
+[
+  {
+    "to": "internal/storage/storage.go",
+    "relationship": "implements",
+    "usage": "Implements MessageSummaryRepository interface, uses MessageSummary and Message types, messageSummaryRepo instantiated in Open()"
+  },
+  {
+    "to": "internal/storage/messages.go",
+    "relationship": "couples_with",
+    "usage": "Returns Message objects from GetUnsummarizedMessages methods; JOINs with messages table to find unsummarized messages"
+  },
+  {
+    "to": "database/sql",
+    "relationship": "imports",
+    "usage": "Database operations (QueryRowContext, QueryContext, ExecContext)"
+  },
+  {
+    "to": "strings",
+    "relationship": "imports",
+    "usage": "string.Join for dynamic SQL query construction in GetUnsummarizedMessagesByChannels"
+  }
+]

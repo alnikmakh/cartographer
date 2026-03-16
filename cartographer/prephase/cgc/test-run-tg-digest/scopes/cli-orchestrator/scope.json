@@ -1,0 +1,19 @@
+{
+  "seed": "cmd/digest/main.go",
+  "boundaries": {
+    "explore_within": ["cmd/digest/**", "internal/config/**"],
+    "boundary_packages": ["internal/storage", "internal/telegram", "internal/summarizer", "internal/source", "internal/refresh", "internal/tui"]
+  },
+  "budget": {
+    "max_iterations": 3,
+    "max_nodes": 4,
+    "max_depth_from_seed": 3
+  },
+  "hints": [
+    "main.go is the highest fan-out file (10 packages) — classic orchestrator/wiring",
+    "Defines summarizeServiceAdapter and registryRefreshAdapter — bridges between packages",
+    "10 functions including main, buildLLMClient, ensureSourceChannel, storeChannel, storeMessages, updateSyncState",
+    "config.go (Config + 6 sub-config types, 3 functions) — loaded at startup, used to configure all services",
+    "Run this slice LAST — by then all boundary packages are mapped"
+  ]
+}

@@ -1,0 +1,94 @@
+/bin/bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m                  CARTOGRAPHER LOOP STARTING                   [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+[0;34mProvider:[0m       claude (claude)
+[0;34mMax iterations:[0m 4
+[0;34mScope:[0m          4 files, 4 pending
+[0;34mLog:[0m            /home/dev/project/cartographer/prephase/cgc/test-run-tg-digest/runs/cli-orchestrator/cartographer/logs/cartographer_session_20260316_165418.log
+
+[0;36mScript-driven loop: compute pending → batch to agent → check output → repeat[0m
+[1;33mPress Ctrl+C to stop[0m
+
+
+[0;35m════════════════════ ITERATION 1 / 4 ════════════════════[0m
+[0;34m[2026-03-16 16:54:18][0m
+  Pending: 4 files, batch: 3
+
+Done. I've explored all three files and written the node, edge, and index entries for each:
+
+**Files explored:**
+
+1. **cmd/digest/main.go** — Classic orchestrator with 10-package fan-out. Handles CLI flags, config loading, Telegram client setup, message fetching/storage, TUI launch, and LLM-based summarization. Defines two bridge adapters: `registryRefreshAdapter` (wraps refresh.Service for source registry) and `summarizeServiceAdapter` (bridges summarizer.Service to TUI interface).
+
+2. **cmd/digest/main_test.go** — Unit tests for `buildLLMClient` function. Uses httptest to mock Ollama API. Tests happy paths (OpenRouter, healthy Ollama), empty provider case, unknown provider error, and Ollama model-not-found error.
+
+3. **internal/config/config.go** — Configuration package. Defines Config struct + 6 sub-config types (Telegram, Storage, OpenRouter, Refresh, LLM, Source). Load() applies defaults (Ollama→localhost:11434, OpenRouter→openrouter.ai, timeouts by provider), handles backward-compat migration (legacy OpenRouter→new LLM section), and validates all required fields.
+
+**Outputs written:**
+- 3 node files in `cartographer/exploration/nodes/`
+- 3 edge files in `cartographer/exploration/edges/`
+- Updated `cartographer/exploration/index.json` with entries for all three files
+[0;32mIteration 1: 0/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 2 / 4 ════════════════════[0m
+[0;34m[2026-03-16 16:55:39][0m
+  Pending: 4 files, batch: 3
+
+## ✓ Mapping Complete
+
+Successfully created node and edge files for all three files:
+
+### **cmd/digest/main.go** 
+- **Type**: Source (orchestrator)
+- **Exports**: 8 items (main, buildLLMClient, adapter types, helpers)
+- **Imports**: 12 packages (10 boundary, 2 external)
+- **Key Pattern**: Classic high-fan-out orchestrator with two adapter types (registryRefreshAdapter, summarizeServiceAdapter) bridging boundary packages to TUI interfaces
+- **Config**: All 6 sub-config types used
+- **Modes**: CLI-only fetch or interactive TUI with refresh/summarization
+
+### **cmd/digest/main_test.go**
+- **Type**: Test
+- **Exports**: 5 test functions covering buildLLMClient
+- **Coverage**: OpenRouter, Ollama (healthy/missing model), empty provider, unknown provider error
+- **Mock Strategy**: httptest.NewServer for Ollama responses
+
+### **internal/config/config.go**
+- **Type**: Source (config hub)
+- **Exports**: 7 types + Load + validate + expandPath
+- **Key Features**:
+  - Backward-compat migration: old OpenRouter → new LLM format
+  - Smart defaults: 120s timeout for Ollama, 30s for OpenRouter, 30min refresh interval
+  - SourceConfig supports 4 types: telegram, rss, reddit, hackernews (each with type-specific validation)
+
+**All files written to:**
+- `nodes/cmd__digest__main.go.json` | `edges/cmd__digest__main.go.edges.json`
+- `nodes/cmd__digest__main_test.go.json` | `edges/cmd__digest__main_test.go.edges.json`
+- `nodes/internal__config__config.go.json` | `edges/internal__config__config.go.edges.json`
+
+Index.json already has all entries marked explored=true.
+[0;32mIteration 2: 3/3 files explored[0m
+
+[0;35m════════════════════ ITERATION 3 / 4 ════════════════════[0m
+[0;34m[2026-03-16 16:57:01][0m
+  Pending: 1 files, batch: 1
+
+**Explored:** `internal/config/config_test.go`
+
+**Node created:** Test suite with 40 functions covering config.Load validation, defaults, error cases, source types (RSS/Reddit/HackerNews), LLM providers (Ollama/OpenRouter), and backward compatibility.
+
+**Edges:** Tests config.go and depends on testify for assertions.
+
+**Index updated** with exploration entry. All three outputs written.
+[0;32mIteration 3: 1/1 files explored[0m
+[0;32mAll files explored. Done.[0m
+
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+[0;32m              CARTOGRAPHER LOOP FINISHED                       [0m
+[0;32m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━[0m
+
+  Files explored:   4 / 4
+  Output:           cartographer/exploration/
+

@@ -1,0 +1,4 @@
+[
+  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses ChatRequest, ChatMessage types; implements Client interface"},
+  {"to": "internal/summarizer/ollama.go", "relationship": "shared_types", "usage": "ollama.go reuses openRouterRequest, openRouterMessage, openRouterResponse for JSON marshaling/unmarshaling"}
+]

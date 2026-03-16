@@ -1,0 +1,25 @@
+{
+  "path": "internal/source/rss/rss.go",
+  "type": "source",
+  "summary": "RSSSource implementation of Source interface with HTTP conditional requests, ETag/Last-Modified caching, and gofeed parsing",
+  "exports": ["RSSSource", "NewRSSSource"],
+  "imports": [
+    "context",
+    "fmt",
+    "io",
+    "net/http",
+    "strings",
+    "time",
+    "github.com/mmcdole/gofeed",
+    "tg-digest/internal/source"
+  ],
+  "imported_by": [
+    "internal/source/rss/rss_test.go",
+    "internal/source/registry.go"
+  ],
+  "side_effects": [
+    "http.DefaultClient.Do() - makes HTTP requests to RSS/Atom feeds with conditional headers (If-None-Match, If-Modified-Since)"
+  ],
+  "config_deps": [],
+  "notes": "Implements source.Source interface. Constructor: NewRSSSource(name, feedURL string). Checkpoint format: RFC3339_timestamp|etag|last_modified for incremental sync with HTTP-level caching. Supports 304 Not Modified responses for bandwidth optimization. Parses both RSS 2.0 and Atom feeds via gofeed library. Text content priority: Content > Description > Title. Author extraction from item.Author or item.Authors[0]. Timestamp precedence: PublishedParsed > UpdatedParsed > time.Now()."
+}

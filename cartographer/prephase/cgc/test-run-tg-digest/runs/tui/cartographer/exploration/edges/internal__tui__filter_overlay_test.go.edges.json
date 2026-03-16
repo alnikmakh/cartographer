@@ -1,0 +1,7 @@
+[
+  {"to": "testing", "relationship": "imports", "usage": "testing.T for test functions"},
+  {"to": "github.com/charmbracelet/bubbletea", "relationship": "imports", "usage": "tea.KeyMsg for simulating keyboard input"},
+  {"to": "github.com/stretchr/testify/assert", "relationship": "imports", "usage": "assert.* functions for test assertions"},
+  {"to": "internal/tui/filter_overlay.go", "relationship": "tests", "usage": "newFilterOverlayModel(), filterOverlayModel.Update(), filterOverlayModel.buildFilter(), filterOverlayConfirmMsg, filterOverlayCancelMsg"},
+  {"to": "internal/tui/filter.go", "relationship": "uses", "usage": "SourceFilter type in test setup and assertions"}
+]

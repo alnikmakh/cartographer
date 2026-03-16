@@ -1,0 +1,19 @@
+{
+  "seed": "internal/summarizer/service.go",
+  "boundaries": {
+    "explore_within": ["internal/summarizer/**"],
+    "boundary_packages": ["internal/storage", "internal/source"]
+  },
+  "budget": {
+    "max_iterations": 4,
+    "max_nodes": 7,
+    "max_depth_from_seed": 3
+  },
+  "hints": [
+    "summarizer.go defines interfaces and types (ChatRequest, ChatMessage, MessageSummarizeResult, SummarizeQueueResult) — the contract",
+    "service.go has Service struct (5 functions) — orchestrates fetching unsummarized messages, calling LLM, storing results",
+    "prompt.go (1 function) — likely builds the LLM prompt from messages",
+    "ollama.go (OllamaClient, 6 functions) and openrouter.go (OpenRouterClient, 2 functions) — two backend implementations",
+    "Service calls storage (14 calls) and source/registry (2 calls) — reads messages and writes summaries"
+  ]
+}

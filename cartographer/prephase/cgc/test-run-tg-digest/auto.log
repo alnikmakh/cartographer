@@ -1,0 +1,82 @@
+All files written. Here's the analysis summary:
+
+---
+
+## Slices Identified (7)
+
+### 1. Storage Foundation
+**Thesis:** Map the persistence layer — SQLite store, migrations, and the repository pattern that every other package depends on.
+**Seed:** `internal/storage/storage.go` — defines core types and sqliteStore
+**Explore within:** `internal/storage/**`
+**Boundaries:** none (foundation layer)
+**Hints:** Repository pattern with channels.go, messages.go, message_summaries.go, syncstate.go all referencing sqliteStore. migrations.go called during init.
+**File count:** 6
+**Budget:** max_nodes=8, max_iterations=4, max_depth=3
+
+### 2. Telegram Client
+**Thesis:** Map the low-level Telegram API client — auth flow, session persistence, message fetching.
+**Seed:** `internal/telegram/client.go` — main Client struct
+**Explore within:** `internal/telegram/**`
+**Boundaries:** storage
+**Hints:** TerminalAuth (7 functions) for interactive auth, FileSessionStorage for sessions, Message type separate from storage.Message.
+**File count:** 4
+**Budget:** max_nodes=6, max_iterations=4, max_depth=3
+
+### 3. Source System
+**Thesis:** Map the content source abstraction — Source interface, Registry, and 4 implementations (Telegram, HN, Reddit, RSS).
+**Seed:** `internal/source/registry.go` — central registry
+**Explore within:** `internal/source/**`
+**Boundaries:** storage, telegram, refresh
+**Hints:** source/telegram bridges to refresh/telegram.go. HN and RSS directly call storage for sync state.
+**File count:** 6
+**Budget:** max_nodes=8, max_iterations=4, max_depth=3
+
+### 4. Summarizer
+**Thesis:** Map the LLM summarization pipeline — Service orchestrator, prompt construction, Ollama + OpenRouter backends.
+**Seed:** `internal/summarizer/service.go` — Service struct
+**Explore within:** `internal/summarizer/**`
+**Boundaries:** storage, source
+**Hints:** summarizer.go defines the contract interfaces. Service reads unsummarized messages from storage, calls LLM, writes summaries.
+**File count:** 5
+**Budget:** max_nodes=7, max_iterations=4, max_depth=3
+
+### 5. Refresh Pipeline
+**Thesis:** Map message refresh orchestration — how Service fetches from sources and persists to storage.
+**Seed:** `internal/refresh/refresh.go` — Service struct
+**Explore within:** `internal/refresh/**`
+**Boundaries:** storage, telegram, source
+**Hints:** Small (2 files) but high coupling (17 storage calls). TelegramFetcher adapts telegram.Client.
+**File count:** 2
+**Budget:** max_nodes=4, max_iterations=3, max_depth=3
+
+### 6. TUI
+**Thesis:** Map the Bubbletea terminal UI — App model, views (channels, dashboard, filter, help), message types, key bindings.
+**Seed:** `internal/tui/app.go` — App struct (18 functions)
+**Explore within:** `internal/tui/**`
+**Boundaries:** storage, cmd/digest
+**Hints:** types.go has 15 message types. Bidirectional coupling with cmd through adapter interfaces. Two main views: channels + dashboard.
+**File count:** 9
+**Budget:** max_nodes=11, max_iterations=5, max_depth=3
+
+### 7. CLI Orchestrator
+**Thesis:** Map the entry point wiring — how main.go connects config, storage, telegram, sources, refresh, summarizer, and TUI.
+**Seed:** `cmd/digest/main.go` — fan-out to 10 packages
+**Explore within:** `cmd/digest/**`, `internal/config/**`
+**Boundaries:** storage, telegram, summarizer, source, refresh, tui
+**Hints:** Defines adapter types (summarizeServiceAdapter, registryRefreshAdapter). config.go loaded at startup.
+**File count:** 2
+**Budget:** max_nodes=4, max_iterations=3, max_depth=3
+
+---
+
+## Execution Order
+
+1. **Storage Foundation** — everything depends on it
+2. **Telegram Client** — infrastructure needed by refresh and cmd
+3. **Source System** — content abstraction needed by refresh and summarizer
+4. **Refresh Pipeline** — bridges telegram + source into storage
+5. **Summarizer** — depends on storage + source
+6. **TUI** — UI layer, depends on storage + cmd adapters
+7. **CLI Orchestrator** — wiring layer, run last when all boundaries are mapped
+
+Total: 34 production files covered across 7 slices (53 total files minus 19 test files = 34).

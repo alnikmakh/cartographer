@@ -1,0 +1,27 @@
+[
+  {
+    "to": "tg-digest/internal/storage",
+    "relationship": "imports",
+    "usage": "boundary — depends on Store interface (Channels, Messages, SyncState collections); 17+ cross-pkg calls per hints"
+  },
+  {
+    "to": "tg-digest/internal/source",
+    "relationship": "imports",
+    "usage": "boundary — uses Source interface and Registry for generic fetch via RefreshAllSources/RefreshSources methods"
+  },
+  {
+    "to": "tg-digest/cmd/digest/main.go",
+    "relationship": "imported_by",
+    "usage": "Service instantiated from main, passed as HTTP handler or refresh orchestrator"
+  },
+  {
+    "to": "tg-digest/internal/tui/types.go",
+    "relationship": "imported_by",
+    "usage": "refresh types used in TUI state or handlers"
+  },
+  {
+    "to": "tg-digest/internal/tui/app_test.go",
+    "relationship": "imported_by",
+    "usage": "refresh service used in TUI app tests"
+  }
+]

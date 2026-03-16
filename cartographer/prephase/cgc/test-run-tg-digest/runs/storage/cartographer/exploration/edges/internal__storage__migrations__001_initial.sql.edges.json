@@ -1,0 +1,3 @@
+[
+  {"to": "internal/storage/migrations.go", "relationship": "embedded_by", "usage": "executed as first migration by runMigrations()"}
+]

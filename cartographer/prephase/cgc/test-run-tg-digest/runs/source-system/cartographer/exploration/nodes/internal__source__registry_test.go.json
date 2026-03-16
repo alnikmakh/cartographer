@@ -1,0 +1,17 @@
+{
+  "path": "internal/source/registry_test.go",
+  "type": "test",
+  "summary": "Test suite for Registry with mockSource test double, covering add/list/lookup/remove and duplicate-name replacement semantics",
+  "exports": [],
+  "imports": [
+    "context",
+    "testing",
+    "time",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require"
+  ],
+  "imported_by": [],
+  "side_effects": [],
+  "config_deps": [],
+  "notes": "Defines mockSource test double implementing Source interface with configurable sourceType, sourceName, messages, checkpoint, and error. Tests Registry.Add and List, ListByType filtering by sourceType, GetByName lookup (nil if not found), Remove (bool return), and duplicate-name replacement semantics (second Add with same Name replaces). Also tests mockSource.FetchMessages behavior."
+}

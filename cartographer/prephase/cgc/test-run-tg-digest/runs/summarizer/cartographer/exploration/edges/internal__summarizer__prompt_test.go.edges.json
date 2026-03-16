@@ -1,0 +1,12 @@
+[
+  {
+    "to": "internal/summarizer/prompt.go",
+    "relationship": "tests",
+    "usage": "Tests BuildSingleMessagePrompt function"
+  },
+  {
+    "to": "internal/storage",
+    "relationship": "imports",
+    "usage": "boundary — uses storage.Message struct for test fixtures"
+  }
+]

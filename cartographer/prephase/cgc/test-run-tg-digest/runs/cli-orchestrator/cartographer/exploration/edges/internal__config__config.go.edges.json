@@ -1,0 +1,17 @@
+[
+  {
+    "to": "cmd/digest/main.go",
+    "relationship": "imported_by",
+    "usage": "Main orchestrator calls config.Load() and uses all config types to initialize services"
+  },
+  {
+    "to": "cmd/digest/main_test.go",
+    "relationship": "imported_by",
+    "usage": "Tests import config.LLMConfig to construct test cases for buildLLMClient()"
+  },
+  {
+    "to": "gopkg.in/yaml.v3",
+    "relationship": "imports",
+    "usage": "external — YAML unmarshaling to parse config file"
+  }
+]

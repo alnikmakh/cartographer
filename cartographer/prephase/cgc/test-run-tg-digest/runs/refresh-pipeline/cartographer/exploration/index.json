@@ -1,0 +1,14 @@
+{
+  "internal/refresh/refresh.go": {
+    "explored": true,
+    "one_line": "Core refresh orchestrator with Service struct managing fetch→store pipeline"
+  },
+  "internal/refresh/refresh_test.go": {
+    "explored": true,
+    "one_line": "Comprehensive test suite for Service with mocks and RSS/Reddit/HackerNews integration tests"
+  },
+  "internal/refresh/telegram.go": {
+    "explored": true,
+    "one_line": "TelegramFetcher adapter implementing Fetcher interface via gotd/td Telegram API client"
+  }
+}

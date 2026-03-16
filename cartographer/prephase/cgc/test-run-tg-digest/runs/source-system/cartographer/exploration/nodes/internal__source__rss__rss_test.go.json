@@ -1,0 +1,21 @@
+{
+  "path": "internal/source/rss/rss_test.go",
+  "type": "test",
+  "summary": "Comprehensive test suite for RSSSource covering RSS 2.0, Atom feeds, HTTP caching, checkpoint filtering, and error handling",
+  "imports": [
+    "context",
+    "net/http",
+    "net/http/httptest",
+    "testing",
+    "time",
+    "github.com/stretchr/testify/assert",
+    "github.com/stretchr/testify/require",
+    "tg-digest/internal/source"
+  ],
+  "imported_by": [],
+  "side_effects": [
+    "httptest.NewServer - creates temporary HTTP servers for test isolation"
+  ],
+  "config_deps": [],
+  "notes": "Compile-time interface verification: var _ source.Source = (*RSSSource)(nil). Extensive test coverage: Type/Name methods, RSS2 feed parsing (2 items with pubDate), Atom feed parsing (single entry with updated timestamp), empty feed handling, server error handling (5xx), invalid URL connection errors, malformed XML parsing errors, checkpoint filtering (prevents duplicate delivery on second fetch), limit enforcement (limit=1 returns 1 item), RFC3339 checkpoint format validation, ETag/If-None-Match conditional request round-trip with 304 Not Modified handling, Last-Modified/If-Modified-Since conditional request round-trip, text composition fallback chain (Content > Description > Title)."
+}
