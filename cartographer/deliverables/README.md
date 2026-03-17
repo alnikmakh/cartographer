@@ -11,7 +11,10 @@ non-obvious behaviors — all verified against source code.
 
 ```bash
 pip install codegraphcontext kuzu    # graph indexer
-npm install -g @anthropic-ai/claude-code  # AI CLI
+
+# AI CLI — pick one (or both)
+npm install -g @anthropic-ai/claude-code  # Claude CLI (default)
+# or install Cursor CLI: https://cursor.com/cli
 ```
 
 ## Quick Start
@@ -73,15 +76,41 @@ PROJECT_ROOT="$PACKAGE" CLAUDE_MODEL=haiku ./explore.sh
 ./synthesize.sh "$PACKAGE"
 ```
 
+## Using Cursor CLI
+
+All three phases support Cursor CLI as an alternative provider.
+
+```bash
+# Prephase with Cursor
+PROVIDER=cursor ./run.sh /path/to/your/package
+
+# Exploration with Cursor
+./explore.sh cursor
+CURSOR_MODEL=sonnet-4 ./explore.sh cursor 10
+
+# Synthesis with Cursor
+PROVIDER=cursor ./synthesize.sh /path/to/source/root
+```
+
+**Cursor differences from Claude:**
+- MCP: Cursor auto-discovers from `.cursor/mcp.json` (run.sh sets this up automatically)
+- Synthesis: Cursor has no `--tools`/`--allowedTools` flags — relies on prompt discipline for read-only behavior
+- Permissions: uses `--yolo` instead of `--dangerously-skip-permissions`
+- Model names differ (e.g., `sonnet-4` vs `sonnet`)
+
 ## Environment Variables
 
 | Variable | Used by | Default | Description |
 |----------|---------|---------|-------------|
 | `PROJECT_ROOT` | explore.sh | parent dir of explore.sh | Where source files live |
-| `EXPLORATION_DIR` | explore.sh | `./exploration` | Where to write nodes/edges/index |
-| `CLAUDE_MODEL` | explore.sh | (provider default) | Model for exploration |
+| `EXPLORATION_DIR` | explore.sh, synthesize.sh | `./exploration` | Where to write nodes/edges/index |
+| `PROVIDER` | run.sh, synthesize.sh | claude | AI CLI provider (`claude` or `cursor`) |
+| `CLAUDE_MODEL` | explore.sh | (provider default) | Model for exploration (Claude) |
+| `CURSOR_MODEL` | explore.sh | (provider default) | Model for exploration (Cursor) |
 | `SYNTH_MODEL` | synthesize.sh | opus | Model for synthesis |
 | `SOURCE_ROOT` | synthesize.sh | (required arg) | Same as PROJECT_ROOT |
+| `CURSOR_CMD` | all scripts | agent | Cursor CLI command name |
+| `CLAUDE_CMD` | explore.sh | claude | Claude CLI command name |
 
 ## File Structure
 
@@ -108,12 +137,20 @@ deliverables/
     └── edges/*.json
 ```
 
+## Providers
+
+| Phase | Supported Providers | Notes |
+|-------|-------------------|-------|
+| Prephase | claude, cursor | MCP required for CGC graph queries |
+| Exploration | claude, codex, gemini, copilot, cursor | Any provider works |
+| Synthesis | claude, cursor | Claude preferred (tool restrictions) |
+
 ## Models
 
 | Phase | Default | Override | Notes |
 |-------|---------|----------|-------|
 | Prephase | Opus | — | Needs MCP tools, architectural judgment |
-| Exploration | haiku | `CLAUDE_MODEL=sonnet` | Cheap file-by-file reading |
+| Exploration | haiku | `CLAUDE_MODEL=sonnet` / `CURSOR_MODEL=sonnet-4` | Cheap file-by-file reading |
 | Synthesis | Opus | `SYNTH_MODEL=sonnet` | Source-verified, needs precision |
 
 ## Updating Prompts

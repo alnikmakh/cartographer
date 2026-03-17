@@ -9,6 +9,7 @@
 # Usage:
 #   ./synthesize.sh /path/to/source/root
 #   SYNTH_MODEL=sonnet ./synthesize.sh /path/to/source/root
+#   PROVIDER=cursor ./synthesize.sh /path/to/source/root
 #
 # Expects:
 #   cartographer/exploration/ to contain scope.json, index.json, nodes/, edges/
@@ -23,6 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EXPLORATION_DIR="${EXPLORATION_DIR:-$SCRIPT_DIR/exploration}"
 SYNTHESIS_PROMPT="$SCRIPT_DIR/SYNTHESIS_PROMPT.md"
 MODEL="${SYNTH_MODEL:-opus}"
+PROVIDER="${PROVIDER:-claude}"
 
 SOURCE_ROOT="${1:-}"
 if [[ -z "$SOURCE_ROOT" ]]; then
@@ -87,10 +89,11 @@ for path in sorted(index.keys()):
 NODE_COUNT=$(python3 -c "import json,glob; print(len(glob.glob('$EXPLORATION_DIR/nodes/*.json')))")
 EDGE_COUNT=$(python3 -c "import json,glob; print(len(glob.glob('$EXPLORATION_DIR/edges/*.json')))")
 
-echo "  Nodes: $NODE_COUNT"
-echo "  Edges: $EDGE_COUNT"
-echo "  Source: $SOURCE_ROOT"
-echo "  Model: $MODEL"
+echo "  Nodes:    $NODE_COUNT"
+echo "  Edges:    $EDGE_COUNT"
+echo "  Source:   $SOURCE_ROOT"
+echo "  Model:    $MODEL"
+echo "  Provider: $PROVIDER"
 echo ""
 
 # --- Build prompt ---
@@ -145,13 +148,34 @@ LOG="$SCRIPT_DIR/synthesis.log"
 
 echo "Running synthesis..."
 
-claude -p \
-    --model "$MODEL" \
-    --output-format text \
-    --tools "Read" \
-    --add-dir "$SOURCE_ROOT" \
-    --allowedTools "Read" \
-    < "$PROMPT_FILE" > "$OUTPUT" 2>"$LOG"
+case "$PROVIDER" in
+    claude)
+        claude -p \
+            --model "$MODEL" \
+            --output-format text \
+            --tools "Read" \
+            --add-dir "$SOURCE_ROOT" \
+            --allowedTools "Read" \
+            < "$PROMPT_FILE" > "$OUTPUT" 2>"$LOG"
+        ;;
+    cursor)
+        # Cursor has no --tools/--allowedTools/--add-dir flags.
+        # Run from SOURCE_ROOT so the agent has natural file access.
+        # The synthesis prompt already instructs "only read, never write."
+        CURSOR_CMD="${CURSOR_CMD:-agent}"
+        if ! command -v "$CURSOR_CMD" &>/dev/null; then
+            echo "Error: $CURSOR_CMD not found. Install Cursor CLI: https://cursor.com/cli"
+            exit 1
+        fi
+        (cd "$SOURCE_ROOT" && $CURSOR_CMD -p --output-format text -m "$MODEL" \
+            < "$PROMPT_FILE") > "$OUTPUT" 2>"$LOG"
+        ;;
+    *)
+        echo "Error: unsupported provider '$PROVIDER' for synthesis"
+        echo "Supported: claude, cursor"
+        exit 1
+        ;;
+esac
 
 rm -f "$PROMPT_FILE"
 

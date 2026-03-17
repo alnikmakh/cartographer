@@ -223,9 +223,15 @@ case "$PROVIDER" in
         CLI_FLAGS="--allow-all-tools"
         PIPE_MODE="arg"
         ;;
+    cursor)
+        CLI_CMD="${CURSOR_CMD:-agent}"
+        CLI_FLAGS="-p --yolo"
+        [ -n "${CURSOR_MODEL:-}" ] && CLI_FLAGS="$CLI_FLAGS -m $CURSOR_MODEL"
+        PIPE_MODE="stdin"
+        ;;
     *)
         echo "Unknown provider: $PROVIDER"
-        echo "Supported: claude, codex, gemini, copilot"
+        echo "Supported: claude, codex, gemini, copilot, cursor"
         exit 1
         ;;
 esac
