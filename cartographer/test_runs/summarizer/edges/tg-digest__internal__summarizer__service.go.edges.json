@@ -1,4 +1,0 @@
-[
-  {"to": "tg-digest/internal/summarizer/prompt.go", "relationship": "imports", "usage": "BuildSingleMessagePrompt function"},
-  {"to": "tg-digest/internal/storage", "relationship": "imports", "usage": "boundary — Message, MessageSummary, Channel, Store types"}
-]

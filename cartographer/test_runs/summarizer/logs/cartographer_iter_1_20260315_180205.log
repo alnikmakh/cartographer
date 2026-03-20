@@ -1,9 +1,0 @@
-Done mapping. Explored 3 files:
-
-| File | Summary |
-|------|---------|
-| **ollama.go** | HTTP client for Ollama API with chat completion, health checks, and model listing. Exports `OllamaClient`, `NewOllamaClient`. Reuses `openRouterRequest/Response` types from openrouter.go. |
-| **ollama_test.go** | 13 test cases covering ChatCompletion, HealthCheck, ListModels, HasModel with mocked HTTP servers. Error scenarios: connection refused, model not found, empty choices, invalid JSON, context timeout. |
-| **openrouter.go** | HTTP client for OpenRouter API plus shared request/response type definitions. Exports `OpenRouterClient`, 5 message/choice types. Creates Authorization header with API key. |
-
-All node/edge files written to `cartographer/exploration/`, index updated.

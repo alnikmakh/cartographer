@@ -1,5 +1,0 @@
-[
-  {"to": "tg-digest/internal/summarizer/openrouter.go", "relationship": "tests", "usage": "NewOpenRouterClient, ChatRequest, ChatMessage"},
-  {"to": "github.com/stretchr/testify/assert", "relationship": "imports", "usage": "external — test assertions"},
-  {"to": "github.com/stretchr/testify/require", "relationship": "imports", "usage": "external — test assertions"}
-]

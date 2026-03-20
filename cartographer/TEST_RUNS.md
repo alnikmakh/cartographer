@@ -35,7 +35,7 @@ symlink is `test_run/myrepo`, paths look like `myrepo/src/...`.
 ## Writing scope.json
 
 The pre-phase normally produces this. For testing, write it by hand.
-All five fields are required — `--init` validates their presence.
+All three fields are required — `--init` validates their presence.
 
 ```json
 {

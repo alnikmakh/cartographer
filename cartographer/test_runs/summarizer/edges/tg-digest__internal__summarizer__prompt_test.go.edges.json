@@ -1,6 +1,0 @@
-[
-  {"to": "tg-digest/internal/summarizer/prompt.go", "relationship": "tests", "usage": "BuildSingleMessagePrompt"},
-  {"to": "tg-digest/internal/storage", "relationship": "imports", "usage": "boundary — storage.Message type for test data"},
-  {"to": "github.com/stretchr/testify/assert", "relationship": "imports", "usage": "external — test assertions"},
-  {"to": "github.com/stretchr/testify/require", "relationship": "imports", "usage": "external — test assertions"}
-]

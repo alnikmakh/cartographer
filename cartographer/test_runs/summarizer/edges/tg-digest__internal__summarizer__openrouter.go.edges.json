@@ -1,5 +1,0 @@
-[
-  {"to": "tg-digest/internal/summarizer/summarizer.go", "relationship": "imports", "usage": "Uses ChatRequest type"},
-  {"to": "tg-digest/internal/summarizer/ollama.go", "relationship": "imported_by", "usage": "Ollama client reuses openRouter* types for API compatibility"},
-  {"to": "tg-digest/internal/summarizer/openrouter_test.go", "relationship": "tested_by", "usage": "Unit tests for OpenRouterClient"}
-]

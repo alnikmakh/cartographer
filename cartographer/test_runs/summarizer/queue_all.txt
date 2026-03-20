@@ -1,9 +1,0 @@
-tg-digest/internal/summarizer/ollama.go
-tg-digest/internal/summarizer/ollama_test.go
-tg-digest/internal/summarizer/openrouter.go
-tg-digest/internal/summarizer/openrouter_test.go
-tg-digest/internal/summarizer/prompt.go
-tg-digest/internal/summarizer/prompt_test.go
-tg-digest/internal/summarizer/service.go
-tg-digest/internal/summarizer/service_test.go
-tg-digest/internal/summarizer/summarizer.go

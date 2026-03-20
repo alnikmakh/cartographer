@@ -1,4 +1,0 @@
-[
-  {"to": "tg-digest/internal/summarizer/openrouter.go", "relationship": "imports", "usage": "Uses openRouterRequest, openRouterMessage, openRouterResponse types"},
-  {"to": "tg-digest/internal/summarizer/ollama_test.go", "relationship": "tested_by", "usage": "Unit tests for OllamaClient"}
-]

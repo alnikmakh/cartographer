@@ -1,5 +1,0 @@
-[
-  {"to": "tg-digest/internal/storage", "relationship": "imports", "usage": "boundary — storage.Message type"},
-  {"to": "tg-digest/internal/summarizer/service.go", "relationship": "imported_by", "usage": "service uses BuildSingleMessagePrompt"},
-  {"to": "tg-digest/internal/summarizer/prompt_test.go", "relationship": "imported_by", "usage": "tests verify prompt construction"}
-]
