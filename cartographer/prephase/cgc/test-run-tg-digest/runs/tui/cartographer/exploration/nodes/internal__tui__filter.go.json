@@ -1,11 +1,26 @@
 {
   "path": "internal/tui/filter.go",
-  "type": "source",
-  "summary": "Filter struct with match logic for sources by type and name; provides UI labels and SQL query helpers",
-  "exports": ["SourceFilter", "IsEmpty", "Match", "MatchingChannelIDs", "MatchingSourceNames", "FilterLabel"],
-  "imports": ["fmt"],
-  "imported_by": ["internal/tui/app.go", "internal/tui/dashboard.go", "internal/tui/filter_overlay.go", "internal/tui/filter_test.go", "internal/tui/filter_overlay_test.go"],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Core filtering logic: SourceFilter has two maps (Types, Names). Zero value = match-all. Match() checks both; MatchingChannelIDs() and MatchingSourceNames() resolve filters to concrete query parameters. FilterLabel() generates UI text."
+  "role": "model",
+  "summary": "SourceFilter value type: pure predicate and resolver for filtering sources by type and/or name",
+  "contracts": {
+    "requires": ["Zero value is valid and means 'match all'"],
+    "guarantees": ["IsEmpty, Match, MatchingChannelIDs, MatchingSourceNames, FilterLabel are all pure — no side effects; nil return from Matching* means 'all' (callers must check for nil vs empty slice)"]
+  },
+  "observations": [
+    {
+      "kind": "invariant",
+      "text": "When both Types and Names are set, Match requires both to pass (AND semantics). This is documented in the field comment but callers must be aware — the filter_overlay only ever produces Names-only filters, never Types+Names combinations.",
+      "loc": "filter.go:22-33"
+    },
+    {
+      "kind": "behavior",
+      "text": "MatchingChannelIDs and MatchingSourceNames return nil (not empty slice) when the filter is empty — callers in app.go treat nil as 'all' and pass it directly to service methods which also treat nil as 'all'.",
+      "loc": "filter.go:37-63"
+    },
+    {
+      "kind": "coupling",
+      "text": "FilterLabel calls sourceTypeBadge from dashboard.go — a mild cross-file coupling within the same package for badge string formatting.",
+      "loc": "filter.go:73"
+    }
+  ]
 }

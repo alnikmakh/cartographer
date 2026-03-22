@@ -1,25 +1,51 @@
 {
   "path": "internal/source/rss/rss.go",
-  "type": "source",
-  "summary": "RSSSource implementation of Source interface with HTTP conditional requests, ETag/Last-Modified caching, and gofeed parsing",
-  "exports": ["RSSSource", "NewRSSSource"],
-  "imports": [
-    "context",
-    "fmt",
-    "io",
-    "net/http",
-    "strings",
-    "time",
-    "github.com/mmcdole/gofeed",
-    "tg-digest/internal/source"
-  ],
-  "imported_by": [
-    "internal/source/rss/rss_test.go",
-    "internal/source/registry.go"
-  ],
-  "side_effects": [
-    "http.DefaultClient.Do() - makes HTTP requests to RSS/Atom feeds with conditional headers (If-None-Match, If-Modified-Since)"
-  ],
-  "config_deps": [],
-  "notes": "Implements source.Source interface. Constructor: NewRSSSource(name, feedURL string). Checkpoint format: RFC3339_timestamp|etag|last_modified for incremental sync with HTTP-level caching. Supports 304 Not Modified responses for bandwidth optimization. Parses both RSS 2.0 and Atom feeds via gofeed library. Text content priority: Content > Description > Title. Author extraction from item.Author or item.Authors[0]. Timestamp precedence: PublishedParsed > UpdatedParsed > time.Now()."
+  "role": "adapter",
+  "summary": "Fetches RSS/Atom feeds with HTTP conditional request support (ETag/Last-Modified) and a compound checkpoint encoding timestamp, ETag, and Last-Modified",
+  "contracts": {
+    "requires": [
+      "Reachable HTTP feed URL",
+      "Checkpoint format: '<RFC3339>|<etag>|<last_modified>' (pipe-delimited; etag and last_modified may be empty)"
+    ],
+    "guarantees": [
+      "On 304 Not Modified, returns empty messages with unchanged checkpoint",
+      "Checkpoint always encodes the newest item timestamp seen; ETag/Last-Modified are appended when provided by server",
+      "Item order follows feed order (not sorted by this code)",
+      "limit=0 means fetch all items"
+    ]
+  },
+  "effects": ["HTTP GET to feedURL with optional If-None-Match / If-Modified-Since headers"],
+  "state": "Stateless; no caching between calls",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "The checkpoint is a compound string '<RFC3339>|<etag>|<last_modified>'. This is the most sophisticated checkpoint format in the source system — it bundles both content-based (timestamp) and HTTP-based (conditional headers) deduplication into one opaque string.",
+      "loc": "rss.go:40-101"
+    },
+    {
+      "kind": "risk",
+      "text": "itemTimestamp falls back to time.Now() when both PublishedParsed and UpdatedParsed are nil. This means undated items are treated as 'just published', causing them to always pass the checkpoint filter and be returned on every call.",
+      "loc": "rss.go:219-227"
+    },
+    {
+      "kind": "behavior",
+      "text": "Text composition priority: Content (full text/HTML) > Description (summary) > Title. Items may contain raw HTML if the feed uses content:encoded — no sanitization performed.",
+      "loc": "rss.go:207-215"
+    },
+    {
+      "kind": "pattern",
+      "text": "Uses mmcdole/gofeed library to parse both RSS 2.0 and Atom feeds through a single unified API, abstracting format differences.",
+      "loc": "rss.go:12,57"
+    },
+    {
+      "kind": "behavior",
+      "text": "When newest timestamp is zero (empty feed after filtering), checkpoint falls back to the input checkpoint string unchanged. This prevents checkpoint regression.",
+      "loc": "rss.go:95-98"
+    },
+    {
+      "kind": "risk",
+      "text": "Uses http.DefaultClient with no timeout — consistent risk with HNSource and RedditSource.",
+      "loc": "rss.go:119"
+    }
+  ]
 }

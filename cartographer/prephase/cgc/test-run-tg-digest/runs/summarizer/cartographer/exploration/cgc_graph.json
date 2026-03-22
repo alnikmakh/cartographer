@@ -1,0 +1,8 @@
+{
+  "files": {},
+  "edges": [],
+  "stats": {},
+  "deps_raw": "Initializing services and database connection...\nDatabase Connection Error: IO exception: Could not set lock on file : \n/home/dev/.codegraphcontext/kuzudb\nSee the docs: https://docs.kuzudb.com/concurrency for more information.\nPlease ensure your database is configured correctly or run 'cgc doctor'.",
+  "callers_raw": "Initializing services and database connection...\nDatabase Connection Error: IO exception: Could not set lock on file : \n/home/dev/.codegraphcontext/kuzudb\nSee the docs: https://docs.kuzudb.com/concurrency for more information.\nPlease ensure your database is configured correctly or run 'cgc doctor'.",
+  "stats_raw": "Initializing services and database connection...\nDatabase Connection Error: IO exception: Could not set lock on file : \n/home/dev/.codegraphcontext/kuzudb\nSee the docs: https://docs.kuzudb.com/concurrency for more information.\nPlease ensure your database is configured correctly or run 'cgc doctor'."
+}

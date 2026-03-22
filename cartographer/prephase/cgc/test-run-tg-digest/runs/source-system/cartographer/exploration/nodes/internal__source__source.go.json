@@ -1,19 +1,25 @@
 {
   "path": "internal/source/source.go",
-  "type": "source",
-  "summary": "Defines Source interface and SourceMessage type - the common abstraction for all content sources",
-  "exports": ["Source", "SourceMessage"],
-  "imports": ["context", "time"],
-  "imported_by": [
-    "internal/source/rss/rss.go",
-    "internal/source/rss/rss_test.go",
-    "internal/source/hackernews/hn.go",
-    "internal/source/hackernews/hn_test.go",
-    "internal/source/reddit/reddit.go",
-    "internal/source/reddit/reddit_test.go",
-    "internal/source/telegram/telegram.go"
-  ],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Core abstraction for the source package. Source interface defines: Type() string, Name() string, FetchMessages(ctx context.Context, checkpoint string, limit int) ([]SourceMessage, string, error). SourceMessage is the canonical data model with ExternalID, Text, Title, URL, Author, Timestamp. All source implementations (rss, hackernews, reddit, telegram) follow this contract."
+  "role": "model",
+  "summary": "Defines the Source interface and SourceMessage struct — the common contract for all content sources",
+  "contracts": {
+    "requires": [],
+    "guarantees": [
+      "FetchMessages returns (messages, newCheckpoint, error) — checkpoint is opaque string, format is implementation-defined",
+      "Empty checkpoint means initial fetch; non-empty checkpoint means incremental sync",
+      "SourceMessage fields Title, URL, Author are optional (empty string is valid)"
+    ]
+  },
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "Checkpoint is deliberately opaque (string) — each implementation encodes its own cursor format (integer ID for HN/Telegram, UTC timestamp for Reddit, RFC3339+ETag+Last-Modified for RSS)",
+      "loc": "source.go:18-20"
+    },
+    {
+      "kind": "invariant",
+      "text": "SourceMessage.ExternalID must be unique within the source — callers use it for deduplication. No enforcement here; implementations are responsible.",
+      "loc": "source.go:24"
+    }
+  ]
 }

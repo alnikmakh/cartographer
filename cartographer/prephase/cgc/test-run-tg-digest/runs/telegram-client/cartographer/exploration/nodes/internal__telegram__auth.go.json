@@ -1,27 +1,31 @@
 {
   "path": "internal/telegram/auth.go",
-  "type": "source",
-  "summary": "Terminal-based interactive authentication flow implementation",
-  "exports": [
-    "AuthFlow",
-    "TerminalAuth",
-    "NewTerminalAuth"
-  ],
-  "imports": [
-    "bufio",
-    "context",
-    "fmt",
-    "os",
-    "strings",
-    "github.com/gotd/td/telegram/auth",
-    "github.com/gotd/td/tg"
-  ],
-  "imported_by": [
-    "cmd/digest/main.go"
-  ],
-  "side_effects": [
-    "Interactive stdin/stdout prompts for user authentication"
-  ],
-  "config_deps": [],
-  "notes": "Implements AuthFlow interface from gotd/td. TerminalAuth prompts user for phone, 2FA password, and verification code during authentication. Supports only authentication with existing accounts (no sign-up). Used by client.Run() to authenticate with Telegram API."
+  "role": "adapter",
+  "summary": "Terminal-based Telegram authentication, implementing the gotd UserAuthenticator interface via stdin/stdout prompts",
+  "contracts": {
+    "requires": ["Interactive terminal (stdin readable, stdout writable)", "Existing Telegram account — sign-up is explicitly rejected"],
+    "guarantees": ["Phone number is cached after first prompt and reused", "Returns a hard error on any sign-up attempt"]
+  },
+  "effects": ["Reads from os.Stdin", "Writes prompts to os.Stdout"],
+  "state": "TerminalAuth caches phone after first Phone() call; subsequent calls return cached value without re-prompting",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "SignUp() always returns an error — the system is designed for existing-account login only, not new account registration",
+      "loc": "auth.go:55-57"
+    },
+    {
+      "kind": "risk",
+      "text": "AcceptTermsOfService silently accepts without presenting ToS text to the user or confirming consent",
+      "loc": "auth.go:60-62"
+    },
+    {
+      "kind": "pattern",
+      "text": "AuthFlow interface is a thin re-export of auth.UserAuthenticator — it adds no new surface but decouples client.go from the gotd auth package type directly"
+    },
+    {
+      "kind": "risk",
+      "text": "prompt() uses fmt.Print (not a logger), mixing authentication interaction with any other stdout output in the process"
+    }
+  ]
 }

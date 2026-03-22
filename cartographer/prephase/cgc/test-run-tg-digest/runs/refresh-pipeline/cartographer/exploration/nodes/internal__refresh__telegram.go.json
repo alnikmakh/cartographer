@@ -1,31 +1,41 @@
 {
   "path": "internal/refresh/telegram.go",
-  "type": "source",
-  "summary": "TelegramFetcher adapter implementing Fetcher interface via gotd/td Telegram API client",
-  "exports": [
-    "TelegramFetcher",
-    "NewTelegramFetcher",
-    "FetchNewMessages",
-    "extractMessages"
+  "role": "adapter",
+  "summary": "Implements the refresh.Fetcher interface against the gotd/td Telegram MTProto client — resolves usernames, fetches message history, extracts text messages",
+  "contracts": {
+    "requires": [
+      "Caller provides a connected *tg.Client (session already established)",
+      "username may include or omit leading '@'"
+    ],
+    "guarantees": [
+      "Returns only messages with non-empty text (tg.Message.Message field); service messages, media-only messages, and deleted placeholders are filtered out",
+      "When afterMsgID > 0, sets MinID so only newer messages are returned"
+    ]
+  },
+  "effects": [
+    "Telegram MTProto API: ContactsResolveUsername RPC",
+    "Telegram MTProto API: MessagesGetHistory RPC"
   ],
-  "imports": [
-    "context",
-    "fmt",
-    "strings",
-    "time",
-    "github.com/gotd/td/tg"
-  ],
-  "imported_by": [
-    "tg-digest/cmd/digest/main.go",
-    "tg-digest/internal/source/telegram/telegram.go"
-  ],
-  "side_effects": [
-    "calls Telegram API via gotd/td client to resolve channel usernames",
-    "calls Telegram API to fetch message history",
-    "parses Telegram message types (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages)"
-  ],
-  "config_deps": [
-    "github.com/gotd/td/tg.Client injected via NewTelegramFetcher"
-  ],
-  "notes": "Adapter matching hints (TelegramFetcher with 3 functions: NewTelegramFetcher, FetchNewMessages, extractMessages). Implements Fetcher interface defined in refresh.go. Uses gotd/td client for ContactsResolveUsername and MessagesGetHistory. Supports incremental sync via MinID parameter (afterMsgID > 0). Extracts only non-empty Message types, ignoring other message classes. Handles multiple Telegram API response types (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages)."
+  "state": "Holds reference to *tg.Client; all state lives in the client — TelegramFetcher itself is stateless",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Username resolution iterates resolved.Chats and takes the first *tg.Channel — if a username resolves to multiple entities (e.g., a linked group), the first channel in the response wins",
+      "loc": "telegram.go:35-43"
+    },
+    {
+      "kind": "behavior",
+      "text": "extractMessages handles three MessagesMessagesClass variants (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages) but returns an error for any unexpected type rather than silently returning empty",
+      "loc": "telegram.go:65-77"
+    },
+    {
+      "kind": "coupling",
+      "text": "Directly depends on gotd/td *tg.Client — no interface indirection between TelegramFetcher and the network layer; testability requires the Fetcher interface defined in refresh.go",
+      "loc": "telegram.go:13-19"
+    },
+    {
+      "kind": "risk",
+      "text": "No retry or rate-limit handling; transient Telegram API errors propagate immediately to the caller as fetch errors accumulated in RefreshResult.Errors"
+    }
+  ]
 }

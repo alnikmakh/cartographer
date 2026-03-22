@@ -1,7 +1,8 @@
 [
-  {"to": "internal/tui/app.go", "relationship": "imported_by", "usage": "key bindings for main app message handling"},
-  {"to": "internal/tui/channels.go", "relationship": "imported_by", "usage": "key bindings for channels view navigation and operations"},
-  {"to": "internal/tui/dashboard.go", "relationship": "imported_by", "usage": "key bindings for dashboard view date navigation and filtering"},
-  {"to": "internal/tui/filter_overlay.go", "relationship": "imported_by", "usage": "key bindings for filter overlay navigation and selection"},
-  {"to": "internal/tui/help.go", "relationship": "imported_by", "usage": "key bindings for help overlay display"}
+  {
+    "from": "internal/tui/keys.go",
+    "to": "[github.com/charmbracelet/bubbles/key]",
+    "semantic": "uses key.Binding and key.NewBinding to declare all bindings",
+    "coupling": "direct"
+  }
 ]

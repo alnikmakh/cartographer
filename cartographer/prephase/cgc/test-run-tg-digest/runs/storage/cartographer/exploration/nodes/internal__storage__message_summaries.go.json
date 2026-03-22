@@ -1,27 +1,30 @@
 {
   "path": "internal/storage/message_summaries.go",
-  "type": "source",
-  "summary": "Message summary repository implementation for storing and retrieving message summaries",
-  "exports": [
-    "Create",
-    "GetByMessageID",
-    "GetByChannelAndDate",
-    "GetUnsummarizedMessages",
-    "GetUnsummarizedMessagesByChannels"
-  ],
-  "imports": [
-    "context",
-    "database/sql",
-    "fmt",
-    "strings",
-    "time"
-  ],
-  "imported_by": [
-    "internal/storage/storage.go"
-  ],
-  "side_effects": [
-    "Database operations (INSERT with ON CONFLICT, SELECT with JOINs)"
-  ],
-  "config_deps": [],
-  "notes": "Implements MessageSummaryRepository interface. Uses ON CONFLICT clause to upsert summaries (automatic update if message_id exists). GetUnsummarizedMessages and GetUnsummarizedMessagesByChannels perform LEFT JOINs with messages table to find unsummarized messages. Includes dynamic SQL construction with string.Join for channel ID filtering."
+  "role": "repository",
+  "summary": "Implements MessageSummaryRepository with upsert semantics and cross-table JOIN queries to identify unsummarized messages",
+  "contracts": {
+    "requires": ["message_summaries and messages tables exist (migration 004)", "message_id references an existing message"],
+    "guarantees": [
+      "Create is an upsert: duplicate message_id updates summary/model/created_at and returns the existing row's ID",
+      "GetByMessageID returns (nil, nil) when not found",
+      "GetUnsummarizedMessagesByChannels delegates to GetUnsummarizedMessages when channelIDs is nil or empty"
+    ]
+  },
+  "effects": ["SQLite reads and writes on message_summaries table; reads messages table via JOIN"],
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Create uses ON CONFLICT(message_id) DO UPDATE — re-summarizing a message overwrites the previous result including model name. The original ID is preserved (not regenerated).",
+      "loc": "message_summaries.go:17-39"
+    },
+    {
+      "kind": "behavior",
+      "text": "GetUnsummarizedMessagesByChannels builds a dynamic IN clause with placeholder strings; SQL injection is not possible because channelIDs are int64 values appended as bound parameters.",
+      "loc": "message_summaries.go:141-155"
+    },
+    {
+      "kind": "pattern",
+      "text": "GetByChannelAndDate and GetUnsummarizedMessages both JOIN messages to filter by channel/date — the message_summaries table does not redundantly store channel or date."
+    }
+  ]
 }

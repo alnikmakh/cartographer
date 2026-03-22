@@ -1,0 +1,25 @@
+{
+  "waves": [
+    {
+      "id": 1,
+      "files": [
+        "internal/tui/app.go",
+        "internal/tui/app_test.go",
+        "internal/tui/channels.go",
+        "internal/tui/channels_test.go",
+        "internal/tui/dashboard.go",
+        "internal/tui/dashboard_test.go",
+        "internal/tui/filter.go",
+        "internal/tui/filter_overlay.go",
+        "internal/tui/filter_overlay_test.go",
+        "internal/tui/filter_test.go",
+        "internal/tui/help.go",
+        "internal/tui/help_test.go",
+        "internal/tui/keys.go",
+        "internal/tui/styles.go",
+        "internal/tui/types.go"
+      ],
+      "rationale": "Default: all files in single wave (wave planning did not produce output)"
+    }
+  ]
+}

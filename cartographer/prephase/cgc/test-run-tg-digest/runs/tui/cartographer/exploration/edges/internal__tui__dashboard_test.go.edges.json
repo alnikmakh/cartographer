@@ -1,27 +1,20 @@
 [
   {
+    "from": "internal/tui/dashboard_test.go",
     "to": "internal/tui/dashboard.go",
-    "relationship": "tests",
-    "usage": "tests newDashboardModel, Update/View, date nav, filtering, expand/collapse, cursor, scroll-to-cursor"
+    "semantic": "tests dashboardModel and newDashboardModel",
+    "coupling": "direct"
   },
   {
+    "from": "internal/tui/dashboard_test.go",
     "to": "internal/tui/types.go",
-    "relationship": "imports",
-    "usage": "SummaryItem, SourceFilter types; summariesLoadedMsg message type"
+    "semantic": "uses SummaryItem, summariesLoadedMsg, SourceFilter",
+    "coupling": "direct"
   },
   {
-    "to": "github.com/charmbracelet/bubbletea",
-    "relationship": "external",
-    "usage": "tea.KeyMsg, tea.KeyDown/Up/Left/Right/Enter for input simulation"
-  },
-  {
-    "to": "github.com/charmbracelet/lipgloss",
-    "relationship": "external",
-    "usage": "lipgloss.Width for ANSI-aware line width assertions in text wrap tests"
-  },
-  {
-    "to": "github.com/stretchr/testify/assert",
-    "relationship": "external",
-    "usage": "test assertions (Contains, NotContains, Equal, Greater, etc)"
+    "from": "internal/tui/dashboard_test.go",
+    "to": "internal/tui/filter.go",
+    "semantic": "constructs SourceFilter to set dashboard.filter directly in test setup",
+    "coupling": "direct"
   }
 ]

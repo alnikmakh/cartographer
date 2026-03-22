@@ -1,7 +1,8 @@
 [
-  {"to": "internal/tui/app.go", "relationship": "imported_by", "usage": "styles for title bar, status bar, tab switching UI"},
-  {"to": "internal/tui/channels.go", "relationship": "imported_by", "usage": "styles for channel list rendering and selection"},
-  {"to": "internal/tui/dashboard.go", "relationship": "imported_by", "usage": "styles for summary cards, date headers, collapsed/expanded arrow states"},
-  {"to": "internal/tui/filter_overlay.go", "relationship": "imported_by", "usage": "styles for overlay border, title, checkbox states (checked/unchecked/selected)"},
-  {"to": "internal/tui/help.go", "relationship": "imported_by", "usage": "styles for help key labels and descriptions"}
+  {
+    "from": "internal/tui/styles.go",
+    "to": "[github.com/charmbracelet/lipgloss]",
+    "semantic": "uses lipgloss.Color, lipgloss.NewStyle, and all style builder methods",
+    "coupling": "direct"
+  }
 ]

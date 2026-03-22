@@ -1,0 +1,19 @@
+{
+  "waves": [
+    {
+      "id": 1,
+      "files": [
+        "internal/summarizer/ollama.go",
+        "internal/summarizer/ollama_test.go",
+        "internal/summarizer/openrouter.go",
+        "internal/summarizer/openrouter_test.go",
+        "internal/summarizer/prompt.go",
+        "internal/summarizer/prompt_test.go",
+        "internal/summarizer/service.go",
+        "internal/summarizer/service_test.go",
+        "internal/summarizer/summarizer.go"
+      ],
+      "rationale": "Default: all files in single wave (wave planning did not produce output)"
+    }
+  ]
+}

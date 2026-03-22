@@ -1,29 +1,36 @@
 [
   {
+    "from": "internal/telegram/client.go",
+    "to": "internal/telegram/session.go",
+    "semantic": "instantiates FileSessionStorage and passes it to gotd client for session persistence",
+    "data_flow": "session file path → FileSessionStorage → gotd telegram.Options",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/telegram/client.go",
     "to": "internal/telegram/auth.go",
-    "relationship": "imports",
-    "usage": "AuthFlow interface parameter for Run() and authenticate() methods"
+    "semantic": "accepts AuthFlow interface (implemented by TerminalAuth) and delegates authentication to it via auth.NewFlow",
+    "data_flow": "AuthFlow callbacks → auth code, phone, password",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "internal/storage",
-    "relationship": "boundary",
-    "used_exports": [],
-    "used_by": "cmd/digest/main.go passes storage.Store to related functions",
-    "notes": "Boundary package. Client works with message data but does not directly import storage."
+    "from": "internal/telegram/client.go",
+    "to": "[github.com/gotd/td/telegram]",
+    "semantic": "wraps telegram.NewClient; delegates Run, Auth().Status(), Auth().IfNecessary() to gotd",
+    "data_flow": "apiID, apiHash, SessionStorage → connected client",
+    "coupling": "direct"
   },
   {
-    "to": "github.com/gotd/td/telegram",
-    "relationship": "imports",
-    "usage": "boundary — provides telegram.Client and telegram.Options for Telegram API connection"
+    "from": "internal/telegram/client.go",
+    "to": "[github.com/gotd/td/tg]",
+    "semantic": "exposes *tg.Client via API() for callers to issue Telegram API calls",
+    "coupling": "direct"
   },
   {
-    "to": "github.com/gotd/td/telegram/auth",
-    "relationship": "imports",
-    "usage": "boundary — provides auth.NewFlow and auth.SendCodeOptions for authentication"
-  },
-  {
-    "to": "github.com/gotd/td/tg",
-    "relationship": "imports",
-    "usage": "boundary — provides tg.Client for Telegram API calls"
+    "from": "internal/telegram/client.go",
+    "to": "[filesystem]",
+    "semantic": "creates session directory with os.MkdirAll before any network activity",
+    "data_flow": "session file path → directory (0700)",
+    "coupling": "direct"
   }
 ]

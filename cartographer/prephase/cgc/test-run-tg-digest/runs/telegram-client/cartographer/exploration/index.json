@@ -1,18 +1,1 @@
-{
-  "internal/telegram/auth.go": {
-    "explored": true,
-    "one_line": "Terminal-based interactive authentication flow with phone/code/password prompts"
-  },
-  "internal/telegram/client.go": {
-    "explored": true,
-    "one_line": "Telegram client wrapper with session persistence and authentication orchestration"
-  },
-  "internal/telegram/messages.go": {
-    "explored": true,
-    "one_line": "Message model and channel/message fetching operations from Telegram API"
-  },
-  "internal/telegram/session.go": {
-    "explored": true,
-    "one_line": "File-based session storage implementing gotd session interface for Telegram persistence"
-  }
-}
+{}

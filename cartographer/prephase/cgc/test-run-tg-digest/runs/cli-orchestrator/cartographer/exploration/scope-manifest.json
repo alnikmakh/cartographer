@@ -1,0 +1,84 @@
+{
+  "scope": "digest",
+  "purpose": "God-file entry point: CLI flag parsing, dual-mode dispatch (TUI vs channel-fetch), service wiring, and all adapter/helper types",
+  "exposes": {
+    "types": [],
+    "interfaces": [],
+    "entry_points": [
+      "Graceful shutdown on SIGINT via signal.NotifyContext",
+      "store.Close() called on exit via defer",
+      "Fatalf on any startup failure \u2014 never partial initialization"
+    ]
+  },
+  "consumes": {
+    "external": [
+      "internal/storage",
+      "internal/telegram",
+      "internal/refresh",
+      "internal/source",
+      "internal/summarizer",
+      "internal/tui",
+      "github.com/charmbracelet/bubbletea",
+      "github.com/gotd/td/tg",
+      "net/http/httptest",
+      "gopkg.in/yaml.v3",
+      "os"
+    ],
+    "config": [
+      "YAML config file (default: config.yaml) with telegram.api_id, api_hash, session_file, storage.db_path",
+      "SQLite database at cfg.Storage.DBPath (created by storage.Open)",
+      "Readable YAML file at the given path"
+    ]
+  },
+  "cross_scope_touchpoints": [
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "opens SQLite store; reads/writes channels, messages, sync state via Store interface",
+      "coupling": "direct"
+    },
+    {
+      "scope": "telegram",
+      "direction": "consumes",
+      "surface": "creates client, authenticates, resolves channels, fetches messages",
+      "coupling": "direct"
+    },
+    {
+      "scope": "refresh",
+      "direction": "consumes",
+      "surface": "creates TelegramFetcher and Service; delegates all-source and filtered refresh in TUI mode",
+      "coupling": "direct"
+    },
+    {
+      "scope": "source",
+      "direction": "consumes",
+      "surface": "creates source Registry; iterates cfg.Sources to register telegram/rss/reddit/hackernews sources",
+      "coupling": "direct"
+    },
+    {
+      "scope": "summarizer",
+      "direction": "consumes",
+      "surface": "creates LLM client (Ollama or OpenRouter) and summarizer.Service; calls SummarizeUnsummarized or SummarizeUnsummarizedForChannels",
+      "coupling": "direct"
+    },
+    {
+      "scope": "tui",
+      "direction": "consumes",
+      "surface": "creates tui.App with store and options; runs bubbletea program; implements tui.RefreshService and tui.SummarizeService interfaces",
+      "coupling": "direct"
+    }
+  ],
+  "invariants": [
+    "LLM validation is gated on cfg.LLM.Provider != '' \u2014 an unconfigured LLM section is valid; the system runs without summarization capability"
+  ],
+  "risks": [
+    "storeMessages inserts messages one-by-one in a loop with no batch operation \u2014 O(N) round-trips to SQLite for each fetch",
+    "ensureSourceChannel silently swallows DB errors (log.Printf only) \u2014 if channel creation fails, the source will have no DB record, but the TUI will proceed anyway",
+    "The --summarize flag accepts N days but the value is never used: SummarizeUnsummarized processes all unsummarized messages regardless of the N value",
+    "storeChannel uses the channel username as the Title field with a comment 'We could enhance this by fetching actual title' \u2014 display names in the TUI will show raw usernames like @durov"
+  ],
+  "patterns": [
+    "registryRefreshAdapter does in-memory name-set filtering of sources for RefreshFiltered \u2014 the filtering is O(N) against the full source list per call",
+    "OpenRouterConfig struct is retained as a migration source only; it is never used downstream after Load() applies the migration to LLMConfig"
+  ]
+}

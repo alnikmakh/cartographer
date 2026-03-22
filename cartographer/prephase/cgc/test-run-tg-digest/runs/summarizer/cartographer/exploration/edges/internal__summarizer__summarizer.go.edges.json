@@ -1,5 +1,1 @@
-[
-  {"to": "internal/summarizer/service.go", "relationship": "imported_by", "usage": "Service uses MessageSummarizeResult (return type line 78), SummarizeQueueResult (return type line 87), Client interface (field line 13), ChatRequest/ChatMessage (lines 53-58)"},
-  {"to": "internal/summarizer/ollama.go", "relationship": "imported_by", "usage": "OllamaClient implements Client interface"},
-  {"to": "internal/summarizer/openrouter.go", "relationship": "imported_by", "usage": "OpenRouterClient implements Client interface"}
-]
+[]

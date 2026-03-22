@@ -1,19 +1,27 @@
 {
   "path": "internal/storage/storage_test.go",
-  "type": "test",
-  "summary": "Integration tests for storage package covering channels, messages, summaries, and sync state repositories",
-  "exports": [],
-  "imports": [
-    "context",
-    "fmt",
-    "path/filepath",
-    "testing",
-    "time",
-    "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require"
-  ],
-  "imported_by": [],
-  "side_effects": ["creates ephemeral SQLite databases in temp directories", "exercises full Store interface"],
-  "config_deps": [],
-  "notes": "Tests core storage patterns via ephemeral Store instances. Helpers: openTestStore (temp DB), seedChannelAndMessages. Tests Channel source types (default 'telegram', custom 'rss'), SyncState with string checkpoints, MessageSummary CRUD and filtering, GetUnsummarizedMessages/ByChannels with channel ID filtering. Confirms upsert semantics: Create() on duplicate message IDs replaces prior summary."
+  "role": "test",
+  "summary": "Integration tests for the storage package using a real SQLite DB in t.TempDir(), covering channels, messages, and message summaries",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "All tests use openTestStore which creates a real SQLite file in t.TempDir(). No mocking — tests exercise the full SQL layer including migrations.",
+      "loc": "storage_test.go:14-20"
+    },
+    {
+      "kind": "behavior",
+      "text": "seedChannelAndMessages is a shared helper that creates a channel and N messages spaced 1 hour apart. Used to set up consistent fixtures across summary tests.",
+      "loc": "storage_test.go:70-89"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestMessageSummary_CreateUpsert verifies that calling Create twice for the same message_id preserves the original row ID and updates summary/model — confirming the ON CONFLICT DO UPDATE semantics.",
+      "loc": "storage_test.go:204-238"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestMessageSummary_GetUnsummarizedByChannels_NilReturnsAll verifies the nil-channelIDs fallback path in GetUnsummarizedMessagesByChannels.",
+      "loc": "storage_test.go:240-259"
+    }
+  ]
 }

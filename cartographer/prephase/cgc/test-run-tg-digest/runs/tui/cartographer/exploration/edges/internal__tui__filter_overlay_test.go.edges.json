@@ -1,7 +1,20 @@
 [
-  {"to": "testing", "relationship": "imports", "usage": "testing.T for test functions"},
-  {"to": "github.com/charmbracelet/bubbletea", "relationship": "imports", "usage": "tea.KeyMsg for simulating keyboard input"},
-  {"to": "github.com/stretchr/testify/assert", "relationship": "imports", "usage": "assert.* functions for test assertions"},
-  {"to": "internal/tui/filter_overlay.go", "relationship": "tests", "usage": "newFilterOverlayModel(), filterOverlayModel.Update(), filterOverlayModel.buildFilter(), filterOverlayConfirmMsg, filterOverlayCancelMsg"},
-  {"to": "internal/tui/filter.go", "relationship": "uses", "usage": "SourceFilter type in test setup and assertions"}
+  {
+    "from": "internal/tui/filter_overlay_test.go",
+    "to": "internal/tui/filter_overlay.go",
+    "semantic": "tests filterOverlayModel and newFilterOverlayModel",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/filter_overlay_test.go",
+    "to": "internal/tui/filter.go",
+    "semantic": "asserts on SourceFilter returned in filterOverlayConfirmMsg",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/filter_overlay_test.go",
+    "to": "internal/tui/types.go",
+    "semantic": "uses ChannelItem, filterOverlayConfirmMsg, filterOverlayCancelMsg",
+    "coupling": "direct"
+  }
 ]

@@ -1,5 +1,15 @@
 [
-  {"to": "fmt", "relationship": "imports", "usage": "string formatting in FilterLabel"},
-  {"to": "internal/tui/types.go", "relationship": "uses", "usage": "ChannelItem type in MatchingChannelIDs and MatchingSourceNames"},
-  {"to": "internal/tui/styles.go", "relationship": "calls", "usage": "sourceTypeBadge() function in FilterLabel for type badges"}
+  {
+    "from": "internal/tui/filter.go",
+    "to": "internal/tui/types.go",
+    "semantic": "MatchingChannelIDs and MatchingSourceNames take []ChannelItem as input",
+    "data_flow": "[]ChannelItem → []int64 or []string",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/filter.go",
+    "to": "internal/tui/dashboard.go",
+    "semantic": "FilterLabel calls sourceTypeBadge defined in dashboard.go",
+    "coupling": "direct"
+  }
 ]

@@ -1,27 +1,16 @@
 [
   {
-    "to": "tg-digest/internal/storage",
-    "relationship": "imports",
-    "usage": "boundary — depends on Store interface (Channels, Messages, SyncState collections); 17+ cross-pkg calls per hints"
+    "from": "internal/refresh/refresh.go",
+    "to": "[internal/storage]",
+    "semantic": "reads channel list, sync state, and writes messages and updated sync state",
+    "data_flow": "Channel list in; SyncState checkpoint in; storage.Message written out; SyncState checkpoint written out",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source",
-    "relationship": "imports",
-    "usage": "boundary — uses Source interface and Registry for generic fetch via RefreshAllSources/RefreshSources methods"
-  },
-  {
-    "to": "tg-digest/cmd/digest/main.go",
-    "relationship": "imported_by",
-    "usage": "Service instantiated from main, passed as HTTP handler or refresh orchestrator"
-  },
-  {
-    "to": "tg-digest/internal/tui/types.go",
-    "relationship": "imported_by",
-    "usage": "refresh types used in TUI state or handlers"
-  },
-  {
-    "to": "tg-digest/internal/tui/app_test.go",
-    "relationship": "imported_by",
-    "usage": "refresh service used in TUI app tests"
+    "from": "internal/refresh/refresh.go",
+    "to": "[internal/source]",
+    "semantic": "consumes source.Source interface and source.Registry for generic source refresh path",
+    "data_flow": "source.SourceMessage list and string checkpoint returned from FetchMessages",
+    "coupling": "interface-mediated"
   }
 ]

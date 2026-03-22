@@ -1,12 +1,15 @@
 [
   {
+    "from": "internal/storage/channels.go",
     "to": "internal/storage/storage.go",
-    "relationship": "implements",
-    "usage": "Implements ChannelRepository interface, uses Channel type, channelRepo instantiated in Open()"
+    "semantic": "implements ChannelRepository interface defined in storage.go; uses Channel model defined there",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "database/sql",
-    "relationship": "imports",
-    "usage": "Database operations (QueryRowContext, QueryContext, ExecContext)"
+    "from": "internal/storage/channels.go",
+    "to": "[SQLite channels table]",
+    "semantic": "reads and writes channel rows",
+    "data_flow": "Channel struct ↔ SQL rows",
+    "coupling": "direct"
   }
 ]

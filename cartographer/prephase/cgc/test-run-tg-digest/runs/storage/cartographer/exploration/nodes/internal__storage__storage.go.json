@@ -1,44 +1,52 @@
 {
   "path": "internal/storage/storage.go",
-  "type": "source",
-  "summary": "Core storage interface definitions and SQLite store initialization, entry point for all persistence operations",
-  "exports": [
-    "Store",
-    "ChannelRepository",
-    "MessageRepository",
-    "MessageSummaryRepository",
-    "SyncStateRepository",
-    "Channel",
-    "Message",
-    "MessageSummary",
-    "SyncState",
-    "Open"
+  "role": "container",
+  "summary": "Defines the Store interface and all repository interfaces/domain types; implements sqliteStore factory via Open()",
+  "contracts": {
+    "requires": [
+      "writable filesystem path for the SQLite database file",
+      "modernc.org/sqlite driver registered via blank import"
+    ],
+    "guarantees": [
+      "Open returns a fully migrated Store or closes the DB and returns an error — never a partially-initialized Store",
+      "MaxOpenConns is capped at 1, serializing all DB access through a single connection",
+      "~ in dbPath is expanded before use; parent directories are created with mode 0700 if absent"
+    ]
+  },
+  "effects": [
+    "filesystem: creates parent directory for DB file (os.MkdirAll, mode 0700)",
+    "filesystem: opens/creates SQLite database file",
+    "runs DDL migrations on first open (delegates to runMigrations in migrations.go)"
   ],
-  "imports": [
-    "context",
-    "database/sql",
-    "fmt",
-    "os",
-    "path/filepath",
-    "strings",
-    "time",
-    "modernc.org/sqlite"
-  ],
-  "imported_by": [
-    "internal/refresh/refresh_test.go",
-    "internal/tui/app_test.go",
-    "internal/summarizer/service_test.go",
-    "internal/storage/channels.go",
-    "internal/storage/messages.go",
-    "internal/storage/message_summaries.go",
-    "internal/storage/syncstate.go"
-  ],
-  "side_effects": [
-    "Opens SQLite database file at dbPath",
-    "Runs migrations via runMigrations()",
-    "Initializes repository implementations",
-    "Sets database connection pool (MaxOpenConns=1)"
-  ],
-  "config_deps": ["dbPath (expands ~)"],
-  "notes": "Core package interface. Defines all repository contracts and domain types (Channel, Message, MessageSummary, SyncState). sqliteStore struct implements Store and is responsible for lifecycle: initialization with Open() invokes runMigrations to ensure schema is up-to-date. Matches hints: storage.go is the prerequisite for all other slices. ChannelRepository has dual Create methods (Create and CreateNonTelegram) supporting source_type diversity. MessageSummaryRepository has channel-filtered and unsummarized queries supporting the per-message summaries model introduced in migration 004."
+  "state": "sqliteStore holds a *sql.DB and four eagerly-initialized repository instances; single-connection pool means the Store is not safe for concurrent open/close lifecycle management from multiple goroutines, though individual repository queries go through database/sql's own concurrency handling",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "Store is a pure interface — callers depend only on Store, ChannelRepository, MessageRepository, MessageSummaryRepository, and SyncStateRepository interfaces. The concrete sqliteStore and its repo fields are unexported, making substitution in tests trivial.",
+      "loc": "storage.go:17-58"
+    },
+    {
+      "kind": "behavior",
+      "text": "db.SetMaxOpenConns(1) intentionally serializes SQLite access. This avoids SQLITE_BUSY errors from concurrent writers but means all repository operations queue behind a single connection. High-throughput callers will see latency spikes.",
+      "loc": "storage.go:123"
+    },
+    {
+      "kind": "behavior",
+      "text": "Open runs migrations synchronously before returning the Store. Any migration failure closes the DB and surfaces the error, preventing callers from using a partially-migrated schema.",
+      "loc": "storage.go:126-129"
+    },
+    {
+      "kind": "coupling",
+      "text": "This is the highest fan-in file in the storage package — all external callers (refresh pipeline, summarizer, source system, TUI, CLI orchestrator) receive a Store from Open() and interact only with the interfaces defined here."
+    },
+    {
+      "kind": "behavior",
+      "text": "expandPath only handles the ~/ prefix form; a bare ~ without a trailing slash is returned unchanged. This matches the pattern noted in config.go and is consistent across the codebase.",
+      "loc": "storage.go:169-178"
+    },
+    {
+      "kind": "invariant",
+      "text": "Domain types (Channel, Message, MessageSummary, SyncState) are defined here alongside their repository interfaces — all repository contracts are co-located in a single file, making this the authoritative schema for the storage package's public surface."
+    }
+  ]
 }

@@ -1,4 +1,15 @@
 [
-  {"to": "internal/storage/storage.go", "relationship": "imports", "usage": "SyncState type and interface definition"},
-  {"to": "internal/storage/migrations", "relationship": "schema_dependency", "usage": "sync_state table created in migrations"}
+  {
+    "from": "internal/storage/syncstate.go",
+    "to": "internal/storage/storage.go",
+    "semantic": "implements SyncStateRepository interface; uses SyncState model from storage.go",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/storage/syncstate.go",
+    "to": "[SQLite sync_state table]",
+    "semantic": "reads and upserts per-channel sync checkpoint",
+    "data_flow": "SyncState struct ↔ SQL row keyed on channel_id",
+    "coupling": "direct"
+  }
 ]

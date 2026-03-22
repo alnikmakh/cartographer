@@ -1,32 +1,22 @@
 {
   "path": "internal/tui/app_test.go",
-  "type": "test",
-  "summary": "Comprehensive test suite for App model with 28 tests covering view switching, key bindings, error handling, loading states, refresh/summarize operations, filtering, and multi-source integration",
-  "exports": [],
-  "imports": [
-    "context",
-    "fmt",
-    "path/filepath",
-    "testing",
-    "time",
-    "github.com/charmbracelet/bubbletea",
-    "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require",
-    "tg-digest/internal/refresh",
-    "tg-digest/internal/storage",
-    "tg-digest/internal/summarizer"
-  ],
-  "imported_by": [],
-  "side_effects": [
-    "Defines test fixtures: setupTestStore (opens temp SQLite), seedTestData (inserts test channels/messages/summaries)",
-    "Defines mock implementations: mockRefreshSvc, mockSummarizeSvc for interface injection testing",
-    "28 test functions organized by feature: view switching, key handling, loading states, error auto-clear, refresh/summarize triggering and completion, status bar rendering, source addition, filtering, multi-source integration"
-  ],
-  "config_deps": [
-    "App, AppOption, WithRefresh, WithSummarize (from app.go)",
-    "viewDashboard, viewChannels (from types.go)",
-    "SourceFilter, message types (from types.go)",
-    "RefreshService, SummarizeService interfaces (from types.go)"
-  ],
-  "notes": "Tests cover all major Update branches and View rendering paths. Uses both isolated unit tests (e.g., key binding handling) and integration tests (e.g., TestApp_MultiSourceIntegration which creates real storage, channels, and messages). Mocks are tracked for state (called, sourceNames, channelIDs). Tests verify state mutations, command generation, and error handling."
+  "role": "test",
+  "summary": "Integration and unit tests for App covering view switching, loading states, error auto-clear, refresh/summarize flows, filter-aware commands, and status bar rendering",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "setupTestStore creates a real SQLite database in t.TempDir() — tests exercise storage integration, not mocks. mockRefreshSvc and mockSummarizeSvc are the only mocks.",
+      "loc": "app_test.go:54-76"
+    },
+    {
+      "kind": "behavior",
+      "text": "Tests directly manipulate App struct fields (app.loading, app.dashboard.filter, app.channels.channels) to set up preconditions rather than simulating full message flows — relies on the value-type App being freely copyable.",
+      "loc": "app_test.go:563-566"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestApp_AutoRefreshIgnoresFilter verifies that autoRefreshTickMsg triggers refreshCmd (RefreshAll), NOT refreshFilteredCmd — documenting the intentional behavioral difference between auto and manual refresh.",
+      "loc": "app_test.go:590-602"
+    }
+  ]
 }

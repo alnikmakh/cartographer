@@ -1,11 +1,16 @@
 {
   "path": "internal/config/config_test.go",
-  "type": "test",
-  "summary": "Comprehensive test suite for config.Load function: validates YAML parsing, defaults, validation rules, backward compatibility, and source types (RSS, Reddit, HackerNews)",
-  "exports": [],
-  "imports": ["internal/config", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require"],
-  "imported_by": [],
-  "side_effects": ["creates temporary YAML config files", "tests file I/O and parsing"],
-  "config_deps": ["Config load validation", "Default value assignment", "LLM provider configuration", "Source configuration validation"],
-  "notes": "40 test functions covering: config structure parsing (Telegram, Storage, OpenRouter, LLM, Refresh, Sources), default values (OpenRouter model, refresh interval), validation rules (refresh interval minimum enforcement, required fields), backward compatibility (openrouter→llm migration), multiple source types (RSS requires URL, Reddit requires subreddit, HackerNews requires feed), LLM providers (Ollama default URL, OpenRouter requires API key), and error handling. Helper function writeTestConfig creates temp files for each test."
+  "role": "test",
+  "summary": "Comprehensive table-driven tests for config.Load covering defaults, validation errors, backward-compat migration, all source types, and LLM providers",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Each test writes a temp YAML file via writeTestConfig helper and calls Load — tests are fully isolated with no shared state"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestLoad_SourcesRedditDefaultSort explicitly asserts that Sort is empty string after load ('Sort can be empty — the RedditSource constructor will default to hot') — documents the intentional split between config defaults and source constructor defaults",
+      "loc": "config_test.go:394-396"
+    }
+  ]
 }

@@ -1,7 +1,38 @@
 [
-  {"to": "internal/tui/app.go", "relationship": "tests", "usage": "tests all major methods: NewApp, Init, Update (all message types), View, key handling"},
-  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "message types, view IDs, service interfaces (RefreshService, SummarizeService), SourceFilter"},
-  {"to": "internal/storage", "relationship": "imports", "usage": "boundary — setupTestStore creates temporary database, seedTestData inserts test data"},
-  {"to": "internal/refresh", "relationship": "imports", "usage": "RefreshResult type for mock responses"},
-  {"to": "internal/summarizer", "relationship": "imports", "usage": "SummarizeQueueResult type for mock responses"}
+  {
+    "from": "internal/tui/app_test.go",
+    "to": "internal/tui/app.go",
+    "semantic": "tests App, NewApp, WithRefresh, WithSummarize",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app_test.go",
+    "to": "internal/tui/types.go",
+    "semantic": "uses SummaryItem, ChannelItem, all message types, RefreshService and SummarizeService interfaces",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app_test.go",
+    "to": "internal/tui/filter.go",
+    "semantic": "constructs SourceFilter to set up dashboard filter preconditions",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app_test.go",
+    "to": "[internal/storage]",
+    "semantic": "opens real storage.Store via storage.Open; creates Channel, Message, MessageSummary records",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app_test.go",
+    "to": "[tg-digest/internal/refresh]",
+    "semantic": "uses refresh.RefreshResult in mockRefreshSvc",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app_test.go",
+    "to": "[tg-digest/internal/summarizer]",
+    "semantic": "uses summarizer.SummarizeQueueResult in mockSummarizeSvc",
+    "coupling": "direct"
+  }
 ]

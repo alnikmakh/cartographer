@@ -1,0 +1,45 @@
+{
+  "scope": "storage",
+  "purpose": "Central storage hub \u2014 defines Store interface, all domain models (Channel, Message, MessageSummary, SyncState), all repository interfaces, and the SQLite-backed Open() factory",
+  "exposes": {
+    "types": [],
+    "interfaces": [],
+    "entry_points": [
+      "Open returns a fully migrated Store or error \u2014 never partial state",
+      "single db connection shared across all repos",
+      "Close() releases the underlying *sql.DB"
+    ]
+  },
+  "consumes": {
+    "external": [
+      "SQLite channels table",
+      "SQLite message_summaries table",
+      "SQLite messages table",
+      "modernc.org/sqlite",
+      "SQLite sync_state table"
+    ],
+    "config": [
+      "migrations/*.sql files embedded at compile time",
+      "valid writable file path for dbPath"
+    ]
+  },
+  "cross_scope_touchpoints": [],
+  "invariants": [
+    "Migration 001_initial.sql also creates the migrations table inside the SQL file, but migrations.go independently creates it via createMigrationsTable before reading files \u2014 the IF NOT EXISTS in 001 prevents conflict",
+    "channels.telegram_id is UNIQUE NOT NULL here \u2014 relaxed to nullable with a partial unique index in migration 003",
+    "After this migration, checkpoint stores heterogeneous strings \u2014 Telegram uses numeric string message IDs, RSS will use ETags or dates",
+    "CREATE UNIQUE INDEX WHERE telegram_id IS NOT NULL \u2014 partial index ensures Telegram channels can't share a telegram_id, while NULL values (non-Telegram sources) are unrestricted"
+  ],
+  "risks": [
+    "No cascade delete of messages/sync_state is enforced at the repository layer \u2014 relies entirely on ON DELETE CASCADE defined in the schema",
+    "When Create is a no-op (duplicate), message.ID stays 0 \u2014 callers that immediately use message.ID after Create on a potentially duplicate message will silently operate on an invalid ID",
+    "Migrations are checked and applied sequentially without locking \u2014 concurrent Open() calls on the same database (e.g., two processes) could both see count=0 and race to apply the same migration"
+  ],
+  "patterns": [
+    "scanChannel accepts interface{ Scan(...any) error } \u2014 works for both *sql.Row and *sql.Rows, avoiding duplication between single-row and multi-row queries",
+    "GetByChannelAndDate and GetUnsummarized* both JOIN with messages table \u2014 MessageSummaryRepository queries span two tables, coupling it tightly to messages schema",
+    "//go:embed migrations/*.sql bakes SQL into the binary at compile time \u2014 no runtime filesystem dependency for schema",
+    "Repository interfaces (ChannelRepository, MessageRepository, etc.) are defined alongside domain models in this file \u2014 callers depend only on this file's types, not on concrete repo implementations",
+    "openTestStore creates a fresh DB in t.TempDir() \u2014 each test gets an isolated database with all migrations applied, no mocking"
+  ]
+}

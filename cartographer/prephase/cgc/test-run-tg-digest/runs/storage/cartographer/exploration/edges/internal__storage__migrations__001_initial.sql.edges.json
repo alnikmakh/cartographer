@@ -1,3 +1,8 @@
 [
-  {"to": "internal/storage/migrations.go", "relationship": "embedded_by", "usage": "executed as first migration by runMigrations()"}
+  {
+    "from": "internal/storage/migrations/001_initial.sql",
+    "to": "internal/storage/migrations.go",
+    "semantic": "embedded and executed by the migration runner at DB open time",
+    "coupling": "direct"
+  }
 ]

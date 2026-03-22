@@ -1,7 +1,14 @@
 [
   {
-    "to": "tg-digest/internal/source",
-    "relationship": "imports",
-    "usage": "source.Source interface check, SourceMessage type assertions"
+    "from": "internal/source/reddit/reddit_test.go",
+    "to": "internal/source/reddit/reddit.go",
+    "semantic": "tests RedditSource behaviour via httptest mock server",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/source/reddit/reddit_test.go",
+    "to": "internal/source/source.go",
+    "semantic": "compile-time interface assertion for RedditSource",
+    "coupling": "interface-mediated"
   }
 ]

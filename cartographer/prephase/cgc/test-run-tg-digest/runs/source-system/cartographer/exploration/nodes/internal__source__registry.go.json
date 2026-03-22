@@ -1,21 +1,31 @@
 {
   "path": "internal/source/registry.go",
-  "type": "source",
-  "summary": "Registry struct for managing and querying registered Source implementations by name and type",
-  "exports": [
-    "Registry",
-    "NewRegistry",
-    "Add",
-    "Remove",
-    "List",
-    "ListByType",
-    "GetByName"
-  ],
-  "imports": [],
-  "imported_by": [
-    "internal/source/registry_test.go"
-  ],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Core registry pattern for source lifecycle. Registry.Add replaces existing source with same Name(). List() returns copy for safety. ListByType filters by source.Type(). GetByName returns nil if not found. Remove uses slice reslicing. Works with Source interface abstraction."
+  "role": "container",
+  "summary": "In-memory registry of Source instances, keyed by name with upsert semantics",
+  "contracts": {
+    "requires": ["Source instances must return stable Name() values"],
+    "guarantees": [
+      "Add with duplicate name replaces the existing entry (upsert, not append)",
+      "List returns a defensive copy — mutations do not affect internal state",
+      "GetByName returns nil (not error) when not found"
+    ]
+  },
+  "state": "Holds []Source slice; not safe for concurrent use (no mutex)",
+  "observations": [
+    {
+      "kind": "risk",
+      "text": "No mutex protection — Registry is not concurrent-safe. If multiple goroutines call Add/Remove/List simultaneously, data races will occur.",
+      "loc": "registry.go:4-6"
+    },
+    {
+      "kind": "behavior",
+      "text": "Remove uses slice-splice (append([:i], [i+1:]...)) which modifies the underlying array in place. Safe for single-goroutine use.",
+      "loc": "registry.go:26-32"
+    },
+    {
+      "kind": "pattern",
+      "text": "Name uniqueness is enforced across source types — two sources of different types cannot share the same name. This prevents aliasing but may be surprising when configuring multiple telegram channels with generic names.",
+      "loc": "registry.go:14-21"
+    }
+  ]
 }

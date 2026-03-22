@@ -1,12 +1,9 @@
 [
   {
+    "from": "internal/summarizer/prompt.go",
     "to": "internal/storage",
-    "relationship": "imports",
-    "usage": "boundary — uses storage.Message struct for message data"
-  },
-  {
-    "to": "internal/summarizer/service.go",
-    "relationship": "imported_by",
-    "usage": "service calls BuildSingleMessagePrompt to construct prompts before sending to LLM"
+    "semantic": "accepts storage.Message to extract text for prompt construction",
+    "data_flow": "storage.Message.Text, .SentAt → prompt strings",
+    "coupling": "direct"
   }
 ]

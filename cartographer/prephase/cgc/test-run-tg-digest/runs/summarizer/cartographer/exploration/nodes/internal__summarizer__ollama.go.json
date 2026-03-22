@@ -1,14 +1,37 @@
 {
   "path": "internal/summarizer/ollama.go",
-  "type": "source",
-  "summary": "HTTP client for Ollama API with chat completion, health check, and model listing",
-  "exports": ["OllamaClient", "NewOllamaClient"],
-  "public_methods": ["ChatCompletion", "HealthCheck", "ListModels", "HasModel"],
-  "private_helpers": ["isConnectionError"],
-  "imports": ["bytes", "context", "encoding/json", "fmt", "io", "net/http", "strings", "time"],
-  "same_package_deps": ["ChatRequest", "ChatMessage", "openRouterRequest", "openRouterMessage", "openRouterResponse"],
-  "imported_by": ["internal/summarizer/ollama_test.go", "internal/summarizer/service.go (via Client interface)"],
-  "side_effects": ["Makes HTTP requests to Ollama API"],
-  "config_deps": ["baseURL (passed to NewOllamaClient)", "timeout (passed to NewOllamaClient)"],
-  "notes": "Implements Client interface defined in summarizer.go. Reuses openRouter message types from openrouter.go for JSON marshaling/unmarshaling. Provides model discovery (ListModels, HasModel) and health checks not required by Client interface."
+  "role": "adapter",
+  "summary": "HTTP client for Ollama's OpenAI-compatible endpoint, implementing Client interface plus local-model utilities (health check, model listing)",
+  "contracts": {
+    "requires": ["baseURL of running Ollama server", "timeout duration for the http.Client"],
+    "guarantees": ["Returns first choice content on 200 OK; returns actionable error messages directing user to 'ollama serve' or 'ollama pull <model>' on failure"]
+  },
+  "effects": [
+    "HTTP POST to Ollama /v1/chat/completions",
+    "HTTP GET to Ollama / (health check)",
+    "HTTP GET to Ollama /api/tags (model listing)"
+  ],
+  "state": "Holds baseURL and http.Client with configured timeout",
+  "observations": [
+    {
+      "kind": "coupling",
+      "text": "Reuses openRouterRequest, openRouterMessage, and openRouterResponse types from openrouter.go — both providers share the same OpenAI-compatible JSON schema, making ollama.go structurally dependent on openrouter.go's type definitions",
+      "loc": "ollama.go:30-39"
+    },
+    {
+      "kind": "behavior",
+      "text": "404 from /v1/chat/completions is intercepted and converted to a user-friendly 'ollama pull <model>' instruction before the generic status check",
+      "loc": "ollama.go:66-68"
+    },
+    {
+      "kind": "behavior",
+      "text": "isConnectionError detects refused/reset/no-such-host by string matching on error.Error() — fragile but sufficient for the expected local-server connectivity scenarios",
+      "loc": "ollama.go:156-159"
+    },
+    {
+      "kind": "risk",
+      "text": "HasModel performs a full ListModels round-trip on every call with no caching — callers checking model presence before each summarization batch would incur repeated HTTP overhead",
+      "loc": "ollama.go:142-153"
+    }
+  ]
 }

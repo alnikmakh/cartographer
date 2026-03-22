@@ -1,12 +1,14 @@
 [
   {
+    "from": "internal/summarizer/prompt_test.go",
     "to": "internal/summarizer/prompt.go",
-    "relationship": "tests",
-    "usage": "Tests BuildSingleMessagePrompt function"
+    "semantic": "tests BuildSingleMessagePrompt",
+    "coupling": "direct"
   },
   {
+    "from": "internal/summarizer/prompt_test.go",
     "to": "internal/storage",
-    "relationship": "imports",
-    "usage": "boundary — uses storage.Message struct for test fixtures"
+    "semantic": "constructs storage.Message fixtures for test inputs",
+    "coupling": "direct"
   }
 ]

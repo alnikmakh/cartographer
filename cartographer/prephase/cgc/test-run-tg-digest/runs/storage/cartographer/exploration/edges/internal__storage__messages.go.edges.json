@@ -1,12 +1,15 @@
 [
   {
+    "from": "internal/storage/messages.go",
     "to": "internal/storage/storage.go",
-    "relationship": "implements",
-    "usage": "Implements MessageRepository interface, uses Message type, messageRepo instantiated in Open()"
+    "semantic": "implements MessageRepository interface; uses Message model defined in storage.go",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "database/sql",
-    "relationship": "imports",
-    "usage": "Database operations (QueryRowContext, QueryContext, ExecContext)"
+    "from": "internal/storage/messages.go",
+    "to": "[SQLite messages table]",
+    "semantic": "reads and writes message rows with deduplication",
+    "data_flow": "Message struct ↔ SQL rows",
+    "coupling": "direct"
   }
 ]

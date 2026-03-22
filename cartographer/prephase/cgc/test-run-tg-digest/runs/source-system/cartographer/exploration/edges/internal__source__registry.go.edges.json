@@ -1,1 +1,8 @@
-[]
+[
+  {
+    "from": "internal/source/registry.go",
+    "to": "internal/source/source.go",
+    "semantic": "stores and manages Source interface instances",
+    "coupling": "interface-mediated"
+  }
+]

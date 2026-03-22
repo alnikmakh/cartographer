@@ -1,18 +1,22 @@
 {
   "path": "internal/summarizer/prompt.go",
-  "type": "source",
-  "summary": "Builds prompts for single-message summarization; defines system prompt templates and constructs user prompts with channel/source context",
-  "exports": [
-    "BuildSingleMessagePrompt"
-  ],
-  "imports": [
-    "fmt",
-    "tg-digest/internal/storage"
-  ],
-  "imported_by": [
-    "internal/summarizer/service.go"
-  ],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Matches hint: 'prompt.go builds the LLM prompt from messages'. Defines two constants (singleMessageSystemPrompt, localModelPreamble) that serve as templates for LLM instructions. BuildSingleMessagePrompt validates message text is non-empty and formats a user prompt incorporating channelName, sourceType, and message.Text. Depends on boundary package storage.Message struct."
+  "role": "utility",
+  "summary": "Constructs system and user prompts for single-message summarization, embedding source type and channel name as context",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "localModelPreamble is a package-level const appended to the system prompt only when WithLocalModel() is set on Service — it instructs local models to skip preamble and be maximally concise",
+      "loc": "prompt.go:18-21"
+    },
+    {
+      "kind": "risk",
+      "text": "BuildSingleMessagePrompt rejects empty message.Text but does not guard against very large texts — no truncation before sending to LLM; token limits are delegated entirely to the provider",
+      "loc": "prompt.go:23-29"
+    },
+    {
+      "kind": "behavior",
+      "text": "User prompt embeds sourceType and channelName verbatim, giving the LLM explicit source provenance for better summarization framing",
+      "loc": "prompt.go:27"
+    }
+  ]
 }

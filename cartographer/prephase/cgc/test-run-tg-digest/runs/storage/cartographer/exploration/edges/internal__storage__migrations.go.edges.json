@@ -1,5 +1,33 @@
 [
-  {"to": "internal/storage/storage.go", "relationship": "imported_by", "usage": "called by Open() during database initialization"},
-  {"to": "internal/storage/migrations/001_initial.sql", "relationship": "embeds", "usage": "executed on first migration run"},
-  {"to": "internal/storage/migrations/002_source_type.sql", "relationship": "embeds", "usage": "executed as second migration if not already applied"}
+  {
+    "from": "internal/storage/migrations.go",
+    "to": "internal/storage/migrations/001_initial.sql",
+    "semantic": "embeds and executes initial schema migration",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/migrations.go",
+    "to": "internal/storage/migrations/002_source_type.sql",
+    "semantic": "embeds and executes source_type column + sync_state checkpoint migration",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/migrations.go",
+    "to": "internal/storage/migrations/003_nullable_telegram_id.sql",
+    "semantic": "embeds and executes nullable telegram_id channel table migration",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/migrations.go",
+    "to": "internal/storage/migrations/004_message_summaries.sql",
+    "semantic": "embeds and executes per-message summaries table migration, drops old daily summaries table",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/migrations.go",
+    "to": "[SQLite migrations table]",
+    "semantic": "tracks applied migrations by filename to enforce exactly-once execution",
+    "data_flow": "filename string → applied_at timestamp row",
+    "coupling": "direct"
+  }
 ]

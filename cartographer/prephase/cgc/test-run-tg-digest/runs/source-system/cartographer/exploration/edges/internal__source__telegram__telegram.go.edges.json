@@ -1,12 +1,15 @@
 [
   {
-    "to": "internal/source",
-    "relationship": "imports",
-    "usage": "SourceMessage type and Source interface"
+    "from": "internal/source/telegram/telegram.go",
+    "to": "internal/source/source.go",
+    "semantic": "implements Source interface; produces []SourceMessage from Telegram messages",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "internal/refresh",
-    "relationship": "imports",
-    "usage": "boundary — Fetcher interface and FetchedMessage type"
+    "from": "internal/source/telegram/telegram.go",
+    "to": "[internal/refresh]",
+    "semantic": "delegates message fetching to refresh.Fetcher interface (boundary package)",
+    "data_flow": "username + afterMsgID + limit → []refresh.FetchedMessage",
+    "coupling": "interface-mediated"
   }
 ]

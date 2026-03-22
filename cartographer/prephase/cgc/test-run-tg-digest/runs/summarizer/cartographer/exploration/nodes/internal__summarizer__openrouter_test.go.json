@@ -1,24 +1,12 @@
 {
   "path": "internal/summarizer/openrouter_test.go",
-  "type": "test",
-  "summary": "Test suite for OpenRouterClient with 6 test cases covering successful completions, API errors, empty responses, network failures, invalid JSON, and context cancellation",
-  "exports": [],
-  "imports": [
-    "context",
-    "encoding/json",
-    "io",
-    "net/http",
-    "net/http/httptest",
-    "testing",
-    "time",
-    "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require"
-  ],
-  "imported_by": [],
-  "side_effects": [
-    "Creates mock HTTP servers to test OpenRouterClient",
-    "Tests ChatCompletion method behavior"
-  ],
-  "config_deps": [],
-  "notes": "Tests the OpenRouterClient HTTP implementation. Uses httptest to mock API responses and verify request formatting (Authorization header, Content-Type, request body structure). Covers error cases (401 Unauthorized, empty choices, network errors, invalid JSON) and context cancellation timeout. Validates that client properly formats ChatRequest with model and messages."
+  "role": "test",
+  "summary": "Unit tests for OpenRouterClient covering successful completion, API error (401), empty choices, network error, invalid JSON, and context cancellation",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "TestOpenRouterClient_SuccessfulCompletion verifies Authorization header format ('Bearer <key>'), request path (/chat/completions), and message structure — documents expected wire format",
+      "loc": "openrouter_test.go:16-70"
+    }
+  ]
 }

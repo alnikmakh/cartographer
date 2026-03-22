@@ -1,150 +1,124 @@
 ---
 scope: internal/refresh/refresh.go
 files_explored: 3
-boundary_packages: 3
-generated: TIMESTAMP
+boundary_packages: 4
+generated: 2026-03-21T00:00:00Z
 ---
 
 ## Purpose
 
-The `refresh` package is the ingestion orchestrator for tg-digest. It pulls new messages from two kinds of sources — Telegram channels (via the gotd/td API) and generic feeds (RSS, Reddit, HackerNews) — deduplicates them, stores them in the database, and advances per-channel sync checkpoints so subsequent refreshes are incremental. Callers (the CLI entrypoint and TUI) use `Service` as the single interface for "go get new content."
+The refresh scope is the pipeline engine that drives content ingestion across all message sources. Callers (`cmd/digest/main.go`) invoke `RefreshAll` or `RefreshAllSources` to pull new messages into SQLite storage, advancing per-channel checkpoints so subsequent calls are incremental. The scope owns the `Fetcher` interface, which the CLI wires to a live Telegram MTProto client — or substitutes with a mock in tests. All caller-visible outcomes arrive through `RefreshResult`: channel counts, message counts, and a per-channel error list that never escalates a single failure into a top-level abort.
 
 ## Architecture
 
-**Dependency diagram**
-
 ```
-                  refresh.go
-                  ┌────────────────────────┐
-                  │  Service               │
-                  │  - RefreshAll()        ←──── Telegram path
-                  │  - RefreshAllSources() ←──── Generic source path
-                  │  - RefreshSources()    │
-                  │  - RefreshFiltered()   │
-                  └────┬──────┬──────┬─────┘
-                       │      │      │
-          implements   │      │      │  uses
-          Fetcher      │      │      │
-     ┌─────────────────┘      │      └──────────────────┐
-     ▼                        ▼                          ▼
-telegram.go            [storage]†               [source]†
-┌──────────────────┐   Store interface          Source interface
-│ TelegramFetcher  │   .Channels()              + Registry
-│ - FetchNewMsgs() │   .Messages()
-│ - extractMsgs()  │   .SyncState()
-└────────┬─────────┘
-         │ uses
-         ▼
-  [gotd/td/tg]†
-  Telegram API SDK
-
-† boundary packages
+                       ┌──────────────────────────────────┐
+                       │        internal/refresh          │
+                       │                                  │
+  [CLI / main.go] ───► │  Service                         │
+                       │    RefreshAll()         ─────────┼──► [internal/storage]
+                       │    RefreshFiltered()    ─────────┼──►   Channels.List
+                       │    RefreshSources()     ─────────┼──►   SyncState.Get/Upsert
+                       │    RefreshAllSources()  ─────────┼──►   Messages.Create
+                       │                                  │
+                       │  «interface» Fetcher             │
+                       │    FetchNewMessages()            │
+                       │         ▲                        │
+                       │         │ implements             │
+                       │  TelegramFetcher ────────────────┼──► [Telegram MTProto API]
+                       │    (holds *tg.Client)            │       ContactsResolveUsername
+                       │                                  │       MessagesGetHistory
+                       └──────────────────────────────────┘
+                                      │
+                                      │ source path only
+                                      ▼
+                              [internal/source]
+                               Source interface
+                               Registry
+                               SourceMessage
 ```
 
-**Key interfaces and signatures**
+**Key interfaces and signatures:**
 
 ```go
-// Fetcher — abstraction over Telegram message retrieval
+// Abstraction point for Telegram; allows mock substitution in tests
 type Fetcher interface {
     FetchNewMessages(ctx context.Context, username string, afterMsgID int, limit int) ([]FetchedMessage, error)
 }
 
-// Value types
-type FetchedMessage struct {
-    TelegramMsgID int
-    Text          string
-    SentAt        time.Time
-}
-
+// Central result carrier — never returns top-level error for per-channel failures
 type RefreshResult struct {
     ChannelsRefreshed int
     NewMessages       int
     Errors            []error
 }
 
-// Service — the orchestrator
 func NewService(fetcher Fetcher, store storage.Store, limit int) *Service
 func (s *Service) RefreshAll(ctx context.Context) (*RefreshResult, error)
-func (s *Service) RefreshFiltered(ctx context.Context, sourceNames []string) (*RefreshResult, error)
-func (s *Service) RefreshSources(ctx context.Context, sources []source.Source) (*RefreshResult, error)
 func (s *Service) RefreshAllSources(ctx context.Context, registry *source.Registry) (*RefreshResult, error)
-
-// TelegramFetcher — Fetcher implementation
-func NewTelegramFetcher(api *tg.Client) *TelegramFetcher
-func (f *TelegramFetcher) FetchNewMessages(ctx context.Context, username string, afterMsgID int, limit int) ([]FetchedMessage, error)
 ```
 
-**Pattern identification**
-
-- **Adapter pattern** — `TelegramFetcher` adapts the gotd/td `tg.Client` into the `Fetcher` interface. The generic `source.Source` interface serves the same role for RSS/Reddit/HN.
-- **Strategy pattern** — Two fetch strategies share the same store-and-checkpoint logic but differ in how they obtain messages: `RefreshAll` uses `Fetcher` (Telegram-specific, integer message ID checkpoints), `RefreshSources` uses `source.Source` (string checkpoints, source-provided).
-- **Registry pattern** — `source.Registry` collects heterogeneous `Source` implementations; `RefreshAllSources` iterates the registry list.
+**Pattern — dual refresh paths:** Two structurally distinct pipelines share the same `Service`. The Fetcher path (`RefreshAll`) is Telegram-specific: it uses integer message IDs as checkpoints stored as decimal strings, calls `s.fetcher.FetchNewMessages`, and only advances the checkpoint when messages arrive. The Source path (`RefreshAllSources` → `RefreshSources`) uses the `source.Source` interface, opaque string checkpoints (ETags, pagination cursors), and always advances the checkpoint regardless of whether messages were stored.
 
 ## Data Flow
 
-**Flow 1: Telegram channel refresh (`RefreshAll`)**
+**Telegram incremental sync (`RefreshAll`):**
+```
+store.Channels().List(ctx)
+  → for each ch:
+      store.SyncState().Get(ctx, ch.ID)     // checkpoint = "103" (last maxID)
+      fetcher.FetchNewMessages(ctx, ch.Username, 103, limit)
+        → TelegramFetcher: ContactsResolveUsername → MessagesGetHistory(MinID=103)
+        → extractMessages: filters to non-empty tg.Message.Message, returns []FetchedMessage
+      for each msg: store.Messages().Create(ctx, dbMsg)   // UNIQUE constraint = dedup
+      store.SyncState().Upsert(ctx, maxID)  // scan full slice for max, not sorted order
+```
 
-1. `Service.RefreshAll` calls `store.Channels().List(ctx)` to get all monitored channels
-2. For each channel, calls `store.SyncState().Get(ctx, ch.ID)` — parses `Checkpoint` string as integer `afterMsgID`
-3. Calls `fetcher.FetchNewMessages(ctx, ch.Username, afterMsgID, s.limit)`
-4. `TelegramFetcher.FetchNewMessages` strips `@` prefix, calls `api.ContactsResolveUsername` to get channel ID + access hash
-5. Builds `MessagesGetHistoryRequest` with `Limit` and (if incremental) `MinID = afterMsgID`; calls `api.MessagesGetHistory`
-6. `extractMessages` type-switches on response (`MessagesMessages` / `MessagesMessagesSlice` / `MessagesChannelMessages`), filters to `*tg.Message` with non-empty `.Message` field, converts to `[]FetchedMessage`
-7. Back in `RefreshAll`: iterates messages, calls `store.Messages().Create` for each — UNIQUE constraint silently deduplicates
-8. Finds max `TelegramMsgID` across fetched messages, calls `store.SyncState().Upsert` with that as the new checkpoint
-9. Returns `RefreshResult` with counts and accumulated errors
-
-**Flow 2: Generic source refresh (`RefreshAllSources`)**
-
-1. `RefreshAllSources` calls `registry.List()`, delegates to `RefreshSources`
-2. For each source, calls `store.Channels().GetByUsername(ctx, src.Name())` — if no matching channel exists, silently skips
-3. Loads checkpoint from `store.SyncState().Get`
-4. Calls `src.FetchMessages(ctx, checkpoint, s.limit)` — source returns messages + new checkpoint string
-5. For each message: converts `ExternalID` to int via `strconv.Atoi`; if that fails, falls back to `crc32.ChecksumIEEE` of the ID string to produce a numeric `TelegramMsgID`
-6. Calls `store.Messages().Create` per message (UNIQUE constraint dedup), counts only successful inserts
-7. Calls `store.SyncState().Upsert` with the source-provided `newCheckpoint` — always updates, even if zero messages stored
+**Generic source sync (`RefreshAllSources`):**
+```
+registry.List()
+  → for each src:
+      store.Channels().GetByUsername(ctx, src.Name())
+      store.SyncState().Get(ctx, ch.ID)     // checkpoint = "etag:xyz" or ""
+      src.FetchMessages(ctx, checkpoint, limit)
+        → returns ([]SourceMessage, newCheckpoint, error)
+      for each msg:
+          msgID = strconv.Atoi(msg.ExternalID)    // integer IDs (HN)
+                  OR crc32.ChecksumIEEE(ExternalID) // URL/alphanumeric IDs (RSS, Reddit)
+          store.Messages().Create(ctx, dbMsg)
+      store.SyncState().Upsert(ctx, newCheckpoint)  // always, even if stored==0
+```
 
 ## Boundaries
 
-| Boundary | Role | Used By | Key Types |
-|----------|------|---------|-----------|
-| `internal/storage` | Persistence — channels, messages, sync state | `refresh.go` (all methods), `refresh_test.go` (setup) | `Store`, `Channel`, `Message`, `SyncState` |
-| `internal/source` | Generic feed abstraction | `refresh.go` (`RefreshSources`, `RefreshAllSources`) | `Source`, `SourceMessage`, `Registry` |
-| `gotd/td/tg` | Telegram API SDK | `telegram.go` | `Client`, `Channel`, `Message`, `InputPeerChannel`, `MessagesGetHistoryRequest` |
-
-Downstream consumers of this package: `cmd/digest/main.go` (instantiates `Service` and `TelegramFetcher`), `internal/tui` (uses refresh types in UI state).
+| Boundary | Role | Coupling | Consuming files | Key types |
+|---|---|---|---|---|
+| `internal/storage` | Persistence layer | direct | `refresh.go` | `Store`, `Channel`, `Message`, `SyncState` |
+| `internal/source` | Generic source interface | interface-mediated | `refresh.go`, `refresh_test.go` | `Source`, `Registry`, `SourceMessage` |
+| `Telegram MTProto API` | External network | direct | `telegram.go` | `*tg.Client`, `tg.MessagesGetHistoryRequest` |
+| `internal/telegram` | Session owner | consumed_by | (wires *tg.Client at startup) | `*tg.Client` passed into `NewTelegramFetcher` |
+| `internal/summarizer` | Post-refresh consumer | event-driven | (none in this scope) | — |
 
 ## Non-Obvious Behaviors
 
-- **`RefreshFiltered` is a no-op stub.** It ignores the `sourceNames` parameter entirely and delegates to `RefreshAll` (`refresh.go:122`). Callers expecting filtered behavior get a full refresh instead.
+- **`RefreshFiltered` is a no-op stub.** It accepts `sourceNames []string` but calls `return s.RefreshAll(ctx)` unconditionally (refresh.go:121-123). Any caller passing a source filter gets a full refresh of all channels instead. There is no mechanism in `Service` to honor filtered refresh.
 
-- **`NewMessages` count is inflated for the Telegram path.** `RefreshAll` adds `len(messages)` to `result.NewMessages` (`refresh.go:94`) regardless of whether `store.Messages().Create` succeeded or was silently deduplicated. The source path correctly counts only successful inserts (`refresh.go:168`).
+- **Silent storage error swallowing in both paths.** `Messages.Create` errors are caught with `continue` in both `RefreshAll` (refresh.go:88-91) and `RefreshSources` (refresh.go:164-166). A storage failure (disk full, connection error) looks identical to a UNIQUE constraint duplicate. The message is lost and the error is not surfaced anywhere.
 
-- **Non-numeric external IDs get CRC32-hashed into `TelegramMsgID`.** When a source returns a non-integer `ExternalID` (e.g., a URL GUID from RSS), `RefreshSources` falls back to `crc32.ChecksumIEEE([]byte(msg.ExternalID))` cast to `int` (`refresh.go:155`). This reuses the `TelegramMsgID` column for non-Telegram content and means hash collisions would silently drop messages.
+- **`NewMessages` counts mean different things per path.** `RefreshAll` increments `result.NewMessages += len(messages)` before any store operation — counting all fetched messages including those that fail Create. `RefreshSources` increments `result.NewMessages += stored` — counting only successfully stored messages. The same field carries different semantics depending on which path ran.
 
-- **Checkpoint is always updated for sources, even with zero new messages.** `RefreshSources` calls `store.SyncState().Upsert` unconditionally after fetching (`refresh.go:172`), so the `LastSyncAt` timestamp advances even when nothing changed. The Telegram path only updates checkpoint when `len(messages) > 0` (`refresh.go:97`).
+- **Source checkpoint advances even on zero stored.** In `RefreshSources`, `SyncState.Upsert(newCheckpoint)` executes unconditionally after the message loop (refresh.go:172-178). In `RefreshAll`, the parallel block only upserts `if len(messages) > 0` (refresh.go:97). This is semantically correct for Sources (ETags/cursors should advance), but means a Source fetch that yields no storable messages still writes a new checkpoint to the DB.
 
-- **`extractMessages` silently drops non-text Telegram messages.** The filter at `telegram.go:81` requires both `*tg.Message` type assertion and `msg.Message != ""`. Service actions, media-only messages, and empty messages are all discarded without logging.
+- **crc32 collision risk for non-integer IDs.** RSS GUIDs (full URLs) and Reddit post IDs (alphanumeric strings like `"abc123"`) are hashed into a 32-bit int via `crc32.ChecksumIEEE` and stored in the `TelegramMsgID` column (refresh.go:153-155). The 32-bit collision space is shared across all messages in a given channel — approximately 1-in-4B per pair, but with hundreds of messages in a single feed the birthday paradox starts to apply. A collision causes a real message to be silently dropped as a duplicate.
 
-- **Sync state checkpoint parsing silently ignores errors.** At `refresh.go:71`, `strconv.Atoi(syncState.Checkpoint)` failures leave `afterMsgID` at 0, causing a full (non-incremental) fetch. This is the correct fallback but happens without any signal.
+- **Username resolution takes the first channel in the response list.** `TelegramFetcher` iterates `resolved.Chats` and breaks on the first `*tg.Channel` (telegram.go:35-43). If a username resolves to both a linked discussion group and the main channel, whichever appears first in the Telegram API response wins — this is non-deterministic from the application's perspective.
 
-- **Error accumulation, not fail-fast.** Both `RefreshAll` and `RefreshSources` continue to the next channel/source on fetch errors, collecting errors in `result.Errors`. The top-level `error` return is only used for the initial `Channels().List` failure (`refresh.go:56`).
+- **`extractMessages` errors on unknown response variants.** The Telegram API can theoretically return `*tg.MessagesNotModified`. `extractMessages` handles three known variants and returns an error for anything else (telegram.go:65-77), propagating as a channel-level fetch error accumulated in `RefreshResult.Errors`.
 
 ## Test Coverage Shape
 
-The test suite is thorough for both paths with 14 test functions split across two groups.
+Coverage is strong and integration-first. `refresh_test.go` avoids mocking the store — it opens a real `storage.Open` against a `t.TempDir()` SQLite file for every test, exercising the full fetch→store→syncstate cycle against actual SQL. The Fetcher is mocked via `mockFetcher` (implementing the `Fetcher` interface) for Telegram path tests.
 
-**Well-tested:**
-- Happy path for both Telegram (`RefreshAll`) and source (`RefreshAllSources`) pipelines
-- Incremental sync: verifies `afterMsgID` is passed from stored checkpoint (Telegram), and that checkpoint string round-trips (sources)
-- Sync state updates: confirms highest message ID is persisted as checkpoint
-- Error continuation: fetch errors for one channel don't block others
-- Deduplication via checkpoint: integration tests confirm second refresh yields 0 new messages
-- Real source implementations: RSS, Reddit, and HackerNews each get an integration test with `httptest` servers serving realistic payloads
+The source path has three full integration tests (`TestService_RefreshAllSources_RSSIntegration`, `_RedditIntegration`, `_HackerNewsIntegration`) that each spin up an `httptest.Server` serving fixture JSON/XML and run two consecutive refreshes — the second verifying that checkpoint-based deduplication suppresses re-ingestion of the same content.
 
-**Conspicuously absent:**
-- No test for `RefreshFiltered` — its stub behavior (delegating to `RefreshAll`) is unverified
-- No test for the CRC32 fallback path when `ExternalID` is non-numeric — the RSS/Reddit/HN integration tests presumably hit it, but no unit test isolates the behavior or checks for collision handling
-- No test for `TelegramFetcher` or `extractMessages` — the entire `telegram.go` file has zero direct test coverage; it's only testable through the real Telegram API
-- No test for the `NewMessages` over-count on the Telegram path (dedup via UNIQUE succeeds silently but count isn't adjusted)
-- No negative test for malformed sync state checkpoints (e.g., non-integer string in the Telegram path)
+Key behaviors covered: incremental sync (checkpoint passed as `afterMsgID`), per-channel error isolation (`FetchErrorContinues`), sync-state update with unsorted messages (maxID scan), checkpoint persistence and recall, and unknown-source-skipping. **Not covered:** the `RefreshFiltered` stub behavior, crc32 collision scenarios, the `extractMessages` unknown-type error path, or concurrent execution of `RefreshAll`.

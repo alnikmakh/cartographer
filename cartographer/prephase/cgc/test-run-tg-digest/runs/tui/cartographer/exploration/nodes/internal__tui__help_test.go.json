@@ -1,11 +1,5 @@
 {
   "path": "internal/tui/help_test.go",
-  "type": "test",
-  "summary": "5 tests for helpModel covering View rendering, key bindings, and Update message handling",
-  "exports": [],
-  "imports": ["strings", "testing", "github.com/charmbracelet/bubbletea", "github.com/stretchr/testify/assert"],
-  "imported_by": [],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Tests help view contains all three sections (Navigation, Dashboard, Sources), key binding labels, and Escape/?-key handling to close help overlay"
+  "role": "test",
+  "summary": "Unit tests for helpModel covering key binding display, section presence, and close-on-esc/? behavior"
 }

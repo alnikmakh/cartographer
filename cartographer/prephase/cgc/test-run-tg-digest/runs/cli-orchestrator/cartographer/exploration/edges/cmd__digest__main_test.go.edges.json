@@ -1,22 +1,21 @@
 [
   {
+    "from": "cmd/digest/main_test.go",
     "to": "cmd/digest/main.go",
-    "relationship": "tests",
-    "usage": "Tests buildLLMClient() function from same package"
+    "semantic": "tests buildLLMClient function defined in main package",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/config",
-    "relationship": "imports",
-    "usage": "Uses config.LLMConfig struct to set up test cases"
+    "from": "cmd/digest/main_test.go",
+    "to": "internal/config/config.go",
+    "semantic": "uses config.LLMConfig struct to construct test inputs for buildLLMClient",
+    "data_flow": "LLMConfig literals → buildLLMClient arguments",
+    "coupling": "direct"
   },
   {
-    "to": "github.com/stretchr/testify/assert",
-    "relationship": "imports",
-    "usage": "external — assert helpers for test assertions"
-  },
-  {
-    "to": "github.com/stretchr/testify/require",
-    "relationship": "imports",
-    "usage": "external — require helpers for test assertions"
+    "from": "cmd/digest/main_test.go",
+    "to": "[net/http/httptest]",
+    "semantic": "spins up local HTTP server to mock Ollama health and model-list endpoints",
+    "coupling": "direct"
   }
 ]

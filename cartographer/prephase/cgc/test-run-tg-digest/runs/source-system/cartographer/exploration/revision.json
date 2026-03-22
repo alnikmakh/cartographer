@@ -1,0 +1,18 @@
+{
+  "last_explored": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "last_synthesized": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "files_at_generation": [
+    "internal/source/hackernews/hn.go",
+    "internal/source/hackernews/hn_test.go",
+    "internal/source/reddit/reddit.go",
+    "internal/source/reddit/reddit_test.go",
+    "internal/source/registry.go",
+    "internal/source/registry_test.go",
+    "internal/source/rss/rss.go",
+    "internal/source/rss/rss_test.go",
+    "internal/source/source.go",
+    "internal/source/telegram/telegram.go",
+    "internal/source/telegram/telegram_test.go"
+  ],
+  "cross_scope_revision": null
+}

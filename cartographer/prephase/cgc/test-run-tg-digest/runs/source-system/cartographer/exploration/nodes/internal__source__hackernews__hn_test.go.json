@@ -1,10 +1,17 @@
 {
   "path": "internal/source/hackernews/hn_test.go",
-  "type": "test",
-  "summary": "Test suite for HNSource with mock Firebase server",
-  "imports": ["tg-digest/internal/source", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require"],
-  "imported_by": [],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Compile-time check verifies HNSource implements source.Source interface. Uses httptest mock server. Tests: constructor defaults, interface compliance, concurrent fetch with limiter, checkpoint filtering (partial and full), text composition logic, timestamp parsing, URL construction, order preservation, error handling (network, invalid JSON, missing items), item filtering (deleted, dead, non-story types)."
+  "role": "test",
+  "summary": "Integration-style unit tests for HNSource using httptest server — covers checkpoint logic, concurrency ordering, item filtering, and text composition",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "Uses compile-time interface assertion (var _ source.Source = (*HNSource)(nil)) — consistent with reddit_test.go and rss_test.go. Ensures implementations stay in sync with the interface.",
+      "loc": "hn_test.go:19"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestHNSource_FetchMessages_OrderPreserved explicitly tests that concurrent item fetching preserves original story-list order, validating the insertion-sort in hn.go.",
+      "loc": "hn_test.go:378-392"
+    }
+  ]
 }

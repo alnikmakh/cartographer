@@ -1,30 +1,33 @@
 {
   "path": "internal/telegram/client.go",
-  "type": "source",
-  "summary": "Telegram client wrapper around gotd/td library with session management",
-  "exports": [
-    "Client",
-    "NewClient"
-  ],
-  "imports": [
-    "context",
-    "os",
-    "path/filepath",
-    "github.com/gotd/td/telegram",
-    "github.com/gotd/td/telegram/auth",
-    "github.com/gotd/td/tg"
-  ],
-  "imported_by": [
-    "cmd/digest/main.go"
-  ],
-  "side_effects": [
-    "Creates session directory on disk",
-    "Establishes connection to Telegram API"
-  ],
-  "config_deps": [
-    "apiID - Telegram API ID",
-    "apiHash - Telegram API hash",
-    "sessionFile - path to session persistence file"
-  ],
-  "notes": "Seed file. Client struct wraps gotd/td Client and API. Run() method is entry point: handles session creation, authentication flow, and executes user-provided function with authenticated context. authenticate() method uses AuthFlow interface (from auth.go) to handle interactive 2FA flow. Internally uses FileSessionStorage (from session.go, not in exploration scope) for session persistence. Called from cmd/digest/main.go (lines 57, 129) and refresh package."
+  "role": "adapter",
+  "summary": "Core wrapper around gotd/td's Telegram client: manages session directory setup, session storage, auth-check-on-connect, and exposes the live tg.Client API handle",
+  "contracts": {
+    "requires": ["apiID and apiHash credentials supplied at construction", "sessionFile path supplied at construction", "AuthFlow implementation passed to Run()"],
+    "guarantees": ["Session directory created (0700) before any network activity", "Function f is only called after successful authentication", "Returns a composite error covering connection, auth, and f errors"]
+  },
+  "effects": ["Telegram MTProto network connection", "Session file directory creation (os.MkdirAll)", "Delegates session file I/O to FileSessionStorage"],
+  "state": "c.client and c.api are nil until Run() is called; API() called before Run() returns nil with no indication of error",
+  "observations": [
+    {
+      "kind": "risk",
+      "text": "API() returns nil if called before or after Run() — callers that store the *tg.Client reference and use it outside the Run callback will panic on method calls",
+      "loc": "client.go:64-66"
+    },
+    {
+      "kind": "behavior",
+      "text": "Client construction (telegram.NewClient) is deferred to Run(), not NewClient() — the struct is inert until Run() is invoked. This means the same Client instance cannot be reused across multiple Run() calls safely (c.client is overwritten each time).",
+      "loc": "client.go:41-43"
+    },
+    {
+      "kind": "coupling",
+      "text": "HINT MATCH — 8 inbound calls from main.go confirm this is the primary integration point for all Telegram operations during initialization. The Run/callback pattern means main orchestrates timing; client owns auth and connection.",
+      "loc": "client.go:33"
+    },
+    {
+      "kind": "behavior",
+      "text": "Auth check uses c.client.Auth().Status() before invoking authenticate() — already-authenticated sessions skip the interactive flow entirely, enabling headless operation after first auth",
+      "loc": "client.go:48-57"
+    }
+  ]
 }

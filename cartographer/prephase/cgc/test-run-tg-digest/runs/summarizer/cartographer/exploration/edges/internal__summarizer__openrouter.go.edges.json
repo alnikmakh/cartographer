@@ -1,4 +1,15 @@
 [
-  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses ChatRequest, ChatMessage types; implements Client interface"},
-  {"to": "internal/summarizer/ollama.go", "relationship": "shared_types", "usage": "ollama.go reuses openRouterRequest, openRouterMessage, openRouterResponse for JSON marshaling/unmarshaling"}
+  {
+    "from": "internal/summarizer/openrouter.go",
+    "to": "internal/summarizer/summarizer.go",
+    "semantic": "implements Client interface via ChatCompletion method",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/summarizer/openrouter.go",
+    "to": "[OpenRouter API]",
+    "semantic": "sends chat completion requests, receives model-generated text",
+    "data_flow": "ChatRequest → JSON POST → choices[0].message.content",
+    "coupling": "direct"
+  }
 ]

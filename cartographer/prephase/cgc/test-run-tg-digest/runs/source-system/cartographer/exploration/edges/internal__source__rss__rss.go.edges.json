@@ -1,17 +1,22 @@
 [
   {
+    "from": "internal/source/rss/rss.go",
     "to": "internal/source/source.go",
-    "relationship": "imports",
-    "usage": "implements Source interface, returns SourceMessage type"
+    "semantic": "implements Source interface; produces []SourceMessage",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "github.com/mmcdole/gofeed",
-    "relationship": "imports",
-    "usage": "external dependency - parses RSS 2.0 and Atom feed XML"
+    "from": "internal/source/rss/rss.go",
+    "to": "[RSS/Atom Feed URL]",
+    "semantic": "fetches and parses feed content with conditional HTTP headers",
+    "data_flow": "GET with If-None-Match/If-Modified-Since → XML body + ETag/Last-Modified response headers",
+    "coupling": "direct"
   },
   {
-    "to": "internal/source/registry.go",
-    "relationship": "imported_by",
-    "usage": "boundary - RSSSource is registered and managed by registry"
+    "from": "internal/source/rss/rss.go",
+    "to": "[github.com/mmcdole/gofeed]",
+    "semantic": "parses RSS 2.0 and Atom feed XML into unified Item structs",
+    "data_flow": "XML string → gofeed.Feed",
+    "coupling": "direct"
   }
 ]

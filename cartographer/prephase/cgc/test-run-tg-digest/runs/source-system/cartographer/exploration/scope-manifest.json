@@ -1,0 +1,51 @@
+{
+  "scope": "source",
+  "purpose": "In-memory registry of Source instances, keyed by name with upsert semantics",
+  "exposes": {
+    "types": [],
+    "interfaces": [],
+    "entry_points": [
+      "Add with duplicate name replaces the existing entry (upsert, not append)",
+      "List returns a defensive copy \u2014 mutations do not affect internal state",
+      "GetByName returns nil (not error) when not found",
+      "FetchMessages returns (messages, newCheckpoint, error) \u2014 checkpoint is opaque string, format is implementation-defined",
+      "Empty checkpoint means initial fetch; non-empty checkpoint means incremental sync",
+      "SourceMessage fields Title, URL, Author are optional (empty string is valid)"
+    ]
+  },
+  "consumes": {
+    "external": [
+      "HackerNews Firebase API",
+      "Reddit JSON API",
+      "RSS/Atom Feed URL",
+      "github.com/mmcdole/gofeed",
+      "internal/refresh"
+    ],
+    "config": []
+  },
+  "cross_scope_touchpoints": [],
+  "invariants": [
+    "SourceMessage.ExternalID must be unique within the source \u2014 callers use it for deduplication. No enforcement here; implementations are responsible."
+  ],
+  "risks": [
+    "Uses http.DefaultClient with no timeout \u2014 context cancellation is the only protection against hung requests. A hung Firebase connection will block up to 10 goroutines indefinitely if the context is not bounded.",
+    "Checkpoint uses float64 UTC timestamp \u2014 two posts created in the same second will have identical timestamps. The post with the same timestamp as the checkpoint is filtered out (<=), so a post created at the same second as the last seen post will be skipped on the next fetch.",
+    "Uses http.DefaultClient with no timeout \u2014 same concern as HNSource. Context cancellation is the only bound.",
+    "No mutex protection \u2014 Registry is not concurrent-safe. If multiple goroutines call Add/Remove/List simultaneously, data races will occur.",
+    "itemTimestamp falls back to time.Now() when both PublishedParsed and UpdatedParsed are nil. This means undated items are treated as 'just published', causing them to always pass the checkpoint filter and be returned on every call.",
+    "Uses http.DefaultClient with no timeout \u2014 consistent risk with HNSource and RedditSource.",
+    "Silent treatment of invalid checkpoint ('not-a-number' \u2192 0) means a corrupted checkpoint causes a full re-fetch from the beginning rather than an error. This is confirmed by the test TestTelegramSource_FetchMessages_InvalidCheckpoint."
+  ],
+  "patterns": [
+    "WithBaseURL builder method enables test injection without interfaces \u2014 consistent with the pattern used in RedditSource and implicitly in RSSSource (feedURL field).",
+    "Uses compile-time interface assertion (var _ source.Source = (*HNSource)(nil)) \u2014 consistent with reddit_test.go and rss_test.go. Ensures implementations stay in sync with the interface.",
+    "Text composition mirrors HackerNews: self-posts become 'Title\\n\\nSelftext', link posts become 'Title\\n\\nLink: URL', title-only if neither. Consistent format across all HTTP-based sources.",
+    "Compile-time interface assertion (var _ source.Source = (*RedditSource)(nil)) consistent with other source test files.",
+    "Name uniqueness is enforced across source types \u2014 two sources of different types cannot share the same name. This prevents aliasing but may be surprising when configuring multiple telegram channels with generic names.",
+    "mockSource defined in test file also serves as a compile-time stand-in for verifying the Source interface signature is callable \u2014 same mock pattern used in all implementation test files.",
+    "Uses mmcdole/gofeed library to parse both RSS 2.0 and Atom feeds through a single unified API, abstracting format differences.",
+    "Compile-time interface assertion consistent with other source test files.",
+    "Checkpoint is deliberately opaque (string) \u2014 each implementation encodes its own cursor format (integer ID for HN/Telegram, UTC timestamp for Reddit, RFC3339+ETag+Last-Modified for RSS)",
+    "Uses mockFetcher that records all calls (username, afterMsgID, limit) for assertion \u2014 allows verifying that checkpoint is correctly parsed and passed through to the underlying Fetcher."
+  ]
+}

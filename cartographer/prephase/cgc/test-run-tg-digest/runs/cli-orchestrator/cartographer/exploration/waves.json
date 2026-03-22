@@ -1,0 +1,14 @@
+{
+  "waves": [
+    {
+      "id": 1,
+      "files": [
+        "cmd/digest/main.go",
+        "cmd/digest/main_test.go",
+        "internal/config/config.go",
+        "internal/config/config_test.go"
+      ],
+      "rationale": "Default: all files in single wave (wave planning did not produce output)"
+    }
+  ]
+}

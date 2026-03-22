@@ -4,16 +4,9 @@
     "explore_within": ["internal/telegram/**"],
     "boundary_packages": ["internal/storage"]
   },
-  "budget": {
-    "max_iterations": 4,
-    "max_nodes": 6,
-    "max_depth_from_seed": 3
-  },
   "hints": [
-    "client.go has 4 functions — likely the Client struct with connect/disconnect/fetch methods",
-    "auth.go has TerminalAuth (7 functions) — interactive authentication flow",
-    "session.go has FileSessionStorage (2 functions) — session persistence",
-    "messages.go has Message type (3 functions) — message data model separate from storage.Message",
-    "Called heavily from cmd (12 calls) and from refresh (1 call via telegram.go adapter)"
+    "client.go has 8 inbound calls from main.go — heavily used during init",
+    "messages.go is called by source/hackernews, source/rss, source/reddit tests — likely shared message types",
+    "No outbound calls to other internal packages from production code except storage"
   ]
 }

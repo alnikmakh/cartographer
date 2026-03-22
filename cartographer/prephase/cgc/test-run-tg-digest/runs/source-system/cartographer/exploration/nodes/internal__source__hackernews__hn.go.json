@@ -1,11 +1,48 @@
 {
   "path": "internal/source/hackernews/hn.go",
-  "type": "source",
-  "summary": "HackerNews source implementation fetching stories via concurrent API calls",
-  "exports": ["HNSource", "NewHNSource"],
-  "imports": ["tg-digest/internal/source"],
-  "imported_by": ["internal/source/hackernews/hn_test.go"],
-  "side_effects": ["HTTP calls to hacker-news.firebaseio.com"],
-  "config_deps": ["baseURL"],
-  "notes": "Implements source.Source interface. Fetches via concurrent goroutines with 10-item semaphore. Checkpoint is string-encoded max item ID (int). Filters deleted/dead items and non-story types. Preserves order via insertion sort after concurrent fetch. Text composition varies by presence of URL and text fields."
+  "role": "adapter",
+  "summary": "Fetches HackerNews stories from the Firebase REST API with concurrent item fetching and checkpoint-based deduplication",
+  "contracts": {
+    "requires": ["Reachable HackerNews Firebase API (or override via WithBaseURL)", "Checkpoint is a decimal integer string (highest story ID seen)"],
+    "guarantees": [
+      "Returns stories in original feed order (insertion-sort after concurrent fetch)",
+      "Checkpoint is always the highest story ID seen across all fetched items, even filtered/deleted ones",
+      "Checkpoint is preserved across calls with no new stories",
+      "Never returns deleted, dead, or non-story items"
+    ]
+  },
+  "effects": ["HTTP GET to hacker-news.firebaseio.com (or baseURL override)", "Up to limit+1 HTTP requests per FetchMessages call (1 for IDs + up to limit for items)"],
+  "state": "Stateless between calls; baseURL field supports test injection via WithBaseURL",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Item fetching is concurrent with a semaphore of 10 goroutines. Items that fail to fetch are silently dropped (fetchErr != nil returns without adding). This means fewer results than expected may be returned without error.",
+      "loc": "hn.go:107-135"
+    },
+    {
+      "kind": "behavior",
+      "text": "Checkpoint tracks highest ID across ALL fetched items including deleted/dead/non-story, so subsequent calls won't re-fetch those items even if they were filtered. This is correct but subtle.",
+      "loc": "hn.go:151-169"
+    },
+    {
+      "kind": "risk",
+      "text": "Uses http.DefaultClient with no timeout — context cancellation is the only protection against hung requests. A hung Firebase connection will block up to 10 goroutines indefinitely if the context is not bounded.",
+      "loc": "hn.go:204,239"
+    },
+    {
+      "kind": "behavior",
+      "text": "limitOverride in FetchMessages takes precedence over the struct's limit field when > 0. This allows per-call override of the configured default.",
+      "loc": "hn.go:76-80"
+    },
+    {
+      "kind": "pattern",
+      "text": "WithBaseURL builder method enables test injection without interfaces — consistent with the pattern used in RedditSource and implicitly in RSSSource (feedURL field).",
+      "loc": "hn.go:57-60"
+    },
+    {
+      "kind": "behavior",
+      "text": "URL for each story is always the HN permalink (news.ycombinator.com/item?id=N), not the story's external URL. The story's own URL appears in the Text field via composeText.",
+      "loc": "hn.go:171-178"
+    }
+  ]
 }

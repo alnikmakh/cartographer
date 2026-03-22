@@ -1,0 +1,75 @@
+{
+  "scope": "refresh",
+  "purpose": "Fetch-store pipeline for all source types: owns the Fetcher interface, Service struct, and two parallel refresh paths (Telegram/generic Source)",
+  "exposes": {
+    "types": [],
+    "interfaces": [],
+    "entry_points": []
+  },
+  "consumes": {
+    "external": [
+      "internal/storage",
+      "internal/source",
+      "internal/source/rss",
+      "internal/source/reddit",
+      "internal/source/hackernews",
+      "Telegram MTProto API"
+    ],
+    "config": []
+  },
+  "cross_scope_touchpoints": [
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "reads channel list, sync state, and writes messages and updated sync state",
+      "coupling": "direct"
+    },
+    {
+      "scope": "source",
+      "direction": "consumes",
+      "surface": "consumes source.Source interface and source.Registry for generic source refresh path",
+      "coupling": "interface-mediated"
+    },
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "opens a real SQLite storage.Store for integration-style test fixtures and result verification",
+      "coupling": "direct"
+    },
+    {
+      "scope": "source",
+      "direction": "consumes",
+      "surface": "uses source.NewRegistry, source.SourceMessage, and the Source interface in source-based test cases",
+      "coupling": "direct"
+    },
+    {
+      "scope": "source",
+      "direction": "consumes",
+      "surface": "creates rss.NewRSSSource for RSS integration test",
+      "coupling": "direct"
+    },
+    {
+      "scope": "source",
+      "direction": "consumes",
+      "surface": "creates reddit.NewRedditSource for Reddit integration test",
+      "coupling": "direct"
+    },
+    {
+      "scope": "source",
+      "direction": "consumes",
+      "surface": "creates hackernews.NewHNSource for HackerNews integration test",
+      "coupling": "direct"
+    }
+  ],
+  "invariants": [
+    "Deduplication is entirely delegated to the DB UNIQUE constraint on Messages; if Create returns an error it is silently skipped regardless of cause \u2014 storage errors during message write are indistinguishable from duplicates"
+  ],
+  "risks": [
+    "RefreshFiltered ignores its sourceNames argument entirely and delegates to RefreshAll \u2014 callers expecting selective refresh get a full refresh silently",
+    "No retry or rate-limit handling; transient Telegram API errors propagate immediately to the caller as fetch errors accumulated in RefreshResult.Errors"
+  ],
+  "patterns": [
+    "Two parallel refresh paths exist: Fetcher-based (Telegram MTProto, integer message IDs) and Source-based (generic interface, opaque string checkpoints). RefreshAllSources delegates to RefreshSources which calls src.FetchMessages rather than the Fetcher.",
+    "Tests use a real storage.Open against a temp-dir SQLite DB rather than a mock store \u2014 integration-style coverage that validates the full fetch\u2192store\u2192syncstate cycle"
+  ]
+}

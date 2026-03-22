@@ -1,25 +1,37 @@
 {
   "path": "internal/telegram/messages.go",
-  "type": "source",
-  "summary": "Message data model and Telegram channel/message fetching operations",
-  "exports": [
-    "Message",
-    "ResolveChannel",
-    "FetchMessages"
-  ],
-  "imports": [
-    "context",
-    "fmt",
-    "strings",
-    "time",
-    "github.com/gotd/td/tg"
-  ],
-  "imported_by": [
-    "cmd/digest/main.go"
-  ],
-  "side_effects": [
-    "API calls to Telegram to resolve usernames and fetch message history"
-  ],
-  "config_deps": [],
-  "notes": "Defines Message struct (ID, Text, Timestamp) as application-level message model, separate from storage.Message. ResolveChannel() converts @username string to tg.InputChannel by calling Telegram API. FetchMessages() retrieves message history from a channel, filters out empty/service messages via extractMessages() helper. Handles different response types from Telegram API (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages). Includes debug mode for detailed logging of message filtering."
+  "role": "adapter",
+  "summary": "Pure Telegram API functions for channel resolution and message fetching, plus the Message domain type that is the shared data contract consumed by source subsystems",
+  "contracts": {
+    "requires": ["Live *tg.Client (must be called within client.go Run callback)", "Valid channel username for ResolveChannel; resolved *tg.InputChannel for FetchMessages"],
+    "guarantees": ["Returns only text-bearing messages — media-only, service, and empty messages are silently dropped", "Message.Timestamp is always UTC-normalized from Unix epoch"]
+  },
+  "effects": ["Telegram API network calls: ContactsResolveUsername, MessagesGetHistory"],
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "extractMessages silently discards MessageEmpty, MessageService, and any message with empty .Message text. Callers receive fewer items than the requested limit with no indication of how many were dropped.",
+      "loc": "messages.go:91-140"
+    },
+    {
+      "kind": "risk",
+      "text": "debug bool causes verbose raw message dumps to os.Stdout (including %#v of full gotd structs). If true in production, this leaks message content and floods logs with unstructured output.",
+      "loc": "messages.go:64-86, 98-133"
+    },
+    {
+      "kind": "coupling",
+      "text": "HINT MATCH — Message struct (ID, Text, Timestamp) is the shared type consumed by source/telegram and referenced in tests for source/hackernews, source/rss, source/reddit. This file is the de-facto domain model for messages across all source subsystems.",
+      "loc": "messages.go:13-17"
+    },
+    {
+      "kind": "behavior",
+      "text": "ResolveChannel strips a leading '@' from the username, so callers can pass either '@channelname' or 'channelname' interchangeably",
+      "loc": "messages.go:21"
+    },
+    {
+      "kind": "behavior",
+      "text": "FetchMessages handles three polymorphic gotd response types (MessagesMessages, MessagesMessagesSlice, MessagesChannelMessages) and returns an error on any unrecognized type — forward-compatible but will break on new gotd response variants",
+      "loc": "messages.go:61-82"
+    }
+  ]
 }

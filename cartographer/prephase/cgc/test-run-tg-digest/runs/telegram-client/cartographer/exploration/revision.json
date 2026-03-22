@@ -1,0 +1,11 @@
+{
+  "last_explored": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "last_synthesized": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "files_at_generation": [
+    "internal/telegram/auth.go",
+    "internal/telegram/client.go",
+    "internal/telegram/messages.go",
+    "internal/telegram/session.go"
+  ],
+  "cross_scope_revision": null
+}

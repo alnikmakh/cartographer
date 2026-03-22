@@ -1,13 +1,28 @@
 {
   "path": "internal/summarizer/openrouter.go",
-  "type": "source",
-  "summary": "HTTP client for OpenRouter API with chat completion; defines shared request/response types used by both Ollama and OpenRouter clients",
-  "exports": ["openRouterRequest", "openRouterMessage", "openRouterResponse", "openRouterChoice", "openRouterChoiceMessage", "OpenRouterClient", "NewOpenRouterClient"],
-  "public_methods": ["ChatCompletion"],
-  "imports": ["bytes", "context", "encoding/json", "fmt", "io", "net/http"],
-  "same_package_deps": ["ChatRequest", "ChatMessage"],
-  "imported_by": ["internal/summarizer/ollama.go (reuses message types)", "internal/summarizer/openrouter_test.go", "internal/summarizer/service.go (via Client interface)"],
-  "side_effects": ["Makes HTTP requests to OpenRouter API"],
-  "config_deps": ["apiKey (passed to NewOpenRouterClient)", "baseURL (passed to NewOpenRouterClient)"],
-  "notes": "Implements Client interface defined in summarizer.go. Message types (openRouterRequest, openRouterMessage, openRouterResponse) are shared with ollama.go which reuses them via struct mapping. Includes Authorization header with Bearer token (unlike Ollama which needs no auth)."
+  "role": "adapter",
+  "summary": "HTTP client for the OpenRouter chat completions API, implementing the Client interface with Bearer token auth",
+  "contracts": {
+    "requires": ["API key string", "base URL without trailing path"],
+    "guarantees": ["Returns first choice content string on 200 OK; returns error on non-200, empty choices, or network failure"]
+  },
+  "effects": ["HTTP POST to OpenRouter API"],
+  "state": "Holds apiKey, baseURL, and http.Client (no timeout configured — relies on context cancellation)",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "openRouterRequest/Message/Response/Choice types defined here are also reused by ollama.go — they represent the shared OpenAI-compatible JSON schema",
+      "loc": "openrouter.go:13-37"
+    },
+    {
+      "kind": "risk",
+      "text": "http.Client created with no Timeout — only context cancellation bounds the request; a hung server with no context deadline will block indefinitely",
+      "loc": "openrouter.go:51"
+    },
+    {
+      "kind": "behavior",
+      "text": "Error messages embed the HTTP status code and raw response body, giving callers full context on API failures without extra logging",
+      "loc": "openrouter.go:100"
+    }
+  ]
 }

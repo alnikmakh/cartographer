@@ -1,21 +1,17 @@
 {
   "path": "internal/source/rss/rss_test.go",
-  "type": "test",
-  "summary": "Comprehensive test suite for RSSSource covering RSS 2.0, Atom feeds, HTTP caching, checkpoint filtering, and error handling",
-  "imports": [
-    "context",
-    "net/http",
-    "net/http/httptest",
-    "testing",
-    "time",
-    "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require",
-    "tg-digest/internal/source"
-  ],
-  "imported_by": [],
-  "side_effects": [
-    "httptest.NewServer - creates temporary HTTP servers for test isolation"
-  ],
-  "config_deps": [],
-  "notes": "Compile-time interface verification: var _ source.Source = (*RSSSource)(nil). Extensive test coverage: Type/Name methods, RSS2 feed parsing (2 items with pubDate), Atom feed parsing (single entry with updated timestamp), empty feed handling, server error handling (5xx), invalid URL connection errors, malformed XML parsing errors, checkpoint filtering (prevents duplicate delivery on second fetch), limit enforcement (limit=1 returns 1 item), RFC3339 checkpoint format validation, ETag/If-None-Match conditional request round-trip with 304 Not Modified handling, Last-Modified/If-Modified-Since conditional request round-trip, text composition fallback chain (Content > Description > Title)."
+  "role": "test",
+  "summary": "Unit tests for RSSSource covering RSS 2.0 and Atom parsing, ETag/Last-Modified conditional request round-trips, 304 handling, checkpoint stability, and text composition priority",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "Compile-time interface assertion consistent with other source test files.",
+      "loc": "rss_test.go:16"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestRSSSource_FetchMessages_ETagRoundTrip and TestRSSSource_FetchMessages_LastModifiedRoundTrip use a stateful httptest server (requestCount) to simulate a real server's conditional-request flow — more sophisticated than the other source tests.",
+      "loc": "rss_test.go:222-299"
+    }
+  ]
 }

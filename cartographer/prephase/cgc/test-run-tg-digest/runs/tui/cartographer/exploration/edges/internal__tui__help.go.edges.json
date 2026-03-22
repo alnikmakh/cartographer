@@ -1,6 +1,20 @@
 [
-  {"to": "internal/tui/keys.go", "relationship": "imports", "usage": "reads keyMap bindings for help section display"},
-  {"to": "internal/tui/styles.go", "relationship": "imports", "usage": "titleStyle, helpKeyStyle, helpDescStyle for rendering"},
-  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "emits switchViewMsg to close help overlay"},
-  {"to": "internal/tui/app.go", "relationship": "imported_by", "usage": "help field embedded in App; newHelpModel called in App.Init()"}
+  {
+    "from": "internal/tui/help.go",
+    "to": "internal/tui/keys.go",
+    "semantic": "reads all key bindings via keys.X.Help() for display; matches keys.Cancel and keys.Help to close overlay",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/help.go",
+    "to": "internal/tui/types.go",
+    "semantic": "emits switchViewMsg{view: -1} to signal close",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/help.go",
+    "to": "internal/tui/styles.go",
+    "semantic": "uses titleStyle, helpKeyStyle, helpDescStyle",
+    "coupling": "direct"
+  }
 ]

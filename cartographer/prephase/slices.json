@@ -1,0 +1,161 @@
+{
+  "repository": "tg-digest",
+  "generated": "2026-03-21",
+  "extraction_mode": "cgc",
+  "graph_stats": {
+    "files": 53,
+    "functions": 458,
+    "classes": 87,
+    "modules": 4
+  },
+  "prior_runs": {
+    "test-run-tg-digest": {
+      "slices": 7,
+      "status": "all explored (100%)",
+      "note": "Prior test run fully explored all packages. Current slices reuse validated boundaries."
+    }
+  },
+  "slices": [
+    {
+      "name": "storage",
+      "slug": "storage",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the persistence layer — SQLite storage, migrations, and all data access methods. This is the universal dependency hub with the highest fan-in in the codebase.",
+      "seed": "internal/storage/storage.go",
+      "seed_rationale": "Core DB type and constructor; every other storage file depends on it",
+      "explore_within": ["internal/storage/**"],
+      "boundary_packages": [],
+      "hints": [
+        "storage.go is the fan-in hub — called by refresh, summarizer, source, tui, and main.go",
+        "channels.go is the second-highest fan-in file within storage",
+        "SQL migration files exist under migrations/ — these are .sql not .go",
+        "syncstate.go tracks refresh state for sources"
+      ],
+      "file_count": 7,
+      "execution_order": 1
+    },
+    {
+      "name": "telegram-client",
+      "slug": "telegram-client",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the Telegram API client — authentication, session management, and message fetching. Wraps external Telegram library.",
+      "seed": "internal/telegram/client.go",
+      "seed_rationale": "Main client struct and constructor; auth.go, messages.go, session.go extend it",
+      "explore_within": ["internal/telegram/**"],
+      "boundary_packages": ["internal/storage"],
+      "hints": [
+        "client.go has 8 inbound calls from main.go — heavily used during init",
+        "messages.go is called by source/hackernews, source/rss, source/reddit tests — likely shared message types",
+        "No outbound calls to other internal packages from production code except storage"
+      ],
+      "file_count": 4,
+      "execution_order": 2
+    },
+    {
+      "name": "source-system",
+      "slug": "source-system",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the pluggable content source system — registry pattern, plus HackerNews, Reddit, RSS, and Telegram source implementations.",
+      "seed": "internal/source/registry.go",
+      "seed_rationale": "Registry pattern entry point; sources register here and are dispatched from here",
+      "explore_within": ["internal/source/**"],
+      "boundary_packages": ["internal/storage", "internal/telegram"],
+      "hints": [
+        "source.go likely defines the Source interface",
+        "Each subdirectory (hackernews, reddit, rss, telegram) is a concrete implementation",
+        "hackernews/hn.go and rss/rss.go both call storage.go and syncstate.go",
+        "source/telegram/telegram.go is distinct from internal/telegram — it's a source adapter"
+      ],
+      "file_count": 11,
+      "execution_order": 3
+    },
+    {
+      "name": "summarizer",
+      "slug": "summarizer",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the LLM summarization pipeline — service orchestration, prompt construction, and provider backends (Ollama, OpenRouter).",
+      "seed": "internal/summarizer/service.go",
+      "seed_rationale": "Orchestrates summarization with fan-out to 6 unique files including storage, providers, and source registry",
+      "explore_within": ["internal/summarizer/**"],
+      "boundary_packages": ["internal/storage", "internal/source"],
+      "hints": [
+        "service.go is the orchestrator (6 unique call targets) — calls storage, channels, message_summaries, source/registry, openrouter",
+        "summarizer.go has no functions — likely interface/type definitions only",
+        "ollama.go and openrouter.go are LLM provider implementations",
+        "prompt.go handles prompt construction — likely template-based"
+      ],
+      "file_count": 9,
+      "execution_order": 4
+    },
+    {
+      "name": "refresh-pipeline",
+      "slug": "refresh-pipeline",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the data refresh pipeline — orchestrates fetching new content from sources and storing it.",
+      "seed": "internal/refresh/refresh.go",
+      "seed_rationale": "Main refresh orchestrator with fan-out to 6 files across storage, source, and summarizer",
+      "explore_within": ["internal/refresh/**"],
+      "boundary_packages": ["internal/storage", "internal/telegram", "internal/source", "internal/summarizer"],
+      "hints": [
+        "refresh.go calls storage.go (8), channels.go (5), syncstate.go (4) — heavy storage dependency",
+        "telegram.go within refresh is a helper, not the client — called by refresh.go (1 call)",
+        "This is a small but high-connectivity slice — 4 boundary packages for just 3 files"
+      ],
+      "file_count": 3,
+      "execution_order": 5
+    },
+    {
+      "name": "tui",
+      "slug": "tui",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the terminal UI — Bubble Tea app structure, views (dashboard, channels, help), filtering system, and keybindings.",
+      "seed": "internal/tui/app.go",
+      "seed_rationale": "App root with 9 unique call targets — secondary orchestrator after main.go",
+      "explore_within": ["internal/tui/**"],
+      "boundary_packages": ["internal/storage", "cmd/digest"],
+      "hints": [
+        "app.go is a secondary orchestrator (9 fan-out) — calls storage, channels, filter, and cmd/digest",
+        "filter.go is a local hub within TUI — called by app.go, dashboard.go, filter_overlay.go",
+        "Bidirectional coupling: filter.go calls dashboard.go AND dashboard.go calls filter.go",
+        "channels.go ↔ dashboard.go also has bidirectional calls",
+        "Largest slice at 15 files — watch for internal complexity"
+      ],
+      "file_count": 15,
+      "execution_order": 6
+    },
+    {
+      "name": "cli-orchestrator",
+      "slug": "cli-orchestrator",
+      "status": "proposed",
+      "extraction_mode": "cgc",
+      "thesis": "Map the CLI entry point and config — how the application boots, wires dependencies, and dispatches commands.",
+      "seed": "cmd/digest/main.go",
+      "seed_rationale": "Application entry point with highest fan-out in codebase (19 unique call targets)",
+      "explore_within": ["cmd/digest/**", "internal/config/**"],
+      "boundary_packages": ["internal/storage", "internal/telegram", "internal/source", "internal/summarizer", "internal/refresh", "internal/tui"],
+      "hints": [
+        "main.go has 19 unique call targets — the god-file orchestrator",
+        "Contains helper functions: storeChannel, storeMessages, updateSyncState, ensureSourceChannel, buildLLMClient, RefreshAll, RefreshFiltered, SummarizeUnsummarized, SummarizeFiltered",
+        "config.go is only consumed by main.go — bundled here as the prior test run validated",
+        "tui/app.go calls back into cmd/digest/main.go (4 calls) — bidirectional coupling"
+      ],
+      "file_count": 4,
+      "execution_order": 7
+    }
+  ],
+  "execution_order": [
+    {"order": 1, "slug": "storage", "reason": "Foundation — zero outbound internal deps, highest fan-in hub"},
+    {"order": 2, "slug": "telegram-client", "reason": "Depends only on storage (already mapped)"},
+    {"order": 3, "slug": "source-system", "reason": "Depends on storage + telegram (both mapped)"},
+    {"order": 4, "slug": "summarizer", "reason": "Depends on storage + source (both mapped)"},
+    {"order": 5, "slug": "refresh-pipeline", "reason": "Depends on storage, source, summarizer (all mapped)"},
+    {"order": 6, "slug": "tui", "reason": "Depends on storage + cmd/digest (bidirectional — run before cli-orchestrator so boundaries are known)"},
+    {"order": 7, "slug": "cli-orchestrator", "reason": "Depends on everything — run last when all boundaries are fully mapped"}
+  ]
+}

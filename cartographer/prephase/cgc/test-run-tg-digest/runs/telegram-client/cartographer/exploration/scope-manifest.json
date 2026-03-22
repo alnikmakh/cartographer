@@ -1,0 +1,37 @@
+{
+  "scope": "telegram",
+  "purpose": "",
+  "exposes": {
+    "types": [],
+    "interfaces": [],
+    "entry_points": []
+  },
+  "consumes": {
+    "external": [
+      "github.com/gotd/td/telegram/auth",
+      "github.com/gotd/td/tg",
+      "os.Stdin / os.Stdout",
+      "github.com/gotd/td/telegram",
+      "filesystem",
+      "Telegram MTProto API",
+      "internal/source/*",
+      "github.com/gotd/td/session"
+    ],
+    "config": [
+      "sessionFile path supplied at construction",
+      "Parent directory of Path must exist before StoreSession is called (created by client.go:Run)"
+    ]
+  },
+  "cross_scope_touchpoints": [],
+  "invariants": [],
+  "risks": [
+    "AcceptTermsOfService silently accepts without presenting ToS text to the user or confirming consent",
+    "prompt() uses fmt.Print (not a logger), mixing authentication interaction with any other stdout output in the process",
+    "API() returns nil if called before or after Run() \u2014 callers that store the *tg.Client reference and use it outside the Run callback will panic on method calls",
+    "debug bool causes verbose raw message dumps to os.Stdout (including %#v of full gotd structs). If true in production, this leaks message content and floods logs with unstructured output.",
+    "No file locking; concurrent processes sharing the same session path can produce a torn write or read a partially written session"
+  ],
+  "patterns": [
+    "AuthFlow interface is a thin re-export of auth.UserAuthenticator \u2014 it adds no new surface but decouples client.go from the gotd auth package type directly"
+  ]
+}

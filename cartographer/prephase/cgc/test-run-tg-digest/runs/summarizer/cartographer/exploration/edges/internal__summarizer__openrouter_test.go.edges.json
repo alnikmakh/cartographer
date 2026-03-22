@@ -1,7 +1,8 @@
 [
   {
+    "from": "internal/summarizer/openrouter_test.go",
     "to": "internal/summarizer/openrouter.go",
-    "relationship": "tests",
-    "usage": "Tests NewOpenRouterClient and ChatCompletion method"
+    "semantic": "tests OpenRouterClient via NewOpenRouterClient and ChatCompletion",
+    "coupling": "direct"
   }
 ]

@@ -1,6 +1,15 @@
 [
-  {"to": "internal/source", "relationship": "imports", "usage": "source.Source interface, source.SourceMessage type definition"},
-  {"to": "internal/source/registry.go", "relationship": "design_pattern", "usage": "HNSource is one of four Source implementations registered via Registry pattern"},
-  {"to": "net/http", "relationship": "external", "usage": "HTTP client for Firebase API calls to hacker-news.firebaseio.com"},
-  {"to": "encoding/json", "relationship": "external", "usage": "JSON unmarshaling of story IDs and item data"}
+  {
+    "from": "internal/source/hackernews/hn.go",
+    "to": "internal/source/source.go",
+    "semantic": "implements Source interface; produces []SourceMessage",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/source/hackernews/hn.go",
+    "to": "[HackerNews Firebase API]",
+    "semantic": "fetches story ID lists and individual item data",
+    "data_flow": "GET /v0/{feed}stories.json → []int; GET /v0/item/{id}.json → hnItem JSON",
+    "coupling": "direct"
+  }
 ]

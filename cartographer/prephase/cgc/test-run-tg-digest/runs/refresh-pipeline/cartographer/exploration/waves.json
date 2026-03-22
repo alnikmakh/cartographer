@@ -1,0 +1,13 @@
+{
+  "waves": [
+    {
+      "id": 1,
+      "files": [
+        "internal/refresh/refresh.go",
+        "internal/refresh/refresh_test.go",
+        "internal/refresh/telegram.go"
+      ],
+      "rationale": "Default: all files in single wave (wave planning did not produce output)"
+    }
+  ]
+}

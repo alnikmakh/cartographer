@@ -1,11 +1,46 @@
 {
   "path": "internal/source/reddit/reddit.go",
-  "type": "source",
-  "summary": "Reddit source implementation fetching posts via JSON API",
-  "exports": ["RedditSource", "NewRedditSource"],
-  "imports": ["tg-digest/internal/source"],
-  "imported_by": ["internal/source/reddit/reddit_test.go"],
-  "side_effects": ["HTTP calls to www.reddit.com", "sets User-Agent header"],
-  "config_deps": ["baseURL", "subreddit", "sort"],
-  "notes": "Implements source.Source interface. Checkpoint is float64-encoded created_utc timestamp (unix). Filters posts by timestamp. Handles rate limiting (429 error) and 404 (missing subreddit). Text composition differs by post type: self-posts include title+selftext, link posts include title+URL. User-Agent header required to avoid Reddit 429 responses. Default sort='hot', limit=25."
+  "role": "adapter",
+  "summary": "Fetches Reddit subreddit posts via the public JSON API with timestamp-based checkpoint and User-Agent header",
+  "contracts": {
+    "requires": [
+      "Reachable Reddit JSON API (or baseURL override via WithBaseURL)",
+      "Checkpoint is a decimal float64 string representing the Unix timestamp of the newest post seen"
+    ],
+    "guarantees": [
+      "Returns posts in API-returned order (no reordering)",
+      "Checkpoint reflects newest post's created_utc across all returned posts, even filtered ones",
+      "User-Agent header is always set to avoid 429 from Reddit",
+      "Explicit error on 404 (subreddit not found) and 429 (rate limited)"
+    ]
+  },
+  "effects": ["HTTP GET to www.reddit.com (or baseURL override)"],
+  "state": "Stateless between calls; baseURL field supports test injection",
+  "observations": [
+    {
+      "kind": "risk",
+      "text": "Checkpoint uses float64 UTC timestamp — two posts created in the same second will have identical timestamps. The post with the same timestamp as the checkpoint is filtered out (<=), so a post created at the same second as the last seen post will be skipped on the next fetch.",
+      "loc": "reddit.go:100-119"
+    },
+    {
+      "kind": "behavior",
+      "text": "URL in SourceMessage is always constructed as 'https://www.reddit.com' + post.Permalink, hardcoded to the canonical Reddit domain regardless of baseURL override. Tests do not verify this field against the override.",
+      "loc": "reddit.go:122-129"
+    },
+    {
+      "kind": "risk",
+      "text": "Uses http.DefaultClient with no timeout — same concern as HNSource. Context cancellation is the only bound.",
+      "loc": "reddit.go:151"
+    },
+    {
+      "kind": "behavior",
+      "text": "Reddit API pagination (the 'after' token in listing.Data.After) is fetched but never used — only the first page of results is returned per call.",
+      "loc": "reddit.go:60-63"
+    },
+    {
+      "kind": "pattern",
+      "text": "Text composition mirrors HackerNews: self-posts become 'Title\\n\\nSelftext', link posts become 'Title\\n\\nLink: URL', title-only if neither. Consistent format across all HTTP-based sources.",
+      "loc": "reddit.go:185-193"
+    }
+  ]
 }

@@ -1,20 +1,40 @@
 {
   "path": "internal/source/telegram/telegram.go",
-  "type": "source",
-  "summary": "TelegramSource adapter implementing Source interface by wrapping refresh.Fetcher with message ID-based checkpoints",
-  "exports": [
-    "TelegramSource",
-    "NewTelegramSource"
-  ],
-  "imports": [
-    "context",
-    "fmt",
-    "strconv",
-    "tg-digest/internal/refresh",
-    "tg-digest/internal/source"
-  ],
-  "imported_by": [],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Adapter pattern: wraps refresh.Fetcher to implement source.Source interface. Checkpoint is Telegram message ID stored as string. Invalid checkpoints parse to 0. Maps FetchedMessage to SourceMessage, tracks maxID for next checkpoint. No Title field in Telegram messages. Matches hint: 'source/telegram depends on refresh/telegram.go (fetcher interface)' — this file directly depends on refresh.Fetcher."
+  "role": "adapter",
+  "summary": "Adapts refresh.Fetcher to the Source interface for Telegram channels, translating integer message IDs to string checkpoints",
+  "contracts": {
+    "requires": [
+      "refresh.Fetcher implementation provided at construction",
+      "Checkpoint is a decimal integer string representing the highest Telegram message ID seen (or empty for initial fetch)"
+    ],
+    "guarantees": [
+      "Empty checkpoint fetches from scratch (afterMsgID=0)",
+      "Invalid (non-numeric) checkpoint is silently treated as 0 — no error returned",
+      "Checkpoint is preserved unchanged when no new messages are returned",
+      "New checkpoint is the highest message ID string across all returned messages"
+    ]
+  },
+  "state": "Stateless; delegates all state to the injected Fetcher",
+  "observations": [
+    {
+      "kind": "coupling",
+      "text": "This is the glue between the source system (internal/source) and the refresh system (internal/refresh). It depends on refresh.Fetcher, which is a boundary package for this scope. The source/telegram adapter is distinct from internal/telegram — the former is a source abstraction, the latter is the actual Telegram MTProto client.",
+      "loc": "telegram.go:8-9"
+    },
+    {
+      "kind": "behavior",
+      "text": "Title and URL fields of SourceMessage are always empty — Telegram messages have no title or external URL in the FetchedMessage struct. This differentiates Telegram messages from RSS/HN/Reddit messages in downstream processing.",
+      "loc": "telegram.go:58-63"
+    },
+    {
+      "kind": "behavior",
+      "text": "Checkpoint computation scans all messages for the max TelegramMsgID, starting from fetched[0].TelegramMsgID as the initial max. This assumes the fetcher may return messages out of ID order.",
+      "loc": "telegram.go:56-65"
+    },
+    {
+      "kind": "risk",
+      "text": "Silent treatment of invalid checkpoint ('not-a-number' → 0) means a corrupted checkpoint causes a full re-fetch from the beginning rather than an error. This is confirmed by the test TestTelegramSource_FetchMessages_InvalidCheckpoint.",
+      "loc": "telegram.go:41-43"
+    }
+  ]
 }

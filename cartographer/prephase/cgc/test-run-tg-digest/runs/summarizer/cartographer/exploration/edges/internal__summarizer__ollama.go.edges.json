@@ -1,4 +1,21 @@
 [
-  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses ChatRequest, ChatMessage types; implements Client interface"},
-  {"to": "internal/summarizer/openrouter.go", "relationship": "imports", "usage": "reuses openRouterRequest, openRouterMessage, openRouterResponse types for JSON serialization"}
+  {
+    "from": "internal/summarizer/ollama.go",
+    "to": "internal/summarizer/summarizer.go",
+    "semantic": "implements Client interface via ChatCompletion method",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/summarizer/ollama.go",
+    "to": "internal/summarizer/openrouter.go",
+    "semantic": "reuses openRouterRequest, openRouterMessage, openRouterResponse types for OpenAI-compatible JSON encoding",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/summarizer/ollama.go",
+    "to": "[Ollama HTTP API]",
+    "semantic": "sends chat completion requests, health checks, and model list queries",
+    "data_flow": "ChatRequest → /v1/chat/completions POST; GET / for health; GET /api/tags for model list",
+    "coupling": "direct"
+  }
 ]

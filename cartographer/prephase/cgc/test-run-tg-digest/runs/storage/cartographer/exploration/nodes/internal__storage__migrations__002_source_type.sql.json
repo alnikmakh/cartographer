@@ -1,15 +1,15 @@
 {
   "path": "internal/storage/migrations/002_source_type.sql",
-  "type": "sql_migration",
-  "summary": "Schema evolution: adds source_type to channels, refactors sync_state from last_msg_id to checkpoint TEXT",
-  "alterations": [
-    "ALTER TABLE channels ADD COLUMN source_type TEXT DEFAULT 'telegram'",
-    "sync_state table redesign: last_msg_id INTEGER -> checkpoint TEXT"
-  ],
-  "migration_pattern": [
-    "CREATE new table (sync_state_new with updated schema)",
-    "INSERT data with type conversion (CAST last_msg_id to TEXT)",
-    "DROP old table and RENAME new"
-  ],
-  "notes": "Second migration showing schema evolution. Adds multi-source support via source_type column. Refactors sync tracking from integer message IDs to arbitrary text checkpoints, enabling support for non-sequential source systems. Uses safe table recreation pattern to handle NOT NULL constraint on new checkpoint column."
+  "role": "migration",
+  "summary": "Adds source_type column to channels and replaces sync_state.last_msg_id (INTEGER) with checkpoint (TEXT)",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "sync_state is rebuilt via CREATE+INSERT+DROP+RENAME because SQLite does not support ALTER COLUMN. Existing integer last_msg_id values are CAST to TEXT during migration."
+    },
+    {
+      "kind": "invariant",
+      "text": "After this migration, checkpoint is TEXT NOT NULL DEFAULT '' — any channel that had no sync state gets an empty string checkpoint, which source adapters must treat as 'start from beginning'."
+    }
+  ]
 }

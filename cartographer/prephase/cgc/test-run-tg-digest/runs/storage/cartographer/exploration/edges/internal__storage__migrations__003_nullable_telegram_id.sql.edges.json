@@ -1,3 +1,8 @@
 [
-  {"to": "internal/storage/migrations.go", "relationship": "executed_by", "usage": "runMigrations runner invokes all migrations in sequence"}
+  {
+    "from": "internal/storage/migrations/003_nullable_telegram_id.sql",
+    "to": "internal/storage/migrations.go",
+    "semantic": "embedded and executed by the migration runner at DB open time",
+    "coupling": "direct"
+  }
 ]

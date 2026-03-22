@@ -1,5 +1,20 @@
 [
-  {"to": "internal/summarizer/service.go", "relationship": "tests", "usage": "tests NewService, WithLocalModel, SummarizeMessage, SummarizeUnsummarized, SummarizeUnsummarizedForChannels"},
-  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses MessageSummarizeResult, SummarizeQueueResult, ChatRequest types in assertions"},
-  {"to": "tg-digest/internal/storage", "relationship": "boundary", "usage": "setupTestStore opens temp database; creates test Channel, Message, MessageSummary fixtures"}
+  {
+    "from": "internal/summarizer/service_test.go",
+    "to": "internal/summarizer/service.go",
+    "semantic": "tests Service via NewService, SummarizeMessage, SummarizeUnsummarized, SummarizeUnsummarizedForChannels",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/summarizer/service_test.go",
+    "to": "internal/summarizer/summarizer.go",
+    "semantic": "implements Client interface via mockClient and countingMockClient for injection",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/summarizer/service_test.go",
+    "to": "internal/storage",
+    "semantic": "opens real SQLite store for integration-level testing; seeds Channel and Message fixtures; queries MessageSummaries for result verification",
+    "coupling": "direct"
+  }
 ]

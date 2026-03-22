@@ -1,22 +1,15 @@
 [
   {
+    "from": "internal/refresh/telegram.go",
     "to": "internal/refresh/refresh.go",
-    "relationship": "imports",
-    "usage": "implements Fetcher interface; FetchedMessage value type from same package"
+    "semantic": "implements the Fetcher interface defined in refresh.go; FetchedMessage type also defined there",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "github.com/gotd/td/tg",
-    "relationship": "imports",
-    "usage": "external Telegram API SDK — ContactsResolveUsername, MessagesGetHistory, Channel, Message, InputPeerChannel types"
-  },
-  {
-    "to": "tg-digest/cmd/digest/main.go",
-    "relationship": "imported_by",
-    "usage": "TelegramFetcher instantiated from main with configured tg.Client"
-  },
-  {
-    "to": "tg-digest/internal/source/telegram/telegram.go",
-    "relationship": "imported_by",
-    "usage": "TelegramFetcher used as Source adapter to wrap refresh.Fetcher"
+    "from": "internal/refresh/telegram.go",
+    "to": "[Telegram MTProto API]",
+    "semantic": "resolves channel username and fetches message history via gotd/td RPC calls",
+    "data_flow": "username string → resolved channel entity; MinID/Limit params → []tg.MessageClass",
+    "coupling": "direct"
   }
 ]

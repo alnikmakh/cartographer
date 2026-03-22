@@ -1,0 +1,57 @@
+{
+  "scope": "summarizer",
+  "purpose": "Orchestrates message summarization: applies 150-char bypass heuristic, calls LLM via Client interface, persists summaries to storage, processes a today+yesterday time-windowed queue",
+  "exposes": {
+    "types": [],
+    "interfaces": [],
+    "entry_points": []
+  },
+  "consumes": {
+    "external": [
+      "Ollama HTTP API",
+      "OpenRouter API"
+    ],
+    "config": [
+      "base URL without trailing path"
+    ]
+  },
+  "cross_scope_touchpoints": [
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "accepts storage.Message to extract text for prompt construction",
+      "coupling": "direct"
+    },
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "constructs storage.Message fixtures for test inputs",
+      "coupling": "direct"
+    },
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "reads unsummarized messages and channel metadata; writes MessageSummary records",
+      "coupling": "direct"
+    },
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "opens real SQLite store for integration-level testing; seeds Channel and Message fixtures; queries MessageSummaries for result verification",
+      "coupling": "direct"
+    }
+  ],
+  "invariants": [],
+  "risks": [
+    "HasModel performs a full ListModels round-trip on every call with no caching \u2014 callers checking model presence before each summarization batch would incur repeated HTTP overhead",
+    "http.Client created with no Timeout \u2014 only context cancellation bounds the request; a hung server with no context deadline will block indefinitely",
+    "BuildSingleMessagePrompt rejects empty message.Text but does not guard against very large texts \u2014 no truncation before sending to LLM; token limits are delegated entirely to the provider",
+    "If Channels().GetByID() returns an error or nil channel, the message is silently skipped (continue) without incrementing any counter \u2014 missed messages are invisible in the result"
+  ],
+  "patterns": [
+    "openRouterRequest/Message/Response/Choice types defined here are also reused by ollama.go \u2014 they represent the shared OpenAI-compatible JSON schema",
+    "Functional options pattern (ServiceOption / WithLocalModel) used for optional configuration \u2014 keeps NewService signature stable while allowing provider-specific prompt tuning",
+    "countingMockClient implements Client with a failAfter threshold, enabling deterministic partial-failure scenarios across multi-message queues",
+    "Client interface with single ChatCompletion method enables polymorphic use of OllamaClient and OpenRouterClient without import coupling"
+  ]
+}

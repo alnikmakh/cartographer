@@ -1,8 +1,50 @@
 [
-  {"to": "internal/storage/migrations.go", "relationship": "imports", "usage": "runMigrations() called during Open() initialization"},
-  {"to": "internal/storage/channels.go", "relationship": "delegates_to", "usage": "channelRepo implements ChannelRepository interface"},
-  {"to": "internal/storage/messages.go", "relationship": "delegates_to", "usage": "messageRepo implements MessageRepository interface"},
-  {"to": "internal/storage/message_summaries.go", "relationship": "delegates_to", "usage": "messageSummaryRepo implements MessageSummaryRepository interface"},
-  {"to": "internal/storage/syncstate.go", "relationship": "delegates_to", "usage": "syncStateRepo implements SyncStateRepository interface"},
-  {"to": "modernc.org/sqlite", "relationship": "imports", "usage": "SQLite driver initialization"}
+  {
+    "from": "internal/storage/storage.go",
+    "to": "internal/storage/channels.go",
+    "semantic": "instantiates channelRepo and exposes it via ChannelRepository interface",
+    "data_flow": "*sql.DB → channelRepo struct",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/storage.go",
+    "to": "internal/storage/messages.go",
+    "semantic": "instantiates messageRepo and exposes it via MessageRepository interface",
+    "data_flow": "*sql.DB → messageRepo struct",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/storage.go",
+    "to": "internal/storage/message_summaries.go",
+    "semantic": "instantiates messageSummaryRepo and exposes it via MessageSummaryRepository interface",
+    "data_flow": "*sql.DB → messageSummaryRepo struct",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/storage.go",
+    "to": "internal/storage/syncstate.go",
+    "semantic": "instantiates syncStateRepo and exposes it via SyncStateRepository interface",
+    "data_flow": "*sql.DB → syncStateRepo struct",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/storage.go",
+    "to": "internal/storage/migrations.go",
+    "semantic": "delegates schema migration to runMigrations on every Open()",
+    "data_flow": "context + *sql.DB → migration execution",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/storage.go",
+    "to": "[modernc.org/sqlite]",
+    "semantic": "registers SQLite driver via blank import for database/sql",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/storage.go",
+    "to": "[filesystem]",
+    "semantic": "creates DB parent directory and opens/creates the SQLite file",
+    "data_flow": "dbPath string → os.MkdirAll + sql.Open",
+    "coupling": "direct"
+  }
 ]

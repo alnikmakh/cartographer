@@ -1,16 +1,35 @@
 {
   "path": "internal/storage/migrations.go",
-  "type": "source",
-  "summary": "Database migration runner with idempotent tracking and transaction support",
-  "exports": ["runMigrations"],
-  "imports": ["context", "database/sql", "embed", "fmt", "sort"],
-  "imported_by": ["internal/storage/storage.go"],
-  "side_effects": [
-    "embeds SQL migration files at compile time",
-    "creates migrations tracking table on first run",
-    "executes SQL migration files in sorted order",
-    "records applied migrations to prevent re-execution"
-  ],
-  "config_deps": [],
-  "notes": "Implements idempotent migration system with transaction-per-migration isolation. Migrations are embedded via //go:embed and sorted alphabetically to ensure deterministic execution order. Migrations table tracks which files have been applied."
+  "role": "migration",
+  "summary": "Embeds SQL migration files and applies them in filename-sorted order using a migrations tracking table",
+  "contracts": {
+    "requires": ["migrations/*.sql files embedded at compile time via go:embed", "database connection is open and writable"],
+    "guarantees": [
+      "Each migration is applied exactly once — tracked by filename in the migrations table",
+      "Each migration executes inside a transaction; failure rolls back and propagates the error",
+      "Migrations run in lexicographic filename order (001_, 002_, ...)"
+    ]
+  },
+  "effects": ["DDL and DML execution on the SQLite database", "reads/writes to migrations tracking table"],
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "Uses go:embed to bundle SQL files into the binary — no runtime filesystem dependency on migration files after compilation.",
+      "loc": "migrations.go:11-12"
+    },
+    {
+      "kind": "behavior",
+      "text": "Migration idempotency relies on filename-keyed rows in the migrations table (created by migration 001 itself). On a fresh DB, createMigrationsTable creates this table before any migration runs, so migration 001's CREATE TABLE IF NOT EXISTS for migrations is a no-op.",
+      "loc": "migrations.go:46-61"
+    },
+    {
+      "kind": "risk",
+      "text": "Migration files are sorted lexicographically by filename; a file named '10_...' would sort before '002_...' if prefixes ever exceed single digits. The current naming (001–004) is safe.",
+      "loc": "migrations.go:33-34"
+    },
+    {
+      "kind": "invariant",
+      "text": "Once applied, a migration is never re-run even if its SQL content changes on disk or in the binary — only the filename key is checked."
+    }
+  ]
 }

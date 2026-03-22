@@ -1,17 +1,21 @@
 [
   {
-    "to": "internal/telegram/client.go",
-    "relationship": "imported_by",
-    "usage": "AuthFlow interface passed to Client.Run() method for authentication"
+    "from": "internal/telegram/auth.go",
+    "to": "[github.com/gotd/td/telegram/auth]",
+    "semantic": "implements auth.UserAuthenticator interface; delegates flow construction to auth.NewFlow via client.go",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "github.com/gotd/td/telegram/auth",
-    "relationship": "imports",
-    "usage": "boundary — provides auth.UserAuthenticator interface and auth.UserInfo type"
+    "from": "internal/telegram/auth.go",
+    "to": "[github.com/gotd/td/tg]",
+    "semantic": "receives tg.AuthSentCode in Code() and tg.HelpTermsOfService in AcceptTermsOfService()",
+    "coupling": "direct"
   },
   {
-    "to": "github.com/gotd/td/tg",
-    "relationship": "imports",
-    "usage": "boundary — provides tg.HelpTermsOfService type for terms acceptance"
+    "from": "internal/telegram/auth.go",
+    "to": "[os.Stdin / os.Stdout]",
+    "semantic": "reads auth codes and phone numbers from terminal; writes prompts to stdout",
+    "data_flow": "user keystrokes → phone/code/password strings",
+    "coupling": "direct"
   }
 ]

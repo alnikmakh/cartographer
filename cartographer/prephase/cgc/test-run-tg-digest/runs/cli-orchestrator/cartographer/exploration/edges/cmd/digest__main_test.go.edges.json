@@ -1,4 +1,0 @@
-[
-  {"to": "cmd/digest/main.go", "relationship": "tests", "usage": "Tests buildLLMClient function"},
-  {"to": "tg-digest/internal/config", "relationship": "imports", "usage": "config.LLMConfig for test fixtures"}
-]

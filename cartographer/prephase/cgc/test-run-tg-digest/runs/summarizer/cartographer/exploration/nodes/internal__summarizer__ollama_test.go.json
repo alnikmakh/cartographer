@@ -1,10 +1,17 @@
 {
   "path": "internal/summarizer/ollama_test.go",
-  "type": "test",
-  "summary": "Test suite for OllamaClient covering chat completion, health checks, model listing, and error handling",
-  "test_functions": ["TestOllamaClient_ChatCompletion", "TestOllamaClient_NoAuthHeader", "TestOllamaClient_ModelNotFound", "TestOllamaClient_ConnectionRefused", "TestOllamaClient_EmptyChoices", "TestOllamaClient_InvalidJSON", "TestOllamaClient_ContextTimeout", "TestOllamaClient_HealthCheck_OK", "TestOllamaClient_HealthCheck_Down", "TestOllamaClient_ListModels", "TestOllamaClient_HasModel_Found", "TestOllamaClient_HasModel_NotFound"],
-  "imports": ["context", "encoding/json", "io", "net/http", "net/http/httptest", "testing", "time", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require"],
-  "tested_subject": "OllamaClient",
-  "side_effects": ["Uses httptest.NewServer to mock HTTP responses"],
-  "notes": "Comprehensive test coverage including success cases, error cases (connection refused, model not found, empty choices, invalid JSON), and context timeouts. Tests verify no Authorization header is sent (contrast with OpenRouter)."
+  "role": "test",
+  "summary": "Unit tests for OllamaClient covering happy path, error mapping (404→pull hint, connection refused→serve hint), empty choices, invalid JSON, and context timeout",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "All HTTP tests use httptest.NewServer — no real Ollama instance required; connection-refused tests use localhost:1 to force immediate failure",
+      "loc": "ollama_test.go:93-103"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestOllamaClient_NoAuthHeader explicitly asserts no Authorization header is sent — documents the intentional absence of auth for local Ollama",
+      "loc": "ollama_test.go:53-73"
+    }
+  ]
 }

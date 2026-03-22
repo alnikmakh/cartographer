@@ -2,156 +2,165 @@
 scope: cmd/digest/main.go
 files_explored: 4
 boundary_packages: 6
-generated: TIMESTAMP
+generated: 2026-03-21
 ---
 
 ## Purpose
 
-tg-digest's entry point wires together a multi-source content aggregation pipeline. It loads configuration, opens a database, constructs source-specific fetchers (Telegram, RSS, Reddit, HackerNews), and exposes them through either a one-shot CLI fetch-and-print mode or an interactive TUI with background refresh and LLM-powered summarization. Callers interact with it as an end-user binary — there is no library API.
+`cmd/digest` is the application entry point and sole wiring layer for tg-digest. It owns all CLI flag parsing, config loading, service construction, and dispatch to one of two operating modes. Callers interact with it as a binary, not a library — it has no exported API surface. The bundled `internal/config` package is its only reusable output, consumed exclusively by `main.go` to parse YAML configuration into typed structs used by every downstream service.
 
 ## Architecture
 
-**Dependency diagram**
-
 ```
-                     config.Load()
-                         │
-                         ▼
-                    ┌─────────┐
-                    │ main.go │  ← orchestrator, no inbound deps
-                    └────┬────┘
-                         │
-        ┌────────┬───────┼────────┬──────────┬──────────┐
-        ▼        ▼       ▼        ▼          ▼          ▼
-  [telegram]†  [storage]† [refresh]† [summarizer]†  [tui]†
-                                      ▲                ▲
-                                      │                │
-                              summarizeService    registryRefresh
-                              Adapter             Adapter
-                                      │                │
-                                      └──── [source]† ─┘
-                                             ▲
-                              ┌──────┬───────┼──────────┐
-                              ▼      ▼       ▼          ▼
-                          [source/   [source/ [source/   [source/
-                          telegram]† rss]†    reddit]†   hackernews]†
-
-  † boundary package
+                    ┌─────────────────────────────────────────────┐
+                    │           cmd/digest/main.go                │
+                    │           (entry-point / orchestrator)      │
+                    │                                             │
+                    │  flags: --config --channel --limit          │
+                    │         --debug --summarize --tui           │
+                    │                                             │
+                    │  helpers: storeChannel, storeMessages,      │
+                    │           updateSyncState, buildLLMClient,  │
+                    │           ensureSourceChannel               │
+                    │                                             │
+                    │  adapters: registryRefreshAdapter           │
+                    │            summarizeServiceAdapter          │
+                    └─────────────────────────────────────────────┘
+         │                │               │              │
+         ▼                ▼               ▼              ▼
+  ┌─────────────┐  ┌──────────────┐  ┌────────┐  ┌────────────┐
+  │ config.Load │  │[tui.NewApp]  │  │[storage│  │ [telegram] │
+  │ (bundled)   │  │ implements   │  │ .Store]│  │ client/    │
+  └─────────────┘  │ RefreshSvc   │  └────────┘  │ resolver/  │
+         │         │ SummarizeSvc │               │ fetcher]   │
+         ▼         └──────────────┘               └────────────┘
+  ┌─────────────┐        ▲
+  │ YAML file   │        │ bidirectional via interface
+  │ (os.ReadFile│        │
+  │ yaml.v3)    │  ┌─────┴──────────────────────────┐
+  └─────────────┘  │ [refresh] [source] [summarizer] │
+                   │ wired by main, invoked via TUI  │
+                   └────────────────────────────────┘
 ```
 
-**Key interfaces and signatures**
+**Two operating modes:**
 
-From `internal/config/config.go`:
+- **CLI mode** (`--channel`): one-shot flow — resolve channel → storeChannel → FetchMessages → storeMessages → updateSyncState → optional SummarizeUnsummarized
+- **TUI mode** (`--tui`): builds the full service graph (refresh pipeline, source registry, optional LLM), then hands off to `tui.NewApp` running inside `tea.NewProgram`
+
+**Key signatures (verified from source):**
+
 ```go
+// config package
 func Load(path string) (*Config, error)
 
 type Config struct {
-    Telegram   TelegramConfig
-    Storage    StorageConfig
-    OpenRouter OpenRouterConfig  // legacy, migrated to LLM
-    Refresh    RefreshConfig
-    LLM        LLMConfig
-    Sources    []SourceConfig
+    Telegram TelegramConfig   // api_id, api_hash, session_file
+    Storage  StorageConfig    // db_path
+    LLM      LLMConfig        // provider, model, ollama_url, openrouter_api_key, timeout_seconds
+    Refresh  RefreshConfig    // auto_enabled, interval_minutes
+    Sources  []SourceConfig   // type, name, url, subreddit, sort, feed, limit
+    OpenRouter OpenRouterConfig // legacy migration source only
 }
-```
 
-From `cmd/digest/main.go`:
-```go
+// main package (unexported, verified)
 func buildLLMClient(ctx context.Context, cfg config.LLMConfig) (summarizer.Client, bool, error)
-// Returns: (client, isLocal, error). isLocal=true for Ollama.
-
 func storeChannel(ctx context.Context, store storage.Store, ch *tg.InputChannel, username string) (*storage.Channel, error)
 func storeMessages(ctx context.Context, store storage.Store, channelID int64, messages []telegram.Message) error
 func updateSyncState(ctx context.Context, store storage.Store, channelID int64, messages []telegram.Message) error
 func ensureSourceChannel(ctx context.Context, store storage.Store, sc config.SourceConfig)
 ```
 
-Adapter types bridging boundary packages to TUI interfaces:
-```go
-type registryRefreshAdapter struct { svc *refresh.Service; registry *source.Registry }
-  func (a *registryRefreshAdapter) RefreshAll(ctx context.Context) (*refresh.RefreshResult, error)
-  func (a *registryRefreshAdapter) RefreshFiltered(ctx context.Context, sourceNames []string) (*refresh.RefreshResult, error)
+**Patterns:**
 
-type summarizeServiceAdapter struct { svc *summarizer.Service }
-  func (a *summarizeServiceAdapter) SummarizeUnsummarized(ctx context.Context) (*summarizer.SummarizeQueueResult, error)
-  func (a *summarizeServiceAdapter) SummarizeFiltered(ctx context.Context, channelIDs []int64) (*summarizer.SummarizeQueueResult, error)
-```
-
-**Patterns**
-
-- **Adapter** — `registryRefreshAdapter` and `summarizeServiceAdapter` bridge concrete service types to the TUI's interface contracts. This decouples the TUI from knowing about the source registry or summarizer internals.
-- **Registry** — `source.Registry` collects heterogeneous source implementations behind a common `source.Source` interface, built up from config at startup.
-- **Facade/Orchestrator** — `main.go` is a pure wiring file. It owns no domain logic; every operation delegates to a boundary package.
+- **God-file orchestrator** — `main.go` wires all six boundary packages in a single file with no sub-packages. All helper functions, both adapter types, and both dispatch flows live here.
+- **Adapter bridging** — `registryRefreshAdapter` and `summarizeServiceAdapter` are thin stateless structs that implement `tui.RefreshService` and `tui.SummarizeService` respectively, satisfying the TUI's interface requirements without the TUI depending on concrete service types.
+- **Backward-compat migration** — `config.Load` transparently promotes the old `openrouter:` YAML section into the unified `llm:` section; `OpenRouterConfig` is retained in the `Config` struct solely as a migration staging area.
 
 ## Data Flow
 
-**Flow 1: TUI mode startup**
+**CLI fetch flow:**
+```
+flag.Parse() → config.Load(configPath) → *Config
+    → storage.Open(cfg.Storage.DBPath) → Store
+    → telegram.NewClient(apiID, apiHash, sessionFile)
+    → client.Run(ctx, auth, func() {
+        telegram.ResolveChannel(ctx, api, username) → *tg.InputChannel
+        storeChannel(ctx, store, ch, username)      → *storage.Channel
+        telegram.FetchMessages(ctx, api, ch, limit) → []telegram.Message
+        storeMessages(ctx, store, channelID, msgs)  → (loop, one insert per msg)
+        updateSyncState(ctx, store, channelID, msgs) → SyncState.Upsert
+        [if --summarize > 0]
+        buildLLMClient(ctx, cfg.LLM) → summarizer.Client
+        summarizer.NewService(...).SummarizeUnsummarized(ctx)
+    })
+```
 
-1. `main()` parses CLI flags; `--tui` is set → enters TUI branch (line 56)
-2. `config.Load(*configPath)` reads YAML, applies defaults, runs backward-compat migration, validates (line 41)
-3. `storage.Open(ctx, cfg.Storage.DBPath)` opens the database (line 50)
-4. `telegram.NewClient()` + `client.Run()` establishes Telegram session (lines 57-60)
-5. Inside the Run callback: builds `source.Registry` by iterating `cfg.Sources`, constructing type-specific sources (lines 66-89)
-6. For each source, `ensureSourceChannel()` creates a DB channel record if missing (line 91)
-7. If registry has entries, wraps `refresh.Service` in `registryRefreshAdapter`; otherwise uses `refresh.Service` directly (lines 93-98)
-8. `buildLLMClient()` → returns `(summarizer.Client, isLocal, error)` based on provider (line 104)
-9. If LLM client exists, creates `summarizer.Service` and wraps in `summarizeServiceAdapter` (lines 108-115)
-10. `tui.NewApp(store, opts...)` → `tea.NewProgram(app).Run()` launches interactive TUI (lines 116-120)
+**TUI mode wiring:**
+```
+config.Load → *Config
+storage.Open → Store
+telegram.NewClient → client.Run(ctx, auth, func() {
+    refresh.NewTelegramFetcher(client.API()) → Fetcher
+    refresh.NewService(fetcher, store, 50)   → *refresh.Service
+    source.NewRegistry() + cfg.Sources loop  → *source.Registry
+    [if len(registry) > 0]
+        registryRefreshAdapter{svc, registry} → tui.RefreshService
+    [else]
+        refreshSvc directly                   → tui.RefreshService
+    buildLLMClient(ctx, cfg.LLM)              → summarizer.Client, isLocal
+    summarizer.NewService(client, model, store) → *summarizer.Service
+    summarizeServiceAdapter{svc}              → tui.SummarizeService
+    tui.NewApp(store, WithRefresh(...), WithSummarize(...)) → tea.Model
+    tea.NewProgram(app, tea.WithAltScreen()).Run()
+})
+```
 
-**Flow 2: CLI fetch mode**
-
-1. `main()` parses flags; `--channel @durov --limit 20` (no `--tui`)
-2. Config load + DB open + Telegram client setup (same as above)
-3. `telegram.ResolveChannel(ctx, client.API(), *channel)` resolves username to `*tg.InputChannel` (line 135)
-4. `storeChannel()` checks DB for existing channel by TelegramID, creates if missing (line 141)
-5. `telegram.FetchMessages(ctx, client.API(), ch, *limit, *debug)` fetches from Telegram API (line 146)
-6. `storeMessages()` iterates messages, calls `store.Messages().Create()` for each (line 157)
-7. `updateSyncState()` finds max message ID, calls `store.SyncState().Upsert()` with checkpoint (line 162)
-8. If `--summarize N` > 0: builds LLM client, creates `summarizer.Service`, calls `svc.SummarizeUnsummarized(ctx)` (lines 173-197)
+**Config loading:**
+```
+os.ReadFile(path) → raw YAML bytes
+yaml.Unmarshal    → Config struct
+[OpenRouter legacy migration if cfg.LLM.Provider == "" && cfg.OpenRouter.APIKey != ""]
+[Apply LLM/Refresh defaults]
+cfg.validate()    → error on missing required fields
+expandPath(session_file, db_path) → absolute paths
+```
 
 ## Boundaries
 
-| Boundary | Role | Used By | Key Types |
-|----------|------|---------|-----------|
-| `internal/storage` | Persistence (DB open, channels, messages, sync state) | `main.go` — `storeChannel`, `storeMessages`, `updateSyncState`, `ensureSourceChannel` | `Store`, `Channel`, `Message`, `SyncState` |
-| `internal/telegram` | Telegram client, auth, channel resolution, message fetching | `main.go` — CLI fetch flow | `Client`, `Message`, `NewTerminalAuth`, `ResolveChannel`, `FetchMessages` |
-| `internal/summarizer` | LLM client abstraction and summarization service | `main.go` — `buildLLMClient`, TUI/CLI summarize flows | `Client`, `Service`, `ServiceOption`, `SummarizeQueueResult`, `NewOllamaClient`, `NewOpenRouterClient` |
-| `internal/refresh` | Background source refresh orchestration | `main.go` — TUI refresh setup | `Service`, `RefreshResult`, `NewTelegramFetcher` |
-| `internal/source` | Source registry and interface | `main.go` — TUI registry construction | `Registry`, `Source` |
-| `internal/source/*` | Concrete source implementations (telegram, rss, reddit, hackernews) | `main.go` — registered into `source.Registry` | `NewTelegramSource`, `NewRSSSource`, `NewRedditSource`, `NewHNSource` |
-| `internal/tui` | Interactive terminal UI | `main.go` — TUI launch | `NewApp`, `AppOption`, `WithRefresh`, `WithSummarize`, `RefreshService`, `SummarizeService` |
+| Boundary Package | Role | Consuming Call Sites | Key Types | Coupling |
+|---|---|---|---|---|
+| `internal/storage` | persistence layer | `storeChannel`, `storeMessages`, `updateSyncState`, `ensureSourceChannel`, TUI wiring | `Store`, `Channel`, `Message`, `SyncState` | direct |
+| `internal/telegram` | Telegram MTProto client | CLI fetch flow, TUI wiring | `NewClient`, `ResolveChannel`, `FetchMessages`, `Message` | direct |
+| `internal/refresh` | multi-source refresh pipeline | TUI wiring only | `NewTelegramFetcher`, `NewService`, `RefreshResult` | direct |
+| `internal/source` | source registry + adapters | TUI wiring only | `NewRegistry`, `Registry`, `Source` (+ 4 concrete subtypes) | direct |
+| `internal/summarizer` | LLM summarization service | `buildLLMClient`, CLI `--summarize` path, TUI wiring | `Client`, `NewOllamaClient`, `NewOpenRouterClient`, `NewService`, `SummarizeQueueResult` | direct |
+| `internal/tui` | bubbletea TUI app | TUI wiring only; main.go *implements* tui interfaces | `NewApp`, `RefreshService`, `SummarizeService` | interface-mediated (bidirectional) |
+| `github.com/gotd/td/tg` | Telegram API types | `storeChannel` parameter type | `tg.InputChannel` | direct |
+| `github.com/charmbracelet/bubbletea` | TUI event loop | TUI wiring | `tea.NewProgram`, `p.Run` | direct |
 
 ## Non-Obvious Behaviors
 
-- **Backward-compat config migration**: If `llm.provider` is empty but `openrouter.api_key` is set, `Load()` silently migrates the old `openrouter` section into the new `llm` config format (`config.go:85-92`). The legacy `OpenRouterConfig` struct is still parsed and its defaults applied first, so the migration picks up those defaults.
+- **`--summarize N` ignores N.** The flag accepts a day-count but `SummarizeUnsummarized(ctx)` at line 187 processes all unsummarized messages regardless of the value. The CLI output even says "today + yesterday" as a hardcoded string. There is no date filtering.
 
-- **LLM timeout defaults differ by provider**: Ollama gets 120s, OpenRouter gets 30s — a 4× difference. These only apply when `timeout_seconds` is omitted from config (`config.go:101-108`).
+- **Bidirectional coupling with TUI.** `main.go` calls `tui.NewApp`, but the TUI also calls back into `main.go`-defined adapters at runtime via `tui.RefreshService` and `tui.SummarizeService`. The TUI package does not depend on `refresh` or `summarizer` directly — `main.go` is the glue.
 
-- **Ollama eagerly validates at startup**: `buildLLMClient` performs a health check AND verifies the requested model exists before returning. If the model isn't pulled, it fails with an actionable error message suggesting `ollama pull` (`main.go:319-324`). OpenRouter does no startup validation.
+- **`ensureSourceChannel` silently discards errors.** If the DB lookup or `CreateNonTelegram` call fails, `log.Printf` is emitted and the function returns. TUI startup continues. The source will appear in the registry but have no corresponding DB channel record, which will cause display issues in the TUI.
 
-- **`isLocal` flag controls summarizer behavior**: `buildLLMClient` returns a `bool isLocal` that's `true` only for Ollama. This is passed as `summarizer.WithLocalModel()` option, meaning the summarizer service behaves differently for local vs. cloud models (`main.go:110-112`).
+- **`storeChannel` stores the username as the channel title.** `channel.Title = username` at line 222 is acknowledged in a comment ("We could enhance this by fetching actual title"). Channels created via the CLI path will display as `@durov` rather than "Pavel Durov" in the TUI.
 
-- **Reddit sort defaults happen in main, not config**: Config validation doesn't set a default for `SourceConfig.Sort`. The default `"hot"` is applied in `main.go:74-76` during registry construction. Similarly, HackerNews defaults `feed="top"` and `limit=30` in main (`main.go:80-88`), not in config. The config test at `config_test.go:394-396` explicitly documents that Sort is empty from config.
+- **Ollama startup is blocking and fail-fast.** `buildLLMClient` performs a live HTTP health check AND a model availability check before returning. If Ollama is configured but temporarily unreachable, the entire TUI launch fails — there is no graceful degradation to "no summarization available."
 
-- **Registry presence changes refresh adapter**: If `registry.List()` is empty, the TUI gets `refresh.Service` directly. If sources exist, it gets the `registryRefreshAdapter` wrapper which calls `RefreshSources` instead of whatever `RefreshAll` the base service implements (`main.go:93-98`). These are different code paths.
+- **`refreshSvc` is used directly (bypassing registry) when no sources are configured.** At lines 94–98, if `registry.List()` is empty, `refreshSvc` (a `*refresh.Service`) is assigned directly as the `tui.RefreshService`. This means an empty config produces a TUI that can still attempt refreshes, though they would operate over zero sources.
 
-- **`ensureSourceChannel` silently swallows errors**: If the DB lookup or channel creation fails, it logs a warning and continues (`main.go:338-353`). The TUI will still launch but that source won't have a channel record, which could cause downstream issues.
+- **Validation happens before path expansion.** `cfg.validate()` (line 115) checks `session_file` and `db_path` for emptiness on unexpanded paths. This has no practical impact since the checks are presence-only, but the ordering is surprising.
 
-- **Messages stored one-at-a-time**: `storeMessages` calls `store.Messages().Create()` in a loop with no batching or transaction wrapping (`main.go:236-249`). A failure mid-loop leaves partial data.
-
-- **Sync checkpoint is max message ID as string**: `updateSyncState` converts the highest `msg.ID` (int) to a string checkpoint via `strconv.Itoa` (`main.go:267`). This is the only sync mechanism — there's no offset-based pagination state.
-
-- **Refresh interval minimum is enforced by defaulting, not clamping**: Setting `interval_minutes: -5` doesn't error — it silently becomes 30 via the `<= 0` check (`config.go:111-113`). Setting it to `1` would be accepted.
+- **Reddit sort defaulting is split across two locations.** `config.Load` does not default `Sort` — it is intentionally left empty. main.go defaults it to `"hot"` at line 75 when constructing the registry. The config test explicitly documents this split.
 
 ## Test Coverage Shape
 
-**Well-tested:**
-- `config.Load()` has ~25 test functions covering all sub-config types, defaults, validation errors, backward-compat migration, and all source type validations. This is thorough.
-- `buildLLMClient` has 5 tests covering OpenRouter happy path, Ollama happy path, Ollama with missing model, empty provider (nil return), and unknown provider. Uses `httptest.NewServer` to mock Ollama endpoints.
+Coverage is narrow but well-targeted:
 
-**Conspicuously absent:**
-- No tests for `storeChannel`, `storeMessages`, `updateSyncState`, or `ensureSourceChannel` — the core CLI data flow is untested at the unit level.
-- No tests for the adapter types (`registryRefreshAdapter`, `summarizeServiceAdapter`) or the registry construction logic in the TUI branch.
-- No integration tests that exercise the full main flow (even with mocked boundaries).
-- The `--summarize` CLI path and the TUI startup path have zero test coverage.
-- Config test for HackerNews default feed (`TestLoad_SourcesHackerNewsDefaultFeed`) tests that `Limit` is `0` when omitted from config, but `main.go` defaults it to `30` — this gap between config and runtime defaults is documented only implicitly.
+- **`main_test.go`** covers only `buildLLMClient`. It uses `httptest.NewServer` to mock both Ollama endpoints (`/` health, `/api/tags` model list) and exercises all three provider branches (ollama, openrouter, empty). Tests are self-contained. The five other helper functions (`storeChannel`, `storeMessages`, `updateSyncState`, `ensureSourceChannel`) and both adapter types have no unit tests.
+
+- **`config_test.go`** is comprehensive: table-driven, fully isolated (temp files via `writeTestConfig`), and covers all source types, both LLM providers, the backward-compat migration, all validation error paths, and the intentional split-default for Reddit sort. This is the better-tested of the two files.

@@ -1,11 +1,56 @@
 {
   "path": "internal/summarizer/service.go",
-  "type": "source",
-  "summary": "Service orchestrates message summarization pipeline: fetches unsummarized messages, calls LLM, stores results",
-  "exports": ["Service", "ServiceOption", "WithLocalModel", "NewService", "SummarizeMessage", "SummarizeUnsummarized", "SummarizeUnsummarizedForChannels"],
-  "imports": ["tg-digest/internal/storage"],
-  "imported_by": ["internal/summarizer/service_test.go", "internal/summarizer/prompt.go"],
-  "side_effects": ["calls Client.ChatCompletion for LLM requests", "calls storage.Store for message and channel operations"],
-  "config_deps": ["Client interface", "storage.Store"],
-  "notes": "Matches hint: Service struct (NewService) with 5 public functions. Orchestrates fetching unsummarized messages, calling LLM via Client interface, storing results to storage. Implements 150-char threshold: short messages copied verbatim without LLM call. Time window filters messages from yesterday+today UTC. SummarizeUnsummarizedForChannels allows filtering by specific channel IDs. WithLocalModel() option adds preamble for local LLM inference."
+  "role": "orchestrator",
+  "summary": "Orchestrates message summarization: applies 150-char bypass heuristic, calls LLM via Client interface, persists summaries to storage, processes a today+yesterday time-windowed queue",
+  "contracts": {
+    "requires": [
+      "Non-nil Client implementation",
+      "Non-nil storage.Store with functional Channels() and MessageSummaries() sub-stores",
+      "model string identifying the LLM model to tag stored summaries"
+    ],
+    "guarantees": [
+      "SummarizeMessage always writes a MessageSummary to storage on success (even for short messages copied verbatim)",
+      "SummarizeUnsummarized returns a non-error result and records queue stop details in SummarizeQueueResult.LastError — it does NOT propagate API errors to caller",
+      "SummarizeUnsummarizedForChannels with nil channelIDs is equivalent to SummarizeUnsummarized"
+    ]
+  },
+  "effects": [
+    "LLM API network call (via Client) for messages >= 150 chars",
+    "storage.MessageSummaries().Create() for every processed message",
+    "storage.MessageSummaries().GetUnsummarizedMessages() / GetUnsummarizedMessagesByChannels()",
+    "storage.Channels().GetByID() per message in queue"
+  ],
+  "state": "Struct holds client, model string, store reference, and localModel flag — created once via NewService, no mutable fields after construction",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Short messages (< 150 chars) are copied verbatim as the summary and stored — the LLM is never called; Skipped flag in result distinguishes these from API-summarized messages",
+      "loc": "service.go:42-66"
+    },
+    {
+      "kind": "behavior",
+      "text": "Queue processing is strictly sequential and stops immediately on the first API error, recording it in LastError. Partial progress is preserved in storage and reflected in the result counts",
+      "loc": "service.go:104-123"
+    },
+    {
+      "kind": "behavior",
+      "text": "Time window is start-of-yesterday UTC to end-of-today UTC, computed fresh on each call — crossing midnight will naturally extend the window without any configuration",
+      "loc": "service.go:90-93"
+    },
+    {
+      "kind": "risk",
+      "text": "If Channels().GetByID() returns an error or nil channel, the message is silently skipped (continue) without incrementing any counter — missed messages are invisible in the result",
+      "loc": "service.go:106-109"
+    },
+    {
+      "kind": "pattern",
+      "text": "Functional options pattern (ServiceOption / WithLocalModel) used for optional configuration — keeps NewService signature stable while allowing provider-specific prompt tuning",
+      "loc": "service.go:20-37"
+    },
+    {
+      "kind": "coupling",
+      "text": "Service depends on storage.Store boundary package for both channel metadata lookup and summary persistence — no in-memory fallback; storage unavailability is fatal to the queue",
+      "loc": "service.go:14-17"
+    }
+  ]
 }

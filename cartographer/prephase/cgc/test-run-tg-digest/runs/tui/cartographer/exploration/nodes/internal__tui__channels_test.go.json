@@ -1,21 +1,5 @@
 {
   "path": "internal/tui/channels_test.go",
-  "type": "test",
-  "summary": "17 comprehensive tests for channelsModel covering rendering, cursor navigation, delete confirmation, add-source wizard flow, and source type badges",
-  "exports": [],
-  "imports": [
-    "fmt",
-    "testing",
-    "time",
-    "github.com/charmbracelet/bubbletea",
-    "github.com/stretchr/testify/assert"
-  ],
-  "imported_by": [
-    "internal/tui/app.go"
-  ],
-  "side_effects": [
-    "test suite execution"
-  ],
-  "config_deps": [],
-  "notes": "Tests channels.go sub-model. Covers: render empty/populated lists, cursor clamping, delete confirmation (d then y/esc), add-source wizard (a then 3-step: type→name→url), source type badges ([TG], [RSS], etc). Uses test fixtures makeChannels(). Key integration: tests channelsLoadedMsg, addSourceMsg message flow."
+  "role": "test",
+  "summary": "Unit tests for channelsModel covering list rendering, cursor navigation, delete confirm flow, and the 3-step add-source wizard"
 }

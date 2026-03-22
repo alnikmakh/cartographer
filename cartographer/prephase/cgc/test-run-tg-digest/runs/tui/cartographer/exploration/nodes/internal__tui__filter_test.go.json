@@ -1,11 +1,5 @@
 {
   "path": "internal/tui/filter_test.go",
-  "type": "test",
-  "summary": "13 tests for SourceFilter covering IsEmpty, Match, MatchingChannelIDs, MatchingSourceNames, and FilterLabel methods",
-  "exports": [],
-  "imports": ["testing", "github.com/stretchr/testify/assert"],
-  "imported_by": [],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Tests SourceFilter struct (type/name matching logic, SQL query helpers, UI display labels) with comprehensive coverage of empty filters, single/multiple type filters, name filters, and intersection logic"
+  "role": "test",
+  "summary": "Unit tests for SourceFilter covering IsEmpty, Match (empty/single-type/multi-type/name/intersection), MatchingChannelIDs, MatchingSourceNames, and FilterLabel"
 }

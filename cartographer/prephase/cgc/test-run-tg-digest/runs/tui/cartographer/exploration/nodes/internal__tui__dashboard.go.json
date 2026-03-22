@@ -1,29 +1,43 @@
 {
   "path": "internal/tui/dashboard.go",
-  "type": "source",
-  "summary": "Dashboard view sub-model with date navigation (◄/►), expandable summary cards, filtering by source type, and filter overlay integration",
-  "exports": [
-    "dashboardModel",
-    "newDashboardModel"
-  ],
-  "imports": [
-    "fmt",
-    "strings",
-    "time",
-    "github.com/charmbracelet/bubbles/key",
-    "github.com/charmbracelet/bubbletea",
-    "github.com/charmbracelet/lipgloss"
-  ],
-  "imported_by": [
-    "internal/tui/app.go"
-  ],
-  "side_effects": [
-    "modifies UI state based on key input",
-    "triggers date-based data reloading via loadSummariesMsg"
-  ],
-  "config_deps": [
-    "keys.go (key bindings: Left, Right, Down, Up, Toggle, ExpandAll, CollapseAll, Filter, FilterPicker)",
-    "styles.go (dateStyle, helpDescStyle, expandedArrowStyle, collapsedArrowStyle, sourceTypeBadgeStyle, selectedCardStyle, summaryTextStyle)"
-  ],
-  "notes": "Second main view (beside channels.go). Manages: 1) currentDate navigation (◄/►), 2) SummaryItem list with SourceFilter, 3) expand/collapse state per card (expanded map), 4) scroll-to-cursor logic, 5) filter cycling (f key cycles through source types), 6) filter overlay (shift+f). Key rendering: source badges ([TG], [RSS], [RD], [HN]), summary bullets with spacing, cursor highlighting. Filters summaries by SourceFilter.Types and ChannelName. Delegates overlay to filterOverlayModel."
+  "role": "presenter",
+  "summary": "Dashboard sub-model: date-navigable summary card list with per-source expand/collapse, filter cycling, and an embedded filter picker overlay",
+  "state": "dashboardModel value type; holds summaries, currentDate, cursor, expanded map (card → bool), active SourceFilter, channels list (for overlay), and an embedded filterOverlayModel",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Scroll position follows the cursor: on each View() call, effectiveScroll is computed from cardStartLines[cursor] so the selected card is always visible without requiring explicit scroll commands.",
+      "loc": "dashboard.go:278-299"
+    },
+    {
+      "kind": "coupling",
+      "text": "Bidirectional coupling with filter_overlay.go: dashboard creates and holds filterOverlayModel; filterOverlay emits filterOverlayConfirmMsg which dashboard handles to update its own filter. App also intercepts these messages and forwards them to dashboard.Update, creating a dual-dispatch path.",
+      "loc": "dashboard.go:57-63, dashboard.go:133-137"
+    },
+    {
+      "kind": "behavior",
+      "text": "Filter cycling ('f' key) uses a fixed cycle order: all → telegram → rss → reddit → hackernews → all. Pressing 'f' again from any type-filter goes to the next type in the hardcoded filterTypeCycle slice.",
+      "loc": "dashboard.go:13, dashboard.go:108-130"
+    },
+    {
+      "kind": "behavior",
+      "text": "Expand state (map[int]bool) is keyed by position in the filtered slice, not by source ID. Changing the filter resets cursor and scroll but does NOT reset expanded — however the positions are recomputed from the filtered slice so previously expanded indices may correspond to different sources.",
+      "loc": "dashboard.go:90-95, dashboard.go:39-44"
+    },
+    {
+      "kind": "risk",
+      "text": "expanded map is keyed by filtered-slice index. When a filter is applied, an index that was expanded under the previous filter now refers to a different source — stale expansion state can cause incorrect card rendering without a crash.",
+      "loc": "dashboard.go:143-154, dashboard.go:185-195"
+    },
+    {
+      "kind": "behavior",
+      "text": "sourceTypeBadge helper is defined here and also called by filter.go (FilterLabel) and channels.go — it is a package-local function, not exported.",
+      "loc": "dashboard.go:346-360"
+    },
+    {
+      "kind": "pattern",
+      "text": "applyScroll is a fallback scroll helper used only for the empty-state path; the main card-rendering path uses inline scroll computation with cardStartLines tracking.",
+      "loc": "dashboard.go:317-343"
+    }
+  ]
 }

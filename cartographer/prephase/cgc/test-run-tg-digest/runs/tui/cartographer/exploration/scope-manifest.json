@@ -1,0 +1,58 @@
+{
+  "scope": "tui",
+  "purpose": "Root Bubble Tea model that owns all sub-views and coordinates storage, refresh, and summarize operations",
+  "exposes": {
+    "types": [],
+    "interfaces": [],
+    "entry_points": [
+      "IsEmpty, Match, MatchingChannelIDs, MatchingSourceNames, FilterLabel are all pure \u2014 no side effects; nil return from Matching* means 'all' (callers must check for nil vs empty slice)"
+    ]
+  },
+  "consumes": {
+    "external": [
+      "internal/storage",
+      "RefreshService",
+      "SummarizeService",
+      "tg-digest/internal/refresh",
+      "tg-digest/internal/summarizer",
+      "github.com/charmbracelet/bubbles/key",
+      "github.com/charmbracelet/lipgloss"
+    ],
+    "config": []
+  },
+  "cross_scope_touchpoints": [
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "reads channels and message summaries, creates and deletes channels via store interface",
+      "coupling": "direct"
+    },
+    {
+      "scope": "storage",
+      "direction": "consumes",
+      "surface": "opens real storage.Store via storage.Open; creates Channel, Message, MessageSummary records",
+      "coupling": "direct"
+    }
+  ],
+  "invariants": [
+    "When both Types and Names are set, Match requires both to pass (AND semantics). This is documented in the field comment but callers must be aware \u2014 the filter_overlay only ever produces Names-only filters, never Types+Names combinations."
+  ],
+  "risks": [
+    "dashboard.filter is read in refreshFilteredCmd/summarizeFilteredCmd but channels.channels is also read at command-execution time \u2014 both are stale snapshots captured when the key is pressed, not at command execution. Filter may drift if channels were loading concurrently.",
+    "addURLInput is required non-empty to advance (line 159), but addNameInput trimming is done via != empty without trimming \u2014 whitespace-only names are accepted as valid.",
+    "expanded map is keyed by filtered-slice index. When a filter is applied, an index that was expanded under the previous filter now refers to a different source \u2014 stale expansion state can cause incorrect card rendering without a crash.",
+    "boxStyle is constructed on every View() call rather than cached \u2014 allocates a new lipgloss.Style on each render. Minor performance concern for high-frequency redraws."
+  ],
+  "patterns": [
+    "Functional options (AppOption) pattern used for optional RefreshService and SummarizeService, keeping the constructor minimal for tests without those capabilities.",
+    "setupTestStore creates a real SQLite database in t.TempDir() \u2014 tests exercise storage integration, not mocks. mockRefreshSvc and mockSummarizeSvc are the only mocks.",
+    "Input handling in addStepName and addStepURL is manual (switch on msg.Type for KeyBackspace/KeyEnter/KeyRunes) rather than using a bubbles/textinput component \u2014 trades simplicity for lack of cursor positioning in the text field.",
+    "applyScroll is a fallback scroll helper used only for the empty-state path; the main card-rendering path uses inline scroll computation with cardStartLines tracking.",
+    "TextWrapping tests use lipgloss.Width() for ANSI-aware line width measurement \u2014 correctly accounts for escape sequences in rendered output rather than naive len().",
+    "Key matching uses direct msg.String() comparisons for space, 'a', 'n', 'enter', 'esc' rather than the global keys singleton \u2014 these are overlay-specific bindings not represented in keyMap.",
+    "Help content is hardcoded inline in View() using sections struct literal \u2014 it pulls key/desc strings from the global keys singleton via Help() method, so it stays in sync with actual bindings automatically.",
+    "Single global 'keys' var used by app.go, dashboard.go, channels.go, filter_overlay.go, and help.go \u2014 all key matching goes through this singleton rather than per-model configuration.",
+    "All visual styling is centralized here; individual model files contain zero style definitions except filter_overlay.go which constructs a local boxStyle at render time (to apply dynamic width).",
+    "Service interfaces (RefreshService, SummarizeService) are defined here in the consumer package (tui), not in the provider packages \u2014 classic dependency-inversion. This decouples the TUI from concrete refresh and summarizer implementations."
+  ]
+}

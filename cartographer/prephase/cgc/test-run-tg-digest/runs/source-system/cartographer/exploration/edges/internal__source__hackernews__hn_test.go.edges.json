@@ -1,5 +1,14 @@
 [
-  {"to": "internal/source/hackernews/hn.go", "relationship": "tests", "usage": "tests HNSource methods via mock server"},
-  {"to": "internal/source", "relationship": "imports", "usage": "source.Source interface for compile-time assertion"},
-  {"to": "net/http/httptest", "relationship": "external", "usage": "mock HTTP server for testing API calls"}
+  {
+    "from": "internal/source/hackernews/hn_test.go",
+    "to": "internal/source/hackernews/hn.go",
+    "semantic": "tests HNSource behaviour via httptest mock server",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/source/hackernews/hn_test.go",
+    "to": "internal/source/source.go",
+    "semantic": "compile-time interface assertion for HNSource",
+    "coupling": "interface-mediated"
+  }
 ]

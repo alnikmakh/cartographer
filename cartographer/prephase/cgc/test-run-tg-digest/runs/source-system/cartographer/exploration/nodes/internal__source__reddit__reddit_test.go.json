@@ -1,23 +1,12 @@
 {
   "path": "internal/source/reddit/reddit_test.go",
-  "type": "test",
-  "summary": "Comprehensive test suite for RedditSource with mocked HTTP server, checkpoint filtering, and error scenarios",
-  "exports": [],
-  "imports": [
-    "context",
-    "net/http",
-    "net/http/httptest",
-    "testing",
-    "time",
-    "github.com/stretchr/testify/assert",
-    "github.com/stretchr/testify/require",
-    "tg-digest/internal/source"
-  ],
-  "imported_by": [],
-  "side_effects": [
-    "uses httptest.Server to mock HTTP responses",
-    "uses compile-time interface check var _ source.Source"
-  ],
-  "config_deps": [],
-  "notes": "Tests RedditSource implementation: Type/Name methods, successful message fetching, timestamp parsing from created_utc, checkpoint-based filtering for incremental fetches, error handling (server error, not found, rate limited, invalid URL, malformed JSON). Verifies User-Agent header requirement and URL construction (/r/golang/top.json with limit and raw_json params). Tests default sort='hot' and limit=25."
+  "role": "test",
+  "summary": "Unit tests for RedditSource covering success, checkpoint filtering, error handling (404/429/500), User-Agent header, and URL construction",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "Compile-time interface assertion (var _ source.Source = (*RedditSource)(nil)) consistent with other source test files.",
+      "loc": "reddit_test.go:16"
+    }
+  ]
 }

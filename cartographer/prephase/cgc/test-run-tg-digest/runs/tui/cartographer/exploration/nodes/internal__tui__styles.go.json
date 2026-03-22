@@ -1,11 +1,13 @@
 {
   "path": "internal/tui/styles.go",
-  "type": "source",
-  "summary": "Package-level style variables using lipgloss for terminal UI rendering; defines 24 style rules and 5 base colors for all TUI components",
-  "exports": ["titleStyle", "activeTabStyle", "inactiveTabStyle", "statusBarStyle", "channelNameStyle", "summaryTextStyle", "messageCountStyle", "dateStyle", "selectedStyle", "unselectedStyle", "helpKeyStyle", "helpDescStyle", "errorStyle", "confirmStyle", "loadingStyle", "spinnerStyle", "sourceTypeBadgeStyle", "selectedCardStyle", "collapsedArrowStyle", "expandedArrowStyle", "cardCountStyle", "overlayBorderStyle", "overlayTitleStyle", "checkboxCheckedStyle", "checkboxUncheckedStyle", "overlaySelectedStyle"],
-  "imports": ["github.com/charmbracelet/lipgloss"],
-  "imported_by": ["internal/tui/app.go", "internal/tui/channels.go", "internal/tui/dashboard.go", "internal/tui/filter_overlay.go", "internal/tui/help.go"],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Central styling configuration for all TUI rendering. Base colors: primaryColor=#7D56F4 (purple), secondaryColor=#6C6C6C (gray), accentColor=#04B575 (green), errorColor=#FF4672 (red), mutedColor=#626262 (dim). Covers styling for: title/status bars, active/inactive tabs, summary cards (channel names, text, counts), date headers, lists (selected/unselected), help overlays (key/desc), error/confirm dialogs, loading/spinner indicators, source badges, dashboard cards (collapsed/expanded arrows, counts), and filter overlays (borders, title, checkboxes). Pure styling configuration — no state or behavior."
+  "role": "presenter",
+  "summary": "Package-level lipgloss style constants shared by all TUI sub-models",
+  "state": "Package-level vars — initialized once at startup, read-only thereafter",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "All visual styling is centralized here; individual model files contain zero style definitions except filter_overlay.go which constructs a local boxStyle at render time (to apply dynamic width).",
+      "loc": "filter_overlay.go:157-167"
+    }
+  ]
 }

@@ -1,4 +1,9 @@
 [
-  {"to": "internal/config/config.go", "relationship": "tests", "usage": "tests Load function and Config data structures"},
-  {"to": "github.com/stretchr/testify", "relationship": "imports", "usage": "external — test assertions and error handling"}
+  {
+    "from": "internal/config/config_test.go",
+    "to": "internal/config/config.go",
+    "semantic": "exercises Load function and all exported config types",
+    "data_flow": "temp YAML file path → *Config assertions",
+    "coupling": "direct"
+  }
 ]

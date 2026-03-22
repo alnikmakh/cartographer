@@ -1,59 +1,55 @@
+Now the findings.md narrative:
+
 ---
 scope: internal/tui/app.go
 files_explored: 15
-boundary_packages: 4
-generated: TIMESTAMP
+boundary_packages: 2
+generated: 2026-03-21
 ---
 
 ## Purpose
 
-The `internal/tui` package provides an interactive terminal UI for browsing daily message digests, managing content sources, and triggering refresh/summarize operations. It is consumed by `cmd/digest/main.go` as the user-facing frontend of the tg-digest application — the single entry point is `NewApp(store, ...opts)` which returns a Bubble Tea model ready to run with `tea.NewProgram`.
+`internal/tui` is the terminal user interface for the tg-digest application. Its sole entry point, `NewApp(store storage.Store, opts ...AppOption) App`, returns a Bubble Tea root model that `cmd/digest` runs via `tea.NewProgram`. From the perspective of its caller, the package provides a complete, self-contained TUI: tab navigation between a summary dashboard and a source manager, date navigation, per-source filtering, and keyboard-triggered refresh and summarization — all mediated through optional service interfaces so the UI can be used in a storage-only mode without network capabilities.
 
 ## Architecture
 
-**Dependency diagram**
-
 ```
-                     [cmd/digest]†
-                          │
-                          ▼
-  types.go ◄──────── app.go ──────────► [storage]†
-    ▲  ▲               │  │
-    │  │          ┌─────┘  └──────┐
-    │  │          ▼               ▼
-    │  │    dashboard.go    channels.go
-    │  │       │                  
-    │  │       ▼                  
-    │  │  filter_overlay.go       
-    │  │       │                  
-    │  └───────┼──► filter.go     
-    │          │                  
-    │          ▼                  
-    │     help.go                 
-    │                             
-    ├── keys.go                   
-    └── styles.go                 
-
-  † boundary packages
-  [storage] = tg-digest/internal/storage
-  [cmd/digest] = cmd/digest/main.go
-  types.go also imports [refresh]† and [summarizer]† for interface types
+[cmd/digest] ──────── NewApp() ──────────────────────────────────────┐
+                                                                      │
+                                ┌─────────────────── app.go ─────────┤
+                                │  App (orchestrator)                 │
+                                │  - activeView: dashboard | channels │
+                                │  - showHelp bool                    │
+                                │  - loading / errID / spinner        │
+                                │  - refreshSvc / summarizeSvc        │
+                                │                                     │
+                    ┌───────────┼──────────────────────────────┐      │
+                    │           │                              │      │
+             dashboard.go  channels.go                    help.go     │
+             (presenter)   (presenter)                  (presenter)   │
+                    │           │                                      │
+             filter.go   types.go ◄─ all msg types, service ifaces   │
+             (model)      shared display types                         │
+                    │                                                  │
+         filter_overlay.go                                            │
+         (presenter)                                                   │
+                    │                                                  │
+         keys.go  styles.go  (config/shared)                          │
+                                                                      │
+[internal/storage] ◄── direct calls in tea.Cmd closures ─────────────┘
+[RefreshService]   ◄── interface-mediated (types.go defines interface)
+[SummarizeService] ◄── interface-mediated (types.go defines interface)
 ```
 
-**Key interfaces and signatures**
+**Key interfaces and signatures (from source):**
 
 ```go
-// app.go — public API
-type App struct { /* ... */ }
-type AppOption func(*App)
+// Public API surface consumed by cmd/digest
 func NewApp(store storage.Store, opts ...AppOption) App
 func WithRefresh(svc RefreshService, autoRefresh bool, interval time.Duration) AppOption
 func WithSummarize(svc SummarizeService) AppOption
-func (a App) Init() tea.Cmd
-func (a App) Update(msg tea.Msg) (tea.Model, tea.Cmd)
-func (a App) View() string
 
-// types.go — service interfaces
+// Service interfaces defined in types.go (dependency inversion)
 type RefreshService interface {
     RefreshAll(ctx context.Context) (*refresh.RefreshResult, error)
     RefreshFiltered(ctx context.Context, sourceNames []string) (*refresh.RefreshResult, error)
@@ -63,109 +59,121 @@ type SummarizeService interface {
     SummarizeFiltered(ctx context.Context, channelIDs []int64) (*summarizer.SummarizeQueueResult, error)
 }
 
-// types.go — display models
-type SummaryItem struct {
-    ChannelName, Summary, SourceType string
-    MessageCount int; Date time.Time
+// Filter type used across dashboard, overlay, and commands
+type SourceFilter struct {
+    Types map[string]bool   // empty = all types
+    Names map[string]bool   // empty = all names (within Types)
 }
-type ChannelItem struct {
-    ID int64; Title, Username, SourceType string; AddedAt time.Time
-}
-
-// filter.go
-type SourceFilter struct { Types, Names map[string]bool }
 func (f SourceFilter) IsEmpty() bool
 func (f SourceFilter) Match(sourceType, sourceName string) bool
-func (f SourceFilter) MatchingChannelIDs(channels []ChannelItem) []int64
-func (f SourceFilter) MatchingSourceNames(channels []ChannelItem) []string
-func (f SourceFilter) FilterLabel(totalSources int) string
+func (f SourceFilter) MatchingChannelIDs(channels []ChannelItem) []int64   // nil = all
+func (f SourceFilter) MatchingSourceNames(channels []ChannelItem) []string // nil = all
 ```
 
-**Patterns**
+**Patterns:**
 
-- **Elm Architecture (Bubble Tea)** — `App` is the root `tea.Model`; child models (`dashboardModel`, `channelsModel`, `helpModel`, `filterOverlayModel`) follow the same `Update`/`View` contract. Messages flow up through commands, state flows down through struct embedding.
-- **Functional Options** — `NewApp` accepts `AppOption` closures (`WithRefresh`, `WithSummarize`) for optional dependency injection of services.
-- **Message Vocabulary** — `types.go` defines 14 message types forming a closed event protocol. All async results arrive as typed messages; no callbacks or channels.
-- **Wizard State Machine** — `channelsModel` uses an `addStep` enum (`addStepType` → `addStepName` → `addStepURL`) to drive a three-step add-source flow with distinct key handlers per step.
+- **Elm architecture** — all sub-models are value types (`App`, `dashboardModel`, `channelsModel`, etc.); `Update` returns new copies; `Init`/`Update`/`View` are pure.
+- **Functional options** — `AppOption` keeps `NewApp` minimal; the TUI degrades gracefully to read-only if no `RefreshService` or `SummarizeService` is provided.
+- **Dependency inversion** — `RefreshService` and `SummarizeService` are defined in `types.go` inside the `tui` package. Only `types.go` imports `internal/refresh` and `internal/summarizer`; all other files in the package see only the local interface.
+- **Global key singleton** — `keys` (declared in `keys.go`) is a package-level var holding all `key.Binding` instances; every sub-model pattern-matches against it rather than defining per-model key configs.
+- **Centralized styles** — `styles.go` is the sole style definition file; `filter_overlay.go` is the only exception, constructing a local `boxStyle` at render time to apply a dynamic terminal-width-dependent box width.
 
 ## Data Flow
 
-**Flow 1: Loading summaries for a date**
+**Flow 1: Initial load**
 
-1. `App.Init()` calls `loadSummariesCmd(now)` — returns a `tea.Cmd` closure
-2. The closure calls `store.Channels().List(ctx)` to get all channels
-3. For each channel, calls `store.MessageSummaries().GetByChannelAndDate(ctx, id, start, end)` — boundary crossing to `[storage]`†
-4. Builds `[]SummaryItem` with bullet-formatted summaries (each `MessageSummary.Summary` prefixed with "• ")
-5. Returns `summariesLoadedMsg{date, summaries}`
-6. `App.Update` receives msg → sets `loading=false`, delegates to `dashboard.Update`
-7. `dashboardModel.Update` stores summaries, resets cursor/scroll/expanded state
+```
+tea.Program.Start()
+  → App.Init()
+      → tea.Batch(
+            spinner.Tick,
+            loadSummariesCmd(today),   // store.Channels().List + store.MessageSummaries().GetByChannelAndDate
+            loadChannelsCmd(),         // store.Channels().List
+            scheduleAutoRefresh()      // optional: tea.Tick(interval) → autoRefreshTickMsg
+        )
+  → summariesLoadedMsg{date, []SummaryItem} → App.Update → dashboard.Update
+  → channelsLoadedMsg{[]ChannelItem}        → App.Update → channels.Update
+                                                         → dashboard.channels = items
+```
 
-**Flow 2: Filtered refresh + summarize**
+**Flow 2: Manual filter-aware refresh (r key)**
 
-1. User presses `r` on dashboard → `App.handleKeyMsg` checks `refreshSvc != nil && !loading`
-2. Calls `refreshFilteredCmd(dashboard.filter)` — resolves `SourceFilter` to source names via `filter.MatchingSourceNames(channels.channels)`
-3. Calls `refreshSvc.RefreshFiltered(ctx, sourceNames)` — boundary crossing to `[refresh]`†
-4. Returns `refreshCompleteMsg{result, err, lastRefresh, filtered}`
-5. On success, `App.Update` triggers `loadSummariesCmd` + `loadChannelsCmd` to reload data
-6. If `autoRefresh` is enabled, also re-schedules `scheduleAutoRefresh()`
+```
+KeyMsg('r') → App.handleKeyMsg
+  → a.refreshSvc != nil && !a.loading
+  → refreshFilteredCmd(a.dashboard.filter)  // captures filter snapshot at key-press time
+      → filter.MatchingSourceNames(a.channels.channels)  // nil = all
+      → refreshSvc.RefreshFiltered(ctx, sourceNames)
+      → refreshCompleteMsg{result, err, lastRefresh, filtered}
+  → App.Update(refreshCompleteMsg)
+      → loadSummariesCmd(currentDate) + loadChannelsCmd()  // reload after success
+```
+Note: auto-refresh via `autoRefreshTickMsg` calls `refreshCmd()` → `refreshSvc.RefreshAll(ctx)`, bypassing the filter entirely. This is intentional; the test `TestApp_AutoRefreshIgnoresFilter` documents this contract.
 
-**Flow 3: Adding a source**
+**Flow 3: Filter overlay → dashboard filter update**
 
-1. User presses `a` in Sources tab → `channelsModel.handleNormalKey` enters `addMode`
-2. Step 1 (`addStepType`): up/down to select from `sourceTypeOptions`, enter to confirm
-3. Step 2 (`addStepName`): raw rune input into `addNameInput`, enter to advance
-4. Step 3 (`addStepURL`): raw rune input into `addURLInput`, enter emits `addSourceMsg`
-5. `App.handleKeyMsg` intercepts the command result, calls `addSourceCmd(msg)`
-6. `addSourceCmd` checks for duplicate via `store.Channels().GetByUsername` — returns `errMsg` if exists
-7. Calls `store.Channels().Create` (telegram) or `store.Channels().CreateNonTelegram` (other types) — boundary crossing to `[storage]`†
-8. Returns `sourceAddedMsg{}` → `App.Update` reloads channels
+```
+KeyMsg('F') → dashboard.Update
+  → newFilterOverlayModel(m.channels, m.filter)  // initializes checkboxes from current filter
+  → m.showFilterOverlay = true
+
+KeyMsg('enter') inside overlay → filterOverlayModel.Update
+  → buildFilter(): allSelected → SourceFilter{} | subset → SourceFilter{Names: {...}}
+  → return filterOverlayConfirmMsg{filter}
+
+filterOverlayConfirmMsg → App.Update   (dual-dispatch: App intercepts, forwards to dashboard)
+  → dashboard.Update(msg)
+      → m.filter = msg.filter
+      → m.showFilterOverlay = false
+      → m.scrollOffset = 0; m.cursor = 0
+```
 
 ## Boundaries
 
-| Boundary | Role | Used By | Key Types |
-|----------|------|---------|-----------|
-| `internal/storage` | Persistence — channel CRUD, message summary queries | `app.go` (direct `Store` usage) | `storage.Store`, `storage.Channel` |
-| `internal/refresh` | Fetches new messages from sources | `app.go` (via `RefreshService` interface) | `refresh.RefreshResult` |
-| `internal/summarizer` | LLM summarization of messages | `app.go` (via `SummarizeService` interface) | `summarizer.SummarizeQueueResult` |
-| `cmd/digest` | CLI entry point, constructs `App` | imports `NewApp`, `WithRefresh`, `WithSummarize` | — |
+| Boundary | Role | Consuming files | Key types | Coupling |
+|---|---|---|---|---|
+| `internal/storage` | Persistence | `app.go` (all DB commands) | `storage.Store`, `storage.Channel`, `ChannelRepository`, `MessageSummaryRepository` | direct |
+| `cmd/digest` | Caller / entrypoint | — | `NewApp`, `WithRefresh`, `WithSummarize`, `AppOption` | direct |
+| `internal/refresh` | Result type only | `types.go` | `refresh.RefreshResult` | interface-mediated |
+| `internal/summarizer` | Result type only | `types.go` | `summarizer.SummarizeQueueResult` | interface-mediated |
+| `charmbracelet/bubbles/key` | Key binding declarations | `keys.go` | `key.Binding`, `key.NewBinding` | direct |
+| `charmbracelet/lipgloss` | Visual styling | `styles.go`, `filter_overlay.go` | `lipgloss.Style`, `lipgloss.Color` | direct |
+
+`internal/refresh` and `internal/summarizer` are imported only in `types.go` for their result struct types. All other TUI files see only the `RefreshService` / `SummarizeService` interfaces.
 
 ## Non-Obvious Behaviors
 
-- **Errors auto-clear after 5 seconds.** Every `errMsg` increments an `errID` counter and schedules an `errClearMsg` with that ID. Only the matching ID clears the error, preventing stale clears from racing with newer errors. (`app.go:119-125`)
+- **Eager sub-view command execution breaks BubbleTea dispatch** (`app.go:285-303`). When a sub-view's `Update` returns a command, `handleKeyMsg` immediately calls `result := cmd()` and pattern-matches the result rather than returning the command to the runtime. This means `loadSummariesMsg`, `deleteChannelMsg`, and `addSourceMsg` produced by sub-views never travel through the normal BubbleTea event loop — they are intercepted and re-dispatched synchronously. Any middleware or command interceptor added at the program level will not see these messages.
 
-- **Sub-model commands are eagerly executed in `handleKeyMsg`.** When a child model returns a `tea.Cmd`, `App.handleKeyMsg` calls `cmd()` immediately (line 287) to inspect the result type and intercept `loadSummariesMsg`, `deleteChannelMsg`, and `addSourceMsg`. This breaks the standard Bubble Tea pattern of returning commands for the runtime to execute — it works but means child commands execute synchronously in the Update cycle.
+- **Error auto-clear uses an incrementing ID to avoid stale clears** (`app.go:113-125`). When an error is set, `errID` is incremented and a `tea.Tick(5s)` fires `errClearMsg{id: currentErrID}`. On receipt, the clear only applies if `msg.id == a.errID`. A newer error arriving before the tick fires will have bumped `errID`, so the old tick's clear is silently ignored.
 
-- **Refresh and summarize are filter-aware.** Pressing `r` or `s` doesn't refresh/summarize all sources — it respects the current dashboard filter. `refreshFilteredCmd` resolves the filter to source names, `summarizeFilteredCmd` resolves to channel IDs. An empty filter (no filtering active) passes `nil`, which the services interpret as "all". (`app.go:532-553`)
+- **Auto-refresh is always unfiltered; manual refresh respects the filter** (`app.go:192-198, 253-258`). `autoRefreshTickMsg` calls `refreshCmd()` → `RefreshAll(ctx)`. The `r` key calls `refreshFilteredCmd(a.dashboard.filter)` → `RefreshFiltered(ctx, sourceNames)`. These are intentionally different; the test `TestApp_AutoRefreshIgnoresFilter` (app_test.go:590) explicitly documents this distinction.
 
-- **Auto-refresh reschedules even on error.** If a refresh fails, `refreshCompleteMsg` handling still calls `scheduleAutoRefresh()` so the timer keeps ticking. If a refresh tick arrives while already loading, it skips the refresh and reschedules. (`app.go:161-164`, `192-198`)
+- **`filterOverlayConfirmMsg` takes a dual-dispatch path** (`app.go:208-214`, `dashboard.go:38-43`). The message is handled in `App.Update`, which forwards it to `dashboard.Update`. The App-level handler is needed because the overlay can also emit this message from outside the dashboard's key-forwarding path (e.g., if App has broader message handling in future). The current effect is that `dashboard.Update` receives the message twice in different scenarios — once via App forwarding and once when App routes it as a regular key-result from the dashboard sub-model.
 
-- **Telegram sources use a different creation path.** `addSourceCmd` branches on `sourceType == "telegram"` to call `store.Channels().Create` vs `store.Channels().CreateNonTelegram` for all other types. (`app.go:574-578`)
+- **`expanded` map survives filter changes, keyed by filtered-slice index** (`dashboard.go:90-95`). Pressing `f` to cycle the type filter resets `cursor` and `scrollOffset` to 0, but leaves `expanded` intact. Indices in `expanded` now refer to positions in the new filtered slice, not the old one — so a previously expanded card may visually appear expanded on a completely different source. Pressing `e` (expand-all) or `c` (collapse-all) clears this.
 
-- **Filter overlay treats "all selected" as "no filter".** `buildFilter()` checks if every source is selected and returns an empty `SourceFilter{}` rather than a filter with all names. This avoids pointless per-name filtering in downstream queries. (`filter_overlay.go:98-108`)
+- **`SourceFilter` AND semantics between Types and Names** (`filter.go:22-33`). When both `Types` and `Names` are set, `Match` requires both to pass. In practice the filter picker overlay (`filter_overlay.go`) only ever produces `Names`-only filters; `Types`-only filters come from the `f`-key cycle in dashboard. A combined filter is theoretically possible but no UI path creates one currently.
 
-- **`f` and `F` are distinct filter modes.** Lowercase `f` cycles through source types one at a time (empty → telegram → rss → reddit → hackernews → empty). Uppercase `F` opens the checkbox overlay for per-source selection. The cycle resets to no filter after hackernews. (`dashboard.go:108-130`, `132-137`)
+- **`MatchingChannelIDs` / `MatchingSourceNames` return `nil` (not `[]T{}`) for empty filters** (`filter.go:37-63`). Downstream service methods (`RefreshFiltered`, `SummarizeFiltered`) treat `nil` as "all" — this is the load-bearing nil-means-all contract. Callers must not conflate nil with an empty selection.
 
-- **Dashboard content height is `height - 4`.** The app reserves 4 lines for chrome (tab bar, two dividers, status bar) and passes the remainder to sub-models. (`app.go:96`)
+- **filterOverlayModel's `confirmed`/`cancelled` fields are test-only observability** (`filter_overlay.go:27-28`). The parent (dashboard) reads state via the emitted message, not these fields. They exist solely so tests can assert on the model state without parsing rendered output.
 
-- **The `Right` key binding does not include `l`.** Unlike `Left` which binds both `left` arrow and `h`, `Right` only binds `right` arrow — `l` is reserved for `Toggle` (expand/collapse). This is an intentional asymmetry in vim-style navigation. (`keys.go:47-54`)
+- **Add-source wizard step 3 (`addStepURL`) is named "URL" but carries different semantics per source type** (`channels.go:267-280`). For Telegram it is a `@username`; for Reddit it is a subreddit name; for HackerNews it is a feed type (`top`/`best`/`new`/...); for RSS it is a URL. The field is stored as `addURLInput` and forwarded verbatim as `addSourceMsg.url`.
+
+- **`addNameInput` whitespace guard is incomplete** (`channels.go:145`). `addStepName` advances on `m.addNameInput != ""` without trimming — a name of spaces passes validation and becomes a channel `Title` and `Username` in storage.
 
 ## Test Coverage Shape
 
-All 8 source files have corresponding test files (100% file coverage). Total: ~100 test functions.
+Coverage is comprehensive and structurally sound. Every sub-model has a dedicated test file (`app_test.go`, `channels_test.go`, `dashboard_test.go`, `filter_overlay_test.go`, `filter_test.go`, `help_test.go`).
 
-**Well-tested:**
-- All message routing paths in `App.Update` — view switching, error handling, refresh/summarize completion, auto-refresh scheduling
-- Dashboard date navigation, cursor behavior, expand/collapse, scroll-to-cursor logic, text wrapping with ANSI-aware width
-- Channels list navigation, delete confirmation (d → y/esc), complete add-source wizard flow through all 3 steps
-- Filter overlay selection, toggle, select-all/none, confirm/cancel, and filter construction semantics
-- `SourceFilter` matching logic — empty filters, type-only, name-only, intersection
+**Strengths:**
+- `app_test.go` uses a real SQLite store (`t.TempDir`) for all storage paths — no storage mocking. Only `RefreshService` and `SummarizeService` are mocked. This means the DB interaction contract is integration-tested.
+- `TestApp_AutoRefreshIgnoresFilter` explicitly documents and tests the auto-vs-manual refresh divergence.
+- `dashboard_test.go` validates cursor-driven auto-scroll via `TestDashboard_ScrollFollowsCursor`, using ANSI-aware width measurement (`lipgloss.Width`) rather than naive `len()`.
+- `filter_test.go` covers AND semantics, nil-return behavior, and all `FilterLabel` branches.
 
-**Behavioral contracts revealed by tests:**
-- `TestApp_MultiSourceIntegration` creates real SQLite storage and verifies end-to-end with multiple source types — this is an integration test, not just mocked
-- Dashboard tests verify cursor clamping at bounds and state reset on data reload
-- Filter overlay tests confirm that all-selected produces an empty filter (the "no filter" optimization)
-
-**Conspicuously absent:**
-- No tests for `View()` output at specific terminal dimensions (width/height edge cases in scroll logic)
-- No tests for `addSourceCmd`'s duplicate-detection or telegram vs non-telegram branching — the async commands that hit storage are tested only through integration tests
-- No test for `scheduleAutoRefresh` timing behavior or the "skip refresh if already loading" path
+**Gaps:**
+- The stale `expanded` map behavior after filter changes is not explicitly tested — the risk is structural and would need a test that cycles the filter and checks card identity, not just position.
+- The dual-dispatch path for `filterOverlayConfirmMsg` (App intercepts + forwards to dashboard) is not directly tested as a path; tests confirm the end-state but not the routing.
+- Whitespace-only name acceptance in the add-source wizard has no test.

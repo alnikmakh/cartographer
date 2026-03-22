@@ -1,38 +1,45 @@
 {
   "path": "internal/tui/app.go",
-  "type": "source",
-  "summary": "Root Bubble Tea model implementing Init/Update/View with dual-view support (dashboard+channels), command handlers for refresh/summarize/add-source, and auto-refresh scheduling",
-  "exports": [
-    "App",
-    "AppOption",
-    "WithRefresh",
-    "WithSummarize",
-    "NewApp"
-  ],
-  "imports": [
-    "context",
-    "fmt",
-    "strings",
-    "time",
-    "github.com/charmbracelet/bubbles/key",
-    "github.com/charmbracelet/bubbles/spinner",
-    "github.com/charmbracelet/bubbletea",
-    "github.com/charmbracelet/lipgloss",
-    "tg-digest/internal/storage"
-  ],
-  "imported_by": [
-    "cmd/digest/main.go (boundary)"
-  ],
-  "side_effects": [
-    "Implements tea.Model interface",
-    "Initializes spinner with Dot style",
-    "Manages RefreshService and SummarizeService dependency injection",
-    "Auto-refresh scheduling via tea.Tick",
-    "Directly uses storage.Store (Channels and MessageSummaries)"
-  ],
-  "config_deps": [
-    "keys (keyMap from keys.go)",
-    "spinnerStyle, loadingStyle, errorStyle, activeTabStyle, inactiveTabStyle, helpDescStyle, statusBarStyle (from styles.go)"
-  ],
-  "notes": "Central Bubbletea model as described in hints. 18 functions total: constructor, Init/Update/View, handleKeyMsg, renderTabBar/renderStatusBar, 7 data-loading commands (loadSummaries, loadChannels, deleteChannel, refresh, summarize, refreshFiltered, summarizeFiltered, addSource, scheduleAutoRefresh). Routes messages to child models (dashboard, channels, help). Uses option pattern for dependency injection (WithRefresh, WithSummarize)."
+  "role": "orchestrator",
+  "summary": "Root Bubble Tea model that owns all sub-views and coordinates storage, refresh, and summarize operations",
+  "contracts": {
+    "requires": ["storage.Store (non-nil)", "optional RefreshService and SummarizeService via AppOption"],
+    "guarantees": ["Implements tea.Model; initial view is dashboard; error messages auto-clear after 5s"]
+  },
+  "effects": ["storage reads (channels, message summaries)", "storage writes (create/delete channel)", "RefreshService network calls", "SummarizeService AI calls"],
+  "state": "Mutable value type (App); holds loading flag, active view, error + error ID, last refresh timestamp, and references to all sub-models",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Sub-view commands are eagerly executed inline via result := cmd() and pattern-matched, rather than being returned to the Bubble Tea runtime for dispatch. This breaks normal BubbleTea message routing for loadSummariesMsg, deleteChannelMsg, and addSourceMsg produced by sub-views.",
+      "loc": "app.go:285-303"
+    },
+    {
+      "kind": "behavior",
+      "text": "Error auto-clear uses an incrementing errID to avoid stale clears: a tea.Tick fires after 5s carrying the ID at time of error; if a newer error arrived the ID will not match and the clear is ignored.",
+      "loc": "app.go:113-125"
+    },
+    {
+      "kind": "behavior",
+      "text": "Manual refresh (r key) uses refreshFilteredCmd which passes the current dashboard filter; auto-refresh tick always calls refreshCmd (unfiltered RefreshAll). These are intentionally different.",
+      "loc": "app.go:253-258, app.go:192-198"
+    },
+    {
+      "kind": "pattern",
+      "text": "Functional options (AppOption) pattern used for optional RefreshService and SummarizeService, keeping the constructor minimal for tests without those capabilities."
+    },
+    {
+      "kind": "coupling",
+      "text": "Directly accesses storage.Store in command closures (loadSummariesCmd, loadChannelsCmd, deleteChannelCmd, addSourceCmd); all DB calls happen in commands, not in Update, preserving the pure-function Elm architecture contract."
+    },
+    {
+      "kind": "risk",
+      "text": "dashboard.filter is read in refreshFilteredCmd/summarizeFilteredCmd but channels.channels is also read at command-execution time — both are stale snapshots captured when the key is pressed, not at command execution. Filter may drift if channels were loading concurrently."
+    },
+    {
+      "kind": "behavior",
+      "text": "filterOverlayConfirmMsg and filterOverlayCancelMsg are forwarded directly to dashboard.Update — App intercepts them at the top level but delegates handling to the sub-model.",
+      "loc": "app.go:208-214"
+    }
+  ]
 }

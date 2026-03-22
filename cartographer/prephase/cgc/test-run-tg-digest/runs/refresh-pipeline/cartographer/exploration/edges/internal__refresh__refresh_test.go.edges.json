@@ -1,42 +1,38 @@
 [
   {
+    "from": "internal/refresh/refresh_test.go",
     "to": "internal/refresh/refresh.go",
-    "relationship": "imports",
-    "usage": "tests Service, FetchedMessage, RefreshResult, Fetcher interface"
+    "semantic": "exercises Service, NewService, RefreshAll, RefreshAllSources, RefreshSources, and the Fetcher interface",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/storage",
-    "relationship": "imports",
-    "usage": "test setup — creates temporary store, seeds channels, calls storage.Open, Messages/Channels/SyncState collections"
+    "from": "internal/refresh/refresh_test.go",
+    "to": "[internal/storage]",
+    "semantic": "opens a real SQLite storage.Store for integration-style test fixtures and result verification",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source",
-    "relationship": "imports",
-    "usage": "mockSource interface implementation, source.NewRegistry for integration tests"
+    "from": "internal/refresh/refresh_test.go",
+    "to": "[internal/source]",
+    "semantic": "uses source.NewRegistry, source.SourceMessage, and the Source interface in source-based test cases",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source/rss",
-    "relationship": "imports",
-    "usage": "integration test — rss.NewRSSSource with httptest mock server"
+    "from": "internal/refresh/refresh_test.go",
+    "to": "[internal/source/rss]",
+    "semantic": "creates rss.NewRSSSource for RSS integration test",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source/reddit",
-    "relationship": "imports",
-    "usage": "integration test — reddit.NewRedditSource with httptest mock server"
+    "from": "internal/refresh/refresh_test.go",
+    "to": "[internal/source/reddit]",
+    "semantic": "creates reddit.NewRedditSource for Reddit integration test",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source/hackernews",
-    "relationship": "imports",
-    "usage": "integration test — hackernews.NewHNSource with httptest mock server"
-  },
-  {
-    "to": "github.com/stretchr/testify/assert",
-    "relationship": "imports",
-    "usage": "assertion library"
-  },
-  {
-    "to": "github.com/stretchr/testify/require",
-    "relationship": "imports",
-    "usage": "assertion library with require semantics"
+    "from": "internal/refresh/refresh_test.go",
+    "to": "[internal/source/hackernews]",
+    "semantic": "creates hackernews.NewHNSource for HackerNews integration test",
+    "coupling": "direct"
   }
 ]

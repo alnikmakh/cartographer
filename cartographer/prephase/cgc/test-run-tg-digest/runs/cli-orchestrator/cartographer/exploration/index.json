@@ -1,18 +1,1 @@
-{
-  "cmd/digest/main.go": {
-    "explored": true,
-    "one_line": "Application entry point and orchestrator: handles CLI flags, config loading, Telegram client setup, message fetching/storage, TUI launch, and LLM summarization"
-  },
-  "cmd/digest/main_test.go": {
-    "explored": true,
-    "one_line": "Unit tests for buildLLMClient function: validates OpenRouter, Ollama, empty provider, and error cases"
-  },
-  "internal/config/config.go": {
-    "explored": true,
-    "one_line": "Configuration data structures and loader: defines Config + 6 sub-config types, Load function, validation, path expansion, backward-compat migration"
-  },
-  "internal/config/config_test.go": {
-    "explored": true,
-    "one_line": "Comprehensive test suite for config.Load function: validates YAML parsing, defaults, validation rules, backward compatibility, and source types (RSS, Reddit, HackerNews)"
-  }
-}
+{}

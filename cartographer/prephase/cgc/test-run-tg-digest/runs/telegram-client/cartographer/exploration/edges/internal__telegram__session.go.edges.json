@@ -1,12 +1,15 @@
 [
   {
-    "to": "internal/telegram/client.go",
-    "relationship": "imported_by",
-    "usage": "client.go instantiates FileSessionStorage with session file path at line 39"
+    "from": "internal/telegram/session.go",
+    "to": "[github.com/gotd/td/session]",
+    "semantic": "implements session.Storage interface; returns session.ErrNotFound sentinel on missing file",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "github.com/gotd/td/session",
-    "relationship": "imports",
-    "usage": "implements session.SessionStorage interface and uses session.ErrNotFound"
+    "from": "internal/telegram/session.go",
+    "to": "[filesystem]",
+    "semantic": "persists session bytes to a JSON file at configured path",
+    "data_flow": "[]byte session data → JSON-encoded file (0600)",
+    "coupling": "direct"
   }
 ]

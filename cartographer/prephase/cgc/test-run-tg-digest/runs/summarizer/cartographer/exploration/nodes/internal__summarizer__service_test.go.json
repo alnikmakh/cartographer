@@ -1,11 +1,32 @@
 {
   "path": "internal/summarizer/service_test.go",
-  "type": "test",
-  "summary": "Test suite for Service with 13 test cases covering single-message and queue summarization",
-  "exports": [],
-  "imports": ["context", "fmt", "path/filepath", "strings", "testing", "time", "github.com/stretchr/testify/assert", "github.com/stretchr/testify/require", "tg-digest/internal/storage"],
-  "imported_by": [],
-  "side_effects": ["creates temporary SQLite test databases", "seeds test fixtures (channels, messages)", "runs service methods with mock clients"],
-  "config_deps": ["storage.Store (via setupTestStore)", "mockClient", "countingMockClient"],
-  "notes": "Comprehensive test coverage: TestService_SummarizeMessage_Success, _ShortMessageCopiedVerbatim, _ExactThreshold (150 chars), _APIError, _StoresResult, _ShortMessageStoresResult; TestService_SummarizeUnsummarized_ProcessesQueue, _SkipsAlreadySummarized, _OnlyTodayAndYesterday, _StopsOnAPIError, _NoMessages, _ShortMessagesCounted; TestService_SummarizeUnsummarizedForChannels_NilProcessesAll, _FiltersByChannel; TestService_LocalModelPromptPreamble. Uses helper functions setupTestStore, seedSingleMessage, seedMultipleMessages."
+  "role": "test",
+  "summary": "Integration-style tests for Service using a real SQLite store (via storage.Open) and mock LLM clients, covering the full summarization lifecycle including queue behavior, channel filtering, and local-model prompt preamble",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Uses storage.Open with a temp-dir SQLite DB — tests exercise real DB schema and query behavior, not mocks; this catches storage-layer regressions automatically",
+      "loc": "service_test.go:27-34"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestService_SummarizeUnsummarized_StopsOnAPIError verifies that 3 messages remain unsummarized in DB after 2nd API call fails — confirms queue-stop semantics are durable, not just in-memory",
+      "loc": "service_test.go:299-329"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestService_SummarizeUnsummarizedForChannels_FiltersByChannel seeds two channels and confirms the non-targeted channel's message remains in the unsummarized set — validates channel-scoped filtering at storage level",
+      "loc": "service_test.go:385-413"
+    },
+    {
+      "kind": "behavior",
+      "text": "TestService_LocalModelPromptPreamble inspects the captured ChatRequest.Messages[0].Content to verify localModelPreamble text is appended — tests the prompt augmentation path directly",
+      "loc": "service_test.go:416-429"
+    },
+    {
+      "kind": "pattern",
+      "text": "countingMockClient implements Client with a failAfter threshold, enabling deterministic partial-failure scenarios across multi-message queues",
+      "loc": "service_test.go:147-163"
+    }
+  ]
 }

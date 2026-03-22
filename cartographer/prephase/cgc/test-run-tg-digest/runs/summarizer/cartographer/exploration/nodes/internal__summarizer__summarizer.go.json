@@ -1,11 +1,17 @@
 {
   "path": "internal/summarizer/summarizer.go",
-  "type": "source",
-  "summary": "Type definitions and interfaces: MessageSummarizeResult, SummarizeQueueResult, Client interface, ChatRequest, ChatMessage",
-  "exports": ["MessageSummarizeResult", "SummarizeQueueResult", "Client", "ChatRequest", "ChatMessage"],
-  "imports": ["context"],
-  "imported_by": ["internal/summarizer/service.go", "internal/summarizer/service_test.go", "internal/summarizer/ollama.go", "internal/summarizer/ollama_test.go", "internal/summarizer/openrouter.go", "internal/summarizer/openrouter_test.go", "internal/summarizer/prompt.go", "internal/summarizer/prompt_test.go"],
-  "side_effects": [],
-  "config_deps": [],
-  "notes": "Matches hint: summarizer.go defines interfaces and types (ChatRequest, ChatMessage, MessageSummarizeResult, SummarizeQueueResult) — the contract. MessageSummarizeResult: returned by Service.SummarizeMessage with Summary text, Model name, Skipped flag. SummarizeQueueResult: returned by Service.SummarizeUnsummarized/ForChannels with counters (Total, Processed, Skipped, APIErrors) and LastError. Client interface: ChatCompletion(context, ChatRequest) → (string, error) — implemented by OllamaClient and OpenRouterClient. Pure type definitions, no logic or side effects."
+  "role": "model",
+  "summary": "Defines the LLM client interface and shared domain types for the summarizer package",
+  "observations": [
+    {
+      "kind": "pattern",
+      "text": "Client interface with single ChatCompletion method enables polymorphic use of OllamaClient and OpenRouterClient without import coupling",
+      "loc": "summarizer.go:22-24"
+    },
+    {
+      "kind": "behavior",
+      "text": "SummarizeQueueResult distinguishes Skipped (short messages copied verbatim) from APIErrors (failed calls) — callers can differentiate throughput vs. failure",
+      "loc": "summarizer.go:13-19"
+    }
+  ]
 }

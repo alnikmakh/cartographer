@@ -1,6 +1,15 @@
 [
-  {"to": "internal/source", "relationship": "imports", "usage": "source.Source interface, source.SourceMessage type definition"},
-  {"to": "internal/source/registry.go", "relationship": "design_pattern", "usage": "RedditSource is one of four Source implementations registered via Registry pattern"},
-  {"to": "net/http", "relationship": "external", "usage": "HTTP client for Reddit API calls to .json endpoint"},
-  {"to": "encoding/json", "relationship": "external", "usage": "JSON unmarshaling of Reddit listing structure"}
+  {
+    "from": "internal/source/reddit/reddit.go",
+    "to": "internal/source/source.go",
+    "semantic": "implements Source interface; produces []SourceMessage",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/source/reddit/reddit.go",
+    "to": "[Reddit JSON API]",
+    "semantic": "fetches subreddit post listings",
+    "data_flow": "GET /r/{sub}/{sort}.json?limit=N&raw_json=1 → redditListing JSON",
+    "coupling": "direct"
+  }
 ]

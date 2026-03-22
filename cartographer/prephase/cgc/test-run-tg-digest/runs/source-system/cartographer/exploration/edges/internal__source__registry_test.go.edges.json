@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "from": "internal/source/registry_test.go",
+    "to": "internal/source/registry.go",
+    "semantic": "tests Registry CRUD operations",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/source/registry_test.go",
+    "to": "internal/source/source.go",
+    "semantic": "implements Source interface via mockSource for test fixtures",
+    "coupling": "interface-mediated"
+  }
+]

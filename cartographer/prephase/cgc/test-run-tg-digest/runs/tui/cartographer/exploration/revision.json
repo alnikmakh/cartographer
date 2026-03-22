@@ -1,0 +1,22 @@
+{
+  "last_explored": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "last_synthesized": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "files_at_generation": [
+    "internal/tui/app.go",
+    "internal/tui/app_test.go",
+    "internal/tui/channels.go",
+    "internal/tui/channels_test.go",
+    "internal/tui/dashboard.go",
+    "internal/tui/dashboard_test.go",
+    "internal/tui/filter.go",
+    "internal/tui/filter_overlay.go",
+    "internal/tui/filter_overlay_test.go",
+    "internal/tui/filter_test.go",
+    "internal/tui/help.go",
+    "internal/tui/help_test.go",
+    "internal/tui/keys.go",
+    "internal/tui/styles.go",
+    "internal/tui/types.go"
+  ],
+  "cross_scope_revision": null
+}

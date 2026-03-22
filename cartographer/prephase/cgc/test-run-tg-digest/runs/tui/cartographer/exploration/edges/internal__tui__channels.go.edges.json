@@ -1,8 +1,26 @@
 [
-  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "ChannelItem (display-oriented channel), message types (channelsLoadedMsg, channelDeletedMsg, addSourceMsg), addStep type"},
-  {"to": "internal/tui/keys.go", "relationship": "imports", "usage": "keyMap bindings for navigation and actions (Up, Down, Delete, Add, Confirm, Cancel)"},
-  {"to": "internal/tui/styles.go", "relationship": "imports", "usage": "UI styles for title, help text, badges, selected/unselected items, message counts"},
-  {"to": "internal/tui/dashboard.go", "relationship": "imports", "usage": "sourceTypeBadge helper function (same package, no import needed)"},
-  {"to": "internal/tui/app.go", "relationship": "imported_by", "usage": "newChannelsModel instantiated in App constructor; channelsModel field in App struct"},
-  {"to": "internal/tui/channels_test.go", "relationship": "imported_by", "usage": "comprehensive test coverage for channelsModel"}
+  {
+    "from": "internal/tui/channels.go",
+    "to": "internal/tui/types.go",
+    "semantic": "receives channelsLoadedMsg, channelDeletedMsg; emits deleteChannelMsg, addSourceMsg; uses ChannelItem, addStep constants",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/channels.go",
+    "to": "internal/tui/styles.go",
+    "semantic": "uses titleStyle, helpDescStyle, selectedStyle, unselectedStyle, messageCountStyle, sourceTypeBadgeStyle, channelNameStyle, confirmStyle",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/channels.go",
+    "to": "internal/tui/keys.go",
+    "semantic": "matches Up, Down, Delete, Add, Confirm, Cancel key bindings",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/channels.go",
+    "to": "internal/tui/dashboard.go",
+    "semantic": "calls sourceTypeBadge helper defined in dashboard.go",
+    "coupling": "direct"
+  }
 ]

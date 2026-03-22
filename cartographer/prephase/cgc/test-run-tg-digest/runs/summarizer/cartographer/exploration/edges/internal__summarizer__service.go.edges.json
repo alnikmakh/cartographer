@@ -1,5 +1,22 @@
 [
-  {"to": "internal/summarizer/prompt.go", "relationship": "imports", "usage": "line 46: calls BuildSingleMessagePrompt to construct system/user prompts; line 51: uses localModelPreamble constant"},
-  {"to": "internal/summarizer/summarizer.go", "relationship": "imports", "usage": "uses Client interface, ChatRequest, ChatMessage, MessageSummarizeResult, SummarizeQueueResult types"},
-  {"to": "tg-digest/internal/storage", "relationship": "boundary", "usage": "GetUnsummarizedMessages, GetUnsummarizedMessagesByChannels, Channels.GetByID, MessageSummaries.Create"}
+  {
+    "from": "internal/summarizer/service.go",
+    "to": "internal/summarizer/summarizer.go",
+    "semantic": "uses Client interface for LLM calls; returns MessageSummarizeResult and SummarizeQueueResult",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/summarizer/service.go",
+    "to": "internal/summarizer/prompt.go",
+    "semantic": "calls BuildSingleMessagePrompt to construct system/user prompts; appends localModelPreamble when WithLocalModel is set",
+    "data_flow": "storage.Message + channelName + sourceType → system/user prompt strings",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/summarizer/service.go",
+    "to": "internal/storage",
+    "semantic": "reads unsummarized messages and channel metadata; writes MessageSummary records",
+    "data_flow": "MessageSummaries().GetUnsummarizedMessages/ByChannels → []Message; Channels().GetByID → Channel; MessageSummaries().Create ← MessageSummary",
+    "coupling": "direct"
+  }
 ]

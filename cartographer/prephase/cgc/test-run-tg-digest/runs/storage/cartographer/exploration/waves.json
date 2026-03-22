@@ -1,0 +1,21 @@
+{
+  "waves": [
+    {
+      "id": 1,
+      "files": [
+        "internal/storage/channels.go",
+        "internal/storage/message_summaries.go",
+        "internal/storage/messages.go",
+        "internal/storage/migrations.go",
+        "internal/storage/migrations/001_initial.sql",
+        "internal/storage/migrations/002_source_type.sql",
+        "internal/storage/migrations/003_nullable_telegram_id.sql",
+        "internal/storage/migrations/004_message_summaries.sql",
+        "internal/storage/storage.go",
+        "internal/storage/storage_test.go",
+        "internal/storage/syncstate.go"
+      ],
+      "rationale": "Default: all files in single wave (wave planning did not produce output)"
+    }
+  ]
+}

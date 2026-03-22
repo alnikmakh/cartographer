@@ -1,7 +1,23 @@
 [
   {
-    "to": "github.com/gotd/td/tg",
-    "relationship": "imports",
-    "usage": "boundary — provides tg.Client API methods (ContactsResolveUsername, MessagesGetHistory), tg.InputChannel, tg.InputPeerChannel, and message type classes (tg.Message, tg.MessageEmpty, tg.MessageService)"
+    "from": "internal/telegram/messages.go",
+    "to": "[github.com/gotd/td/tg]",
+    "semantic": "calls ContactsResolveUsername and MessagesGetHistory; pattern-matches on tg.Channel, tg.Message, tg.MessageEmpty, tg.MessageService response types",
+    "data_flow": "username / InputChannel → resolved channel / Message slice",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/telegram/messages.go",
+    "to": "[Telegram MTProto API]",
+    "semantic": "issues network requests for channel resolution and message history retrieval",
+    "data_flow": "API requests → raw message structs",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/telegram/messages.go",
+    "to": "[internal/source/*]",
+    "semantic": "Message type (ID, Text, Timestamp) is consumed by all source subsystems as the shared domain message contract",
+    "data_flow": "[]Message returned by FetchMessages → source pipeline",
+    "coupling": "interface-mediated"
   }
 ]

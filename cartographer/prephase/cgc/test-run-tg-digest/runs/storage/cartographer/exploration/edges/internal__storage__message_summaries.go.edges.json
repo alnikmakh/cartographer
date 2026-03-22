@@ -1,22 +1,22 @@
 [
   {
+    "from": "internal/storage/message_summaries.go",
     "to": "internal/storage/storage.go",
-    "relationship": "implements",
-    "usage": "Implements MessageSummaryRepository interface, uses MessageSummary and Message types, messageSummaryRepo instantiated in Open()"
+    "semantic": "implements MessageSummaryRepository interface; uses MessageSummary and Message models from storage.go",
+    "coupling": "interface-mediated"
   },
   {
-    "to": "internal/storage/messages.go",
-    "relationship": "couples_with",
-    "usage": "Returns Message objects from GetUnsummarizedMessages methods; JOINs with messages table to find unsummarized messages"
+    "from": "internal/storage/message_summaries.go",
+    "to": "[SQLite message_summaries table]",
+    "semantic": "reads and writes per-message summary rows with upsert",
+    "data_flow": "MessageSummary struct ↔ SQL rows",
+    "coupling": "direct"
   },
   {
-    "to": "database/sql",
-    "relationship": "imports",
-    "usage": "Database operations (QueryRowContext, QueryContext, ExecContext)"
-  },
-  {
-    "to": "strings",
-    "relationship": "imports",
-    "usage": "string.Join for dynamic SQL query construction in GetUnsummarizedMessagesByChannels"
+    "from": "internal/storage/message_summaries.go",
+    "to": "[SQLite messages table]",
+    "semantic": "JOINs messages to filter summaries by channel/date and to find unsummarized messages",
+    "data_flow": "channel_id, sent_at range → filtered Message rows",
+    "coupling": "direct"
   }
 ]

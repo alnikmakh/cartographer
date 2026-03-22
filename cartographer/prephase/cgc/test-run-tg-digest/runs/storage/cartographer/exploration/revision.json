@@ -1,0 +1,18 @@
+{
+  "last_explored": "5190dbb2db86d9ebe40e30fde2500528d202de04",
+  "last_synthesized": null,
+  "files_at_generation": [
+    "internal/storage/channels.go",
+    "internal/storage/message_summaries.go",
+    "internal/storage/messages.go",
+    "internal/storage/migrations.go",
+    "internal/storage/migrations/001_initial.sql",
+    "internal/storage/migrations/002_source_type.sql",
+    "internal/storage/migrations/003_nullable_telegram_id.sql",
+    "internal/storage/migrations/004_message_summaries.sql",
+    "internal/storage/storage.go",
+    "internal/storage/storage_test.go",
+    "internal/storage/syncstate.go"
+  ],
+  "cross_scope_revision": null
+}

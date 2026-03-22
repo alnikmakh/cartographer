@@ -1,22 +1,14 @@
 [
   {
+    "from": "internal/source/rss/rss_test.go",
     "to": "internal/source/rss/rss.go",
-    "relationship": "tests",
-    "usage": "comprehensive test coverage of RSSSource implementation"
+    "semantic": "tests RSSSource behaviour via httptest mock server",
+    "coupling": "direct"
   },
   {
+    "from": "internal/source/rss/rss_test.go",
     "to": "internal/source/source.go",
-    "relationship": "imports",
-    "usage": "uses Source interface and SourceMessage type"
-  },
-  {
-    "to": "github.com/stretchr/testify/assert",
-    "relationship": "imports",
-    "usage": "external - assertion library for test conditions"
-  },
-  {
-    "to": "github.com/stretchr/testify/require",
-    "relationship": "imports",
-    "usage": "external - assertion library with test termination on failure"
+    "semantic": "compile-time interface assertion for RSSSource",
+    "coupling": "interface-mediated"
   }
 ]

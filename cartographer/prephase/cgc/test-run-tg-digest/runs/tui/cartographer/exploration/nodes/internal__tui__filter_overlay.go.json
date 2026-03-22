@@ -1,11 +1,33 @@
 {
   "path": "internal/tui/filter_overlay.go",
-  "type": "source",
-  "summary": "Bubble Tea model for interactive source filter picker overlay with checkbox list, cursor navigation, and state management",
-  "exports": ["filterOverlayModel", "filterOverlayConfirmMsg", "filterOverlayCancelMsg", "newFilterOverlayModel", "Update", "View", "buildFilter"],
-  "imports": ["fmt", "strings", "github.com/charmbracelet/bubbles/key", "github.com/charmbracelet/bubbletea", "github.com/charmbracelet/lipgloss"],
-  "imported_by": ["internal/tui/app.go", "internal/tui/dashboard.go", "internal/tui/filter_overlay_test.go"],
-  "side_effects": ["renders terminal UI with borders and styled text"],
-  "config_deps": ["keys.Down", "keys.Up", "keys.FilterPicker", "styles: titleStyle, helpDescStyle, selectedCardStyle, sourceTypeBadgeStyle, primaryColor"],
-  "notes": "Part of filtering subsystem (hint). filterOverlayModel is a Bubble Tea sub-model with sources list, selected map, and cursor position. Sends filterOverlayConfirmMsg (with constructed SourceFilter) on enter or filterOverlayCancelMsg on esc. buildFilter() converts selection to SourceFilter (all selected → empty filter meaning match-all)."
+  "role": "presenter",
+  "summary": "Modal checkbox overlay for per-source filter selection; emits filterOverlayConfirmMsg or filterOverlayCancelMsg on completion",
+  "state": "filterOverlayModel value type; holds sources list, selected map (index → bool), cursor, confirmed/cancelled flags",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "When all sources are selected on confirm, buildFilter returns an empty SourceFilter (match-all) rather than a Names filter containing all names — this preserves the invariant that empty filter = no filtering.",
+      "loc": "filter_overlay.go:98-117"
+    },
+    {
+      "kind": "behavior",
+      "text": "Initial state: if current filter is empty, all sources start selected; if filter has Names set, only matching sources start selected. Type-only filters are treated as empty for initialization purposes (all selected), which means applying a type filter then opening the overlay shows all items checked.",
+      "loc": "filter_overlay.go:34-43"
+    },
+    {
+      "kind": "risk",
+      "text": "boxStyle is constructed on every View() call rather than cached — allocates a new lipgloss.Style on each render. Minor performance concern for high-frequency redraws.",
+      "loc": "filter_overlay.go:157-168"
+    },
+    {
+      "kind": "pattern",
+      "text": "Key matching uses direct msg.String() comparisons for space, 'a', 'n', 'enter', 'esc' rather than the global keys singleton — these are overlay-specific bindings not represented in keyMap.",
+      "loc": "filter_overlay.go:62-91"
+    },
+    {
+      "kind": "behavior",
+      "text": "confirmed and cancelled fields on filterOverlayModel are set but never read back by the parent (dashboard reads them via the emitted message, not via the model field) — they are purely for test observability.",
+      "loc": "filter_overlay.go:27-28"
+    }
+  ]
 }

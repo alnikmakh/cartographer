@@ -1,37 +1,55 @@
 {
   "path": "internal/refresh/refresh.go",
-  "type": "source",
-  "summary": "Core refresh orchestrator with Service struct managing fetch→store pipeline",
-  "exports": [
-    "FetchedMessage",
-    "RefreshResult",
-    "Fetcher",
-    "Service",
-    "NewService",
-    "RefreshAll",
-    "RefreshFiltered",
-    "RefreshSources",
-    "RefreshAllSources"
+  "role": "orchestrator",
+  "summary": "Fetch-store pipeline for all source types: owns the Fetcher interface, Service struct, and two parallel refresh paths (Telegram/generic Source)",
+  "contracts": {
+    "requires": [
+      "storage.Store is open and healthy",
+      "Fetcher implementation provided for RefreshAll/RefreshFiltered",
+      "source.Registry populated for RefreshAllSources/RefreshSources",
+      "Channels pre-seeded in DB before refresh runs"
+    ],
+    "guarantees": [
+      "Returns RefreshResult with per-channel error list — never propagates a single-channel failure as a top-level error",
+      "Sync state checkpoint is updated only when at least one message was fetched",
+      "Duplicate messages silently skipped (relies on DB UNIQUE constraint)"
+    ]
+  },
+  "effects": [
+    "storage.Channels read (List, GetByUsername)",
+    "storage.SyncState read and upsert",
+    "storage.Messages create"
   ],
-  "imports": [
-    "context",
-    "fmt",
-    "hash/crc32",
-    "strconv",
-    "time",
-    "tg-digest/internal/source",
-    "tg-digest/internal/storage"
-  ],
-  "imported_by": [
-    "tg-digest/cmd/digest/main.go",
-    "tg-digest/internal/tui/types.go",
-    "tg-digest/internal/tui/app_test.go"
-  ],
-  "side_effects": [
-    "calls storage.Store methods to fetch channels and messages",
-    "calls Fetcher interface to fetch messages from sources",
-    "updates sync state checkpoints for incremental sync"
-  ],
-  "config_deps": [],
-  "notes": "Central orchestrator matching hints. Service struct with 4 refresh methods. Implements two fetch strategies: (1) Direct Telegram via Fetcher interface with afterMsgID-based incremental sync, (2) Generic Source interface with checkpoint-based sync (RFC/RSS/HackerNews). Both strategies: fetch→dedup via UNIQUE constraint→store→update checkpoint. FetchedMessage and RefreshResult are key value types. Heavy storage coupling (Channels, Messages, SyncState collections)."
+  "state": "Stateless after construction; Service holds immutable fetcher, store reference, and limit",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "RefreshAll computes maxID by scanning the full returned slice, not relying on sorted order — correct but O(n) per channel",
+      "loc": "refresh.go:98-103"
+    },
+    {
+      "kind": "risk",
+      "text": "RefreshFiltered ignores its sourceNames argument entirely and delegates to RefreshAll — callers expecting selective refresh get a full refresh silently",
+      "loc": "refresh.go:121-123"
+    },
+    {
+      "kind": "behavior",
+      "text": "RefreshSources falls back from numeric ExternalID parse failure to crc32.ChecksumIEEE — non-integer IDs (RSS GUIDs, Reddit post IDs) are hashed into the TelegramMsgID field, risking collision",
+      "loc": "refresh.go:153-155"
+    },
+    {
+      "kind": "pattern",
+      "text": "Two parallel refresh paths exist: Fetcher-based (Telegram MTProto, integer message IDs) and Source-based (generic interface, opaque string checkpoints). RefreshAllSources delegates to RefreshSources which calls src.FetchMessages rather than the Fetcher.",
+      "loc": "refresh.go:126-190"
+    },
+    {
+      "kind": "invariant",
+      "text": "Deduplication is entirely delegated to the DB UNIQUE constraint on Messages; if Create returns an error it is silently skipped regardless of cause — storage errors during message write are indistinguishable from duplicates",
+      "loc": "refresh.go:88-91"
+    },
+    {
+      "kind": "coupling",
+      "text": "scope.json hint confirmed: storage called ~8 times per channel in RefreshAll (List, SyncState.Get, Messages.Create×N, SyncState.Upsert) — storage is the dominant dependency"
+    }
+  ]
 }

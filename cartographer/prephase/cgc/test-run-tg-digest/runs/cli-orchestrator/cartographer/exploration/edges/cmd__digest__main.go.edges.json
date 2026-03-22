@@ -1,67 +1,65 @@
 [
   {
-    "to": "tg-digest/internal/config",
-    "relationship": "imports",
-    "usage": "Load config via config.Load(); uses all config types (Telegram, Storage, OpenRouter, LLM, Refresh, Sources)"
+    "from": "cmd/digest/main.go",
+    "to": "internal/config/config.go",
+    "semantic": "loads application config at startup",
+    "data_flow": "YAML file path → *Config struct",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/telegram",
-    "relationship": "imports",
-    "usage": "boundary — NewClient, NewTerminalAuth, ResolveChannel, FetchMessages, Message type"
+    "from": "cmd/digest/main.go",
+    "to": "[internal/storage]",
+    "semantic": "opens SQLite store; reads/writes channels, messages, sync state via Store interface",
+    "data_flow": "db path → Store; Channel/Message/SyncState structs in both directions",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/storage",
-    "relationship": "imports",
-    "usage": "boundary — storage.Open(), Channels/Messages/SyncState DAOs, Store interface"
+    "from": "cmd/digest/main.go",
+    "to": "[internal/telegram]",
+    "semantic": "creates client, authenticates, resolves channels, fetches messages",
+    "data_flow": "API credentials → connected client; channel username → *tg.InputChannel; → []Message",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/refresh",
-    "relationship": "imports",
-    "usage": "boundary — NewTelegramFetcher, NewService, RefreshService interface, RefreshResult"
+    "from": "cmd/digest/main.go",
+    "to": "[internal/refresh]",
+    "semantic": "creates TelegramFetcher and Service; delegates all-source and filtered refresh in TUI mode",
+    "data_flow": "source list → *RefreshResult",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source",
-    "relationship": "imports",
-    "usage": "boundary — Registry type and interface, Source.Name() method"
+    "from": "cmd/digest/main.go",
+    "to": "[internal/source]",
+    "semantic": "creates source Registry; iterates cfg.Sources to register telegram/rss/reddit/hackernews sources",
+    "data_flow": "SourceConfig entries → source.Source instances in Registry",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source/telegram",
-    "relationship": "imports",
-    "usage": "boundary — NewTelegramSource for source registry"
+    "from": "cmd/digest/main.go",
+    "to": "[internal/summarizer]",
+    "semantic": "creates LLM client (Ollama or OpenRouter) and summarizer.Service; calls SummarizeUnsummarized or SummarizeUnsummarizedForChannels",
+    "data_flow": "LLMConfig → Client; unsummarized messages → *SummarizeQueueResult",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source/rss",
-    "relationship": "imports",
-    "usage": "boundary — NewRSSSource for source registry"
+    "from": "cmd/digest/main.go",
+    "to": "[internal/tui]",
+    "semantic": "creates tui.App with store and options; runs bubbletea program; implements tui.RefreshService and tui.SummarizeService interfaces",
+    "data_flow": "store + opts → tui.App; refresh/summarize callbacks from TUI into main.go adapters",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source/reddit",
-    "relationship": "imports",
-    "usage": "boundary — NewRedditSource for source registry"
+    "from": "cmd/digest/main.go",
+    "to": "[github.com/charmbracelet/bubbletea]",
+    "semantic": "runs the TUI event loop via tea.NewProgram and p.Run",
+    "data_flow": "tui.App model → terminal rendering",
+    "coupling": "direct"
   },
   {
-    "to": "tg-digest/internal/source/hackernews",
-    "relationship": "imports",
-    "usage": "boundary — NewHNSource for source registry"
-  },
-  {
-    "to": "tg-digest/internal/summarizer",
-    "relationship": "imports",
-    "usage": "boundary — NewService, NewOllamaClient, NewOpenRouterClient, Client interface, SummarizeQueueResult"
-  },
-  {
-    "to": "tg-digest/internal/tui",
-    "relationship": "imports",
-    "usage": "boundary — NewApp, RefreshService interface, SummarizeService interface, AppOption, WithRefresh, WithSummarize"
-  },
-  {
-    "to": "github.com/charmbracelet/bubbletea",
-    "relationship": "imports",
-    "usage": "external — tea.NewProgram, tea.WithAltScreen for TUI rendering"
-  },
-  {
-    "to": "github.com/gotd/td/tg",
-    "relationship": "imports",
-    "usage": "external — tg.InputChannel type from Telegram client library"
+    "from": "cmd/digest/main.go",
+    "to": "[github.com/gotd/td/tg]",
+    "semantic": "uses tg.InputChannel as channel handle type from Telegram API",
+    "data_flow": "tg.InputChannel passed to storeChannel",
+    "coupling": "direct"
   }
 ]

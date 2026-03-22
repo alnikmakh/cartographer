@@ -1,26 +1,31 @@
 {
   "path": "internal/storage/messages.go",
-  "type": "source",
-  "summary": "Message repository implementation for storing and retrieving Telegram messages",
-  "exports": [
-    "Create",
-    "GetByChannelAndDate",
-    "GetLatestByChannel",
-    "GetDistinctDates",
-    "CountByChannel"
-  ],
-  "imports": [
-    "context",
-    "database/sql",
-    "fmt",
-    "time"
-  ],
-  "imported_by": [
-    "internal/storage/storage.go"
-  ],
-  "side_effects": [
-    "Database operations (INSERT with deduplication, SELECT queries)"
-  ],
-  "config_deps": [],
-  "notes": "Implements MessageRepository interface. Create() uses ON CONFLICT(channel_id, telegram_msg_id) DO NOTHING for automatic deduplication of duplicate messages. GetDistinctDates uses SUBSTR to extract date portion from sent_at timestamp (works around potential SQLite DATE() parsing issues with Go time format). All retrieval methods support time-based filtering."
+  "role": "repository",
+  "summary": "Implements MessageRepository with insert-or-ignore deduplication and date-range/recency queries over the messages table",
+  "contracts": {
+    "requires": ["messages table exists (migration 001)", "channel_id references an existing channel"],
+    "guarantees": [
+      "Create is idempotent: duplicate (channel_id, telegram_msg_id) is silently dropped, no error returned",
+      "Create mutates message.ID and message.FetchedAt in-place via RETURNING when the row is new",
+      "GetDistinctDates silently skips rows whose date string cannot be parsed"
+    ]
+  },
+  "effects": ["SQLite reads and writes on messages table"],
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Create uses ON CONFLICT DO NOTHING + RETURNING. When a duplicate exists, RETURNING returns no row → sql.ErrNoRows is swallowed. The caller's message.ID stays zero — callers must not rely on ID being populated for duplicates.",
+      "loc": "messages.go:17-41"
+    },
+    {
+      "kind": "behavior",
+      "text": "GetDistinctDates extracts dates via SUBSTR(sent_at, 1, 10) rather than SQLite DATE() because Go's time driver stores timestamps as full RFC3339 strings; DATE() may not parse them correctly.",
+      "loc": "messages.go:111-114"
+    },
+    {
+      "kind": "risk",
+      "text": "GetDistinctDates silently continues on parse errors (time.Parse failure → continue). A corrupted timestamp value in the DB produces a missing date in the result, not an error.",
+      "loc": "messages.go:129-131"
+    }
+  ]
 }

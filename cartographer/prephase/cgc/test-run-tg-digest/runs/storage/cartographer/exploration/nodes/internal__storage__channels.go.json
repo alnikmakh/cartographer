@@ -1,28 +1,35 @@
 {
   "path": "internal/storage/channels.go",
-  "type": "source",
-  "summary": "Channel repository implementation for CRUD operations on channels",
-  "exports": [
-    "Create",
-    "CreateNonTelegram",
-    "GetByID",
-    "GetByTelegramID",
-    "GetByUsername",
-    "List",
-    "Delete",
-    "scanChannel"
-  ],
-  "imports": [
-    "context",
-    "database/sql",
-    "fmt"
-  ],
-  "imported_by": [
-    "internal/storage/storage.go"
-  ],
-  "side_effects": [
-    "Database operations (INSERT, SELECT, DELETE on channels table)"
-  ],
-  "config_deps": [],
-  "notes": "Implements ChannelRepository interface. The channelRepo struct is instantiated in storage.go's Open() function. Uses sql.NullInt64 to handle nullable telegram_id column. scanChannel is a helper for reading rows. All methods support context for cancellation."
+  "role": "repository",
+  "summary": "Implements ChannelRepository with full CRUD over the channels SQLite table, handling nullable telegram_id",
+  "contracts": {
+    "requires": ["channels table exists (migration 001/003)", "caller provides valid *sql.DB"],
+    "guarantees": [
+      "GetByID/GetByTelegramID/GetByUsername return (nil, nil) when row not found — not an error",
+      "Create mutates channel.ID and channel.AddedAt in-place via RETURNING",
+      "Delete returns a non-nil error if the row did not exist (rowsAffected==0)"
+    ]
+  },
+  "effects": ["SQLite reads and writes on channels table"],
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Create defaults SourceType to 'telegram' when blank; CreateNonTelegram defaults to 'rss'. Both are side-effects on the caller's struct.",
+      "loc": "channels.go:36-38, 62-64"
+    },
+    {
+      "kind": "behavior",
+      "text": "scanChannel uses sql.NullInt64 for telegram_id — the only field in Channel that may be NULL in the DB. A zero TelegramID in-memory is indistinguishable from an unset one unless callers check SourceType.",
+      "loc": "channels.go:14-32"
+    },
+    {
+      "kind": "pattern",
+      "text": "All SELECT queries use the same scanChannel helper, centralising the nullable field handling.",
+      "loc": "channels.go:14"
+    },
+    {
+      "kind": "coupling",
+      "text": "Second-highest fan-in file within the storage package — called by refresh, source, tui, and the CLI orchestrator via the Store interface."
+    }
+  ]
 }

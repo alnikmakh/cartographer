@@ -1,19 +1,19 @@
 {
   "path": "internal/storage/migrations/001_initial.sql",
-  "type": "sql_migration",
-  "summary": "Initial database schema: channels, messages, summaries, sync_state tables with indexes",
-  "tables_created": ["migrations", "channels", "messages", "summaries", "sync_state"],
-  "indexes_created": ["idx_messages_channel_date", "idx_messages_fetched"],
-  "foreign_keys": [
-    "messages.channel_id -> channels.id (CASCADE)",
-    "summaries.channel_id -> channels.id (CASCADE)",
-    "sync_state.channel_id -> channels.id (CASCADE)"
-  ],
-  "schema": {
-    "channels": ["id INTEGER PRIMARY KEY", "telegram_id INTEGER UNIQUE", "title TEXT", "username TEXT", "added_at TIMESTAMP"],
-    "messages": ["id INTEGER PRIMARY KEY", "channel_id INTEGER", "telegram_msg_id INTEGER", "text TEXT", "sent_at TIMESTAMP", "fetched_at TIMESTAMP", "UNIQUE(channel_id, telegram_msg_id)"],
-    "summaries": ["id INTEGER PRIMARY KEY", "channel_id INTEGER", "date DATE", "summary TEXT", "message_count INTEGER", "created_at TIMESTAMP", "UNIQUE(channel_id, date)"],
-    "sync_state": ["channel_id INTEGER PRIMARY KEY", "last_msg_id INTEGER", "last_sync_at TIMESTAMP"]
-  },
-  "notes": "Foundation migration. Establishes all core tables with cascade deletes for channels. Includes performance indexes on messages for common query patterns (channel + date filtering, fetched timestamp)."
+  "role": "migration",
+  "summary": "Creates initial schema: channels, messages, summaries (daily), and sync_state tables with indexes",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Creates a migrations table inside the migration itself (CREATE TABLE IF NOT EXISTS migrations). This is redundant with migrations.go's createMigrationsTable, but harmless — IF NOT EXISTS makes it a no-op on subsequent runs."
+    },
+    {
+      "kind": "invariant",
+      "text": "Original sync_state used INTEGER last_msg_id; migration 002 replaces this with TEXT checkpoint. The summaries (daily) table created here is dropped by migration 004 and replaced with per-message summaries."
+    },
+    {
+      "kind": "behavior",
+      "text": "telegram_id on channels is UNIQUE NOT NULL in this initial schema — migration 003 loosens this to nullable with a partial unique index to support non-Telegram sources."
+    }
+  ]
 }

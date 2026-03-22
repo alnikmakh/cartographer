@@ -1,5 +1,32 @@
 [
-  {"to": "internal/storage/storage.go", "relationship": "imports", "usage": "Store, Channel, Message, MessageSummary, SyncState types"},
-  {"to": "github.com/stretchr/testify/assert", "relationship": "imports", "usage": "test assertions"},
-  {"to": "github.com/stretchr/testify/require", "relationship": "imports", "usage": "test assertions and error checks"}
+  {
+    "from": "internal/storage/storage_test.go",
+    "to": "internal/storage/storage.go",
+    "semantic": "exercises Store interface, Open factory, and all domain models via integration tests",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/storage/storage_test.go",
+    "to": "internal/storage/channels.go",
+    "semantic": "tests ChannelRepository.Create, GetByID, and source_type defaulting behavior",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/storage/storage_test.go",
+    "to": "internal/storage/messages.go",
+    "semantic": "tests MessageRepository.Create via seedChannelAndMessages helper",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/storage/storage_test.go",
+    "to": "internal/storage/message_summaries.go",
+    "semantic": "tests all MessageSummaryRepository methods including upsert and channel-filtered unsummarized queries",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/storage/storage_test.go",
+    "to": "internal/storage/syncstate.go",
+    "semantic": "tests SyncStateRepository.Upsert and Get with string checkpoint",
+    "coupling": "interface-mediated"
+  }
 ]

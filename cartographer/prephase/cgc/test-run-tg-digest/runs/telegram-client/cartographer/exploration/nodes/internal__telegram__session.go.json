@@ -1,11 +1,25 @@
 {
   "path": "internal/telegram/session.go",
-  "type": "source",
-  "summary": "File-based session storage implementing github.com/gotd/td/session interface for Telegram session persistence",
-  "exports": ["FileSessionStorage", "LoadSession", "StoreSession"],
-  "imports": ["context", "encoding/json", "os", "github.com/gotd/td/session"],
-  "imported_by": ["internal/telegram/client.go"],
-  "side_effects": ["file I/O operations (os.ReadFile, os.WriteFile)"],
-  "config_deps": ["FileSessionStorage.Path (file path to session storage)"],
-  "notes": "Implements session.SessionStorage interface from gotd library. Serializes/deserializes session bytes to JSON file. Key coupling: client.go instantiates FileSessionStorage with session file path. Error handling: maps os.IsNotExist to session.ErrNotFound for proper session initialization flow."
+  "role": "adapter",
+  "summary": "File-backed session storage implementing gotd's session.Storage interface, persisting session bytes as JSON-encoded data with 0600 permissions",
+  "contracts": {
+    "requires": ["Parent directory of Path must exist before StoreSession is called (created by client.go:Run)"],
+    "guarantees": ["Returns session.ErrNotFound (gotd sentinel) when file is absent — not a generic os error", "Stored file is owner-readable only (0600)"]
+  },
+  "effects": ["Reads from and writes to filesystem at configured path"],
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Session bytes are JSON-marshaled on store and unmarshaled on load — the byte slice becomes a base64 JSON string on disk. This is a deliberate single-level encoding, not a double-encode bug.",
+      "loc": "session.go:27-29, 37-39"
+    },
+    {
+      "kind": "coupling",
+      "text": "Returns session.ErrNotFound specifically (not io.EOF or os.ErrNotExist) — gotd's client.Run() relies on this sentinel to distinguish 'no session yet' from a real I/O error"
+    },
+    {
+      "kind": "risk",
+      "text": "No file locking; concurrent processes sharing the same session path can produce a torn write or read a partially written session"
+    }
+  ]
 }

@@ -1,0 +1,16 @@
+{
+  "last_explored": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "last_synthesized": "021c5ea7ea3006a42583a466d2ca736daa09d91f",
+  "files_at_generation": [
+    "internal/summarizer/ollama.go",
+    "internal/summarizer/ollama_test.go",
+    "internal/summarizer/openrouter.go",
+    "internal/summarizer/openrouter_test.go",
+    "internal/summarizer/prompt.go",
+    "internal/summarizer/prompt_test.go",
+    "internal/summarizer/service.go",
+    "internal/summarizer/service_test.go",
+    "internal/summarizer/summarizer.go"
+  ],
+  "cross_scope_revision": null
+}

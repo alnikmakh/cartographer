@@ -1,15 +1,20 @@
 {
   "path": "internal/storage/migrations/004_message_summaries.sql",
-  "type": "schema_migration",
-  "summary": "Schema migration: creates per-message summaries table and drops legacy daily summaries",
-  "exports": [],
-  "imports": [],
-  "imported_by": ["internal/storage/migrations.go"],
-  "side_effects": [
-    "Creates message_summaries table with foreign key to messages",
-    "Adds index idx_message_summaries_message_id",
-    "Drops legacy summaries table"
-  ],
-  "config_deps": [],
-  "notes": "Migration 004 restructures the summaries model from daily aggregates to per-message summaries. Enables finer-grained summary storage and CASCADE deletion when messages are removed. The UNIQUE constraint on message_id ensures one summary per message."
+  "role": "migration",
+  "summary": "Replaces the daily summaries table with per-message message_summaries table keyed on message_id",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Drops the summaries table (daily grain, channel+date keyed) and creates message_summaries (message grain, message_id keyed). This is a destructive migration — any existing daily summaries are lost.",
+      "loc": "004_message_summaries.sql:14"
+    },
+    {
+      "kind": "invariant",
+      "text": "message_id has UNIQUE constraint, enforcing one summary per message. The repository layer (message_summaries.go) uses ON CONFLICT DO UPDATE to treat Create as upsert."
+    },
+    {
+      "kind": "behavior",
+      "text": "Stores model name alongside summary text, enabling multi-model summarization tracking and future model-version comparisons."
+    }
+  ]
 }

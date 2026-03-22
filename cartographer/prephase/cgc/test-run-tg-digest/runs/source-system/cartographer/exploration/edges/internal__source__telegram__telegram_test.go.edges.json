@@ -1,12 +1,14 @@
 [
   {
+    "from": "internal/source/telegram/telegram_test.go",
     "to": "internal/source/telegram/telegram.go",
-    "relationship": "tests",
-    "usage": "tests TelegramSource type and NewTelegramSource constructor"
+    "semantic": "tests TelegramSource checkpoint parsing and message conversion via mockFetcher",
+    "coupling": "direct"
   },
   {
-    "to": "internal/refresh",
-    "relationship": "imports",
-    "usage": "boundary — FetchedMessage type for mock data"
+    "from": "internal/source/telegram/telegram_test.go",
+    "to": "[internal/refresh]",
+    "semantic": "implements refresh.Fetcher interface via mockFetcher for test isolation",
+    "coupling": "interface-mediated"
   }
 ]

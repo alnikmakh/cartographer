@@ -1,11 +1,22 @@
 {
   "path": "internal/tui/help.go",
-  "type": "source",
-  "summary": "Bubble Tea model for help overlay view with keyboard shortcuts organized in three sections (Navigation, Dashboard, Sources)",
-  "exports": ["helpModel"],
-  "imports": ["strings", "github.com/charmbracelet/bubbles/key", "github.com/charmbracelet/bubbletea"],
-  "imported_by": ["internal/tui/app.go"],
-  "side_effects": [],
-  "config_deps": ["keys", "titleStyle", "helpKeyStyle", "helpDescStyle"],
-  "notes": "Implements tea.Model interface; helpModel is embedded in App struct. Update() handles Escape/Help key to close overlay (emits switchViewMsg). View() renders sections with key bindings from keys.go; uses three style variables from styles.go"
+  "role": "presenter",
+  "summary": "Help overlay model: renders all keyboard shortcuts in categorized sections and emits switchViewMsg{view:-1} to dismiss itself",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Both '?' and 'esc' close the help overlay — they both match keys.Help and keys.Cancel respectively, emitting switchViewMsg{view: -1} which app.go catches to set showHelp=false.",
+      "loc": "help.go:23-27"
+    },
+    {
+      "kind": "pattern",
+      "text": "Help content is hardcoded inline in View() using sections struct literal — it pulls key/desc strings from the global keys singleton via Help() method, so it stays in sync with actual bindings automatically.",
+      "loc": "help.go:38-75"
+    },
+    {
+      "kind": "behavior",
+      "text": "helpModel has width and height fields but View() does not use them for layout — the help content renders at natural size regardless of terminal dimensions.",
+      "loc": "help.go:10-13"
+    }
+  ]
 }

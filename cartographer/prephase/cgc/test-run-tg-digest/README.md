@@ -1,8 +1,7 @@
 # CGC Pre-Phase Test Run: tg-digest
 
-End-to-end test of the full cartographer pipeline — CGC prephase → parallel
-exploration → source-verified synthesis — against the tg-digest Go application
-(53 files, 7 internal packages + cmd).
+End-to-end test of the full cartographer v2 pipeline against the tg-digest
+Go application (57 files, 7 internal packages + cmd).
 
 ## Target
 
@@ -14,86 +13,70 @@ summarizer, tui (Bubble Tea), and cmd/digest entrypoint.
 
 ```bash
 pip install codegraphcontext kuzu
-```
-
-CGC must have the repo indexed:
-
-```bash
 cgc index /home/dev/project/tg-digest
 cgc list   # should show tg-digest
 ```
 
 ## How to Run
 
-### Step 1: Pre-phase (produces scopes)
+### v2 Pipeline (recommended)
 
 ```bash
-./cartographer/prephase/cgc/test-run-tg-digest/run.sh
+# Full pipeline: prephase → wave exploration → synthesis → cross-scope
+./run-all-v2.sh
+
+# Skip prephase (reuse existing scopes)
+./run-all-v2.sh --skip-prephase
+
+# Only exploration (no synthesis)
+./run-all-v2.sh --explore-only
+
+# Only synthesis (reuse existing nodes)
+./run-all-v2.sh --synthesize-only
+
+# Incremental (re-explore changed files only)
+./run-all-v2.sh --incremental
 ```
 
-This runs `cgc/AUTO_PROMPT.md` with MCP access to the CGC graph. The agent
-queries the dependency graph, identifies slices, and writes:
-- `slices.json` — all slices with metadata
-- `scopes/<slug>/scope.json` — one scope file per slice
+Override models:
+```bash
+EXPLORE_MODEL=sonnet ./run-all-v2.sh        # default
+SYNTH_MODEL=sonnet ./run-all-v2.sh          # default
+CROSS_MODEL=opus ./run-all-v2.sh            # default
+PROVIDER=cursor ./run-all-v2.sh             # use Cursor CLI
+```
 
-The prephase runs on the default model (Opus). It needs MCP tool access to
-query the graph interactively.
+### What the v2 pipeline does
 
-### Step 2: Fix CGC path prefix (manual, if needed)
+1. **CGC Index** — indexes tg-digest with tree-sitter AST parser
+2. **Prephase** — Opus queries CGC graph via MCP, identifies 7 scopes, writes scope.json files
+3. **Setup** — creates isolated run dirs per scope with symlinks to tg-digest source
+4. **Wave Exploration** (parallel, Sonnet) — per scope:
+   - Sonnet plans exploration waves from CGC graph → `waves.json`
+   - Sonnet reads full source per wave, accumulating context → v2 nodes/edges
+5. **Per-scope Synthesis** (parallel, Sonnet) — produces findings.md + scope-manifest.json
+6. **Cross-scope Synthesis** (Opus) — adversarial analysis → architecture.md
 
-CGC indexes paths with the repo name as prefix (`tg-digest/internal/...`).
-The parallel runner symlinks source dirs without this prefix. If the prephase
-produced prefixed paths, strip them:
+### v1 Pipeline (legacy)
 
 ```bash
-for f in scopes/*/scope.json; do
-    sed -i 's|tg-digest/||g' "$f"
-done
+./run-all.sh                    # v1: Haiku batch exploration
+./synthesize-all.sh             # v1: Opus synthesis
 ```
-
-### Step 3: Parallel exploration (produces nodes/edges)
-
-```bash
-./cartographer/prephase/cgc/test-run-tg-digest/run-all.sh
-```
-
-This creates isolated directory trees per scope, runs `--init` for each,
-then launches all cartographers in parallel. Default model: Haiku.
-
-Override model: `EXPLORE_MODEL=sonnet ./run-all.sh`
-
-### Step 4: Parallel synthesis (produces findings.md per scope)
-
-```bash
-./cartographer/prephase/cgc/test-run-tg-digest/synthesize-all.sh
-```
-
-Consolidates nodes/edges per scope, feeds them plus `SYNTHESIS_PROMPT.md`
-to an Opus agent that also has Read access to the actual source files.
-The agent uses structured exploration data as a map, then reads source
-code to verify signatures, trace real call chains, and confirm behavioral
-claims. Output is `findings.md` per scope.
-
-Default model: Opus. Override: `SYNTH_MODEL=sonnet ./synthesize-all.sh`
-Source root: `SOURCE_ROOT=/path/to/repo ./synthesize-all.sh`
-
-Key flags passed to `claude -p`:
-- `--tools "Read"` — only the Read tool is available (no Write/Bash/Edit)
-- `--add-dir "$SOURCE_ROOT"` — grants read access to the source tree
-- `--allowedTools "Read"` — auto-approves Read (no permission prompts)
 
 ## File Structure
 
 ```
 test-run-tg-digest/
-├── README.md              ← this file
-├── run.sh                 ← prephase runner (CGC auto mode)
-├── run-all.sh             ← parallel cartographer launcher
-├── synthesize-all.sh      ← parallel synthesis launcher
-├── hallucination-bug.md   ← writeup of claude -p path resolution issue
-├── auto.log               ← prephase session log
-├── slices.json            ← prephase output (all slices, extraction_mode: cgc)
-├── scopes/                ← one scope.json per slice (durable)
+├── README.md                ← this file
+├── run-all-v2.sh            ← v2 full pipeline runner
+├── run-all.sh               ← v1 parallel exploration (legacy)
+├── synthesize-all.sh        ← v1 parallel synthesis (legacy)
+├── run.sh                   ← standalone prephase runner
+├── hallucination-bug.md     ← v1 issues writeup
+├── auto.log                 ← prephase session log
+├── slices.json              ← prephase output
+├── scopes/                  ← scope definitions (durable)
 │   ├── cli-orchestrator/scope.json
 │   ├── refresh-pipeline/scope.json
 │   ├── source-system/scope.json
@@ -101,152 +84,110 @@ test-run-tg-digest/
 │   ├── summarizer/scope.json
 │   ├── telegram-client/scope.json
 │   └── tui/scope.json
-└── runs/                  ← exploration + synthesis output (regenerated)
+└── runs/                    ← exploration + synthesis output (regenerated)
     ├── <slug>/
-    │   ├── cartographer/
-    │   │   ├── explore.sh
-    │   │   ├── PROMPT.md        ← generated with absolute paths (sed)
-    │   │   ├── exploration/
-    │   │   │   ├── scope.json
-    │   │   │   ├── queue_all.txt
-    │   │   │   ├── queue_explored.txt
-    │   │   │   ├── index.json
-    │   │   │   ├── findings.md  ← synthesis output
-    │   │   │   ├── nodes/*.json
-    │   │   │   └── edges/*.json
-    │   │   └── logs/
-    │   ├── synthesis.log        ← synthesis stderr
-    │   ├── review.md            ← Opus review of findings accuracy
+    │   ├── cartographer/exploration/
+    │   │   ├── scope.json
+    │   │   ├── queue_all.txt / queue_explored.txt
+    │   │   ├── waves.json             ← v2: wave plan
+    │   │   ├── cgc_graph.json         ← v2: AST dependency data
+    │   │   ├── revision.json          ← v2: SHA tracking
+    │   │   ├── findings.md            ← synthesis output
+    │   │   ├── scope-manifest.json    ← v2: machine-readable manifest
+    │   │   ├── nodes/*.json           ← v2 nodes (contracts, observations)
+    │   │   └── edges/*.json           ← v2 edges (semantic, data_flow)
+    │   ├── explore.log
+    │   ├── synthesis.log
     │   ├── internal/ → symlink to tg-digest/internal/
-    │   ├── cmd/      → symlink to tg-digest/cmd/
-    │   └── explore.log
-    └── ...
-```
-
-## How Parallel Isolation Works
-
-`claude -p` resolves file paths from the git project root, not from the
-shell's working directory. This means all agents would write to the same
-global `cartographer/exploration/` if given relative paths.
-
-The fix: `run-all.sh` generates a per-scope `PROMPT.md` with absolute paths
-by sed-replacing `cartographer/exploration/` with the full path to that
-scope's exploration directory. Source files are symlinked so the agent can
-read them at the expected relative paths.
-
-## Results (2026-03-16)
-
-### Exploration
-
-7 slices, 7 parallel Haiku cartographers, no budget limits:
+    │   └── cmd/ → symlink to tg-digest/cmd/
+    └── architecture.md        ← v2: cross-scope synthesis
 
 ```
-cli-orchestrator        4/4  explored    6 nodes   6 edges
-refresh-pipeline        3/3  explored    3 nodes   3 edges
-source-system          11/11 explored   11 nodes  11 edges
-storage                11/11 explored   11 nodes  11 edges
-summarizer              9/9  explored    9 nodes   9 edges
-telegram-client         4/4  explored    4 nodes   4 edges
-tui                    15/15 explored   15 nodes  15 edges
-────────────────────────────────────────────────────────
-TOTAL                  57/57 explored   59 nodes  59 edges
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `EXPLORE_MODEL` | sonnet | Exploration model |
+| `SYNTH_MODEL` | sonnet | Per-scope synthesis model |
+| `CROSS_MODEL` | opus | Cross-scope synthesis model |
+| `PROVIDER` | claude | AI CLI provider (claude, cursor) |
+| `SOURCE_ROOT` | (auto) | Git repo for incremental SHA tracking |
+
+## Results
+
+### v2 (2026-03-21, Sonnet exploration + synthesis, Opus cross-scope)
+
+**Exploration**: 7 scopes, 7 parallel Sonnet wave explorers
+
+```
+SCOPE                  FILES  NODES  EDGES
+cli-orchestrator           4      4      4
+refresh-pipeline           3      3      3
+source-system             11     11     11
+storage                   11     11     11
+summarizer                 9      9      9
+telegram-client            4      4      4
+tui                       15     15     15
+TOTAL                     57     57     57
 ```
 
-100% file coverage. Every queued file explored.
+100% file coverage. All v2 nodes include role, contracts, effects, state,
+typed observations with loc references.
 
-### Synthesis (Opus, source-verified)
+**Per-scope Synthesis** (Sonnet): 7/7 findings.md + 7/7 scope-manifest.json
 
 ```
-cli-orchestrator           157 lines
-refresh-pipeline           150 lines
-source-system              147 lines
-storage                    183 lines
-summarizer                 157 lines
-telegram-client            121 lines
-tui                        171 lines
+cli-orchestrator           166 lines
+refresh-pipeline           124 lines
+source-system              145 lines
+storage                    171 lines
+summarizer                 137 lines
+telegram-client            146 lines
+tui                        179 lines
 ```
 
-### Quality Review (Opus reviewers, verified against source)
+**Cross-scope Synthesis** (Opus): 290-line architecture.md with:
+- System dependency map
+- Data lineage tracing 4 entities across scope boundaries
+- 8 cross-scope findings (broken RefreshFiltered, silent error chain, no HTTP timeouts, etc.)
+- Systemic patterns analysis (error handling, config, HTTP, testing, DI)
+- Architectural assessment with structural debt
 
-Each findings.md was reviewed by an Opus agent that read both the doc and
-all referenced source files, then scored accuracy, completeness, and
-usefulness.
+**Incremental**: Tested — changed 1 file, only that file re-explored (not all 11).
 
-| Scope            | Accuracy | Completeness | Usefulness |
-|------------------|----------|--------------|------------|
-| source-system    | 9/10     | 9/10         | 9/10       |
-| storage          | 9/10     | 8/10         | 9/10       |
-| cli-orchestrator | 9/10     | 8/10         | 9/10       |
-| refresh-pipeline | 9/10     | 8/10         | 9/10       |
-| telegram-client  | 9/10     | 8/10         | 9/10       |
-| summarizer       | 9/10     | 9/10         | 9/10       |
-| tui              | 9/10     | 8/10         | 9/10       |
-| **Average**      | **9.0**  | **8.3**      | **9.0**    |
+### v1 Baseline (2026-03-16, Haiku exploration, Opus synthesis)
 
-Zero hallucinated signatures or fabricated behaviors. Remaining completeness
-gaps are cross-boundary details requiring code outside the explored scope.
+57/57 files, 59 nodes, 1086 lines of findings. Opus review scores:
+Accuracy 9.0, Completeness 8.3, Usefulness 9.0.
 
-#### Comparison: without source access (Haiku/Sonnet synthesis)
+### v1 → v2 Comparison
 
-An earlier run used Haiku/Sonnet without source code access. Average scores:
-Accuracy 6.9, Completeness 7.1, Usefulness 7.9. The accuracy jump (6.9 → 9.0)
-came from two changes: Opus model + Read access to source files for
-fact-checking during synthesis.
+| Aspect | v1 | v2 |
+|--------|-----|-----|
+| Exploration model | Haiku (batch of 3) | Sonnet (wave-based) |
+| Node schema | flat (summary, notes) | rich (contracts, effects, observations) |
+| Edge schema | bare (relationship, usage) | semantic (data_flow, coupling type) |
+| Synthesis model | Opus | Sonnet |
+| New: scope-manifest.json | — | per scope |
+| New: architecture.md | — | cross-scope Opus analysis |
+| New: incremental | — | SHA-tracked, per-file |
+| Opus calls | 7 (synthesis) | 2 (prephase + cross-scope) |
 
 ## Issues Found During Testing
 
-### 1. claude -p path resolution (fixed)
+### v2-specific
 
-Agents wrote to global `cartographer/exploration/` instead of isolated dirs.
-Cross-contamination between parallel runs. Fixed with absolute paths in
-PROMPT.md. See `hallucination-bug.md`.
+1. **CGC `| head -5` SIGPIPE** — `set -e` caught broken pipe from early pipe close. Fixed with `|| true`.
+2. **scope-manifest.json not written by agent** — Sonnet with `--output-format text` didn't use Write tool. Fixed by generating manifest programmatically from node/edge data.
+3. **architecture.md wrapped in code fences** — Prompt said "write to file" but agent only had Read. Fixed prompt to "output as text."
+4. **Wrong git SHA in revision.json** — `git -C "$PROJECT_ROOT"` resolved through symlinks to cartographer repo. Fixed by adding `SOURCE_ROOT` env var.
 
-### 2. ignore field (removed)
+### v1 (see hallucination-bug.md for details)
 
-`ignore: ["**/*_test.go", "**/*.md"]` caused two problems:
-- explore.sh queued test files but the agent skipped them, leaving them
-  permanently stuck in the queue and burning iterations
-- Prephase undercounted files (excluded tests from analysis), producing
-  wrong budget sizes
-
-Fix: removed `ignore` from the scope.json schema entirely. `explore_within`
-+ `boundary_packages` is sufficient.
-
-### 3. Budget limits (removed)
-
-The budget table (max_nodes, max_iterations, max_depth_from_seed) was
-vestigial from an older design where the agent discovered files dynamically.
-With `--init` pre-queuing all files, the natural stop condition is "queue
-empty." Budget caps guaranteed incomplete exploration:
-- With budget: 50/57 explored (88%)
-- Without budget: 57/57 explored (100%)
-
-Fix: removed budget from scope.json schema and all prompts. explore.sh now
-computes a safety iteration limit as `ceil(queued / BATCH_SIZE) * 2`.
-
-### 4. CGC path prefix (manual workaround)
-
-CGC graphs use the repo directory name as a path prefix
-(`tg-digest/internal/...`). The symlinked directory structure doesn't have
-this level. Requires manual `sed` stripping after prephase. Future fix: teach
-the prephase prompt to emit paths relative to the repo root, not including
-the repo name.
-
-### 5. claude -p tool permissions for synthesis (fixed)
-
-Opus synthesis agents attempted to use Read tool but were blocked by
-permission prompts in non-interactive mode. Also tried to Write the output
-file instead of outputting to stdout. Fixed with:
-- `--tools "Read"` — restricts available tools to Read only
-- `--allowedTools "Read"` — auto-approves Read without prompts
-- `--add-dir "$SOURCE_ROOT"` — grants access to source tree
-- Explicit prompt instruction: "Output markdown as your response text,
-  do not use write tools"
-
-### 6. Haiku/Sonnet synthesis quality (resolved by using Opus)
-
-Haiku produced meta-commentary ("Approve the write and I'll save it")
-instead of actual findings for 3/7 scopes. Sonnet worked but wrapped
-output in code blocks. Both hallucinated function signatures at high rates
-(accuracy 6-7/10). Resolved by using Opus for synthesis — accuracy jumped
-to 9/10 across all scopes.
+1. claude -p path resolution — agents wrote to global dir instead of isolated
+2. ignore field — queued files were skipped, burning iterations
+3. Budget limits — guaranteed incomplete exploration
+4. CGC path prefix — requires manual sed stripping
+5. Tool permissions for synthesis — needed explicit `--tools "Read"`
+6. Haiku/Sonnet synthesis quality — hallucinated signatures (accuracy 6.9/10)

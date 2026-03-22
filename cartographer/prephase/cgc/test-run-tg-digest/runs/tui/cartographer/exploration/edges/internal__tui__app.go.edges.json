@@ -1,10 +1,67 @@
 [
-  {"to": "internal/tui/types.go", "relationship": "imports", "usage": "message types (summariesLoadedMsg, channelsLoadedMsg, etc.) and service interfaces"},
-  {"to": "internal/tui/keys.go", "relationship": "imports", "usage": "keyMap for key bindings in handleKeyMsg"},
-  {"to": "internal/tui/styles.go", "relationship": "imports", "usage": "UI styles (spinner, loading, error, tab, status bar)"},
-  {"to": "internal/tui/dashboard.go", "relationship": "imports", "usage": "dashboardModel for dashboard view"},
-  {"to": "internal/tui/channels.go", "relationship": "imports", "usage": "channelsModel for sources/channels view"},
-  {"to": "internal/tui/help.go", "relationship": "imports", "usage": "helpModel for help overlay"},
-  {"to": "internal/storage", "relationship": "imports", "usage": "boundary — loads/deletes channels, retrieves message summaries"},
-  {"to": "cmd/digest/main.go", "relationship": "imported_by", "usage": "NewApp constructor called to instantiate TUI"}
+  {
+    "from": "internal/tui/app.go",
+    "to": "internal/tui/types.go",
+    "semantic": "consumes all message types, service interfaces, and display types defined here",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "internal/tui/dashboard.go",
+    "semantic": "owns dashboardModel as a field; forwards key messages and result messages to it; reads dashboard.filter and dashboard.currentDate",
+    "data_flow": "tea.Msg → dashboardModel.Update; dashboard.filter → refreshFilteredCmd/summarizeFilteredCmd",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "internal/tui/channels.go",
+    "semantic": "owns channelsModel as a field; forwards key messages to it; reads channels.channels for filter resolution",
+    "data_flow": "tea.Msg → channelsModel.Update; channels.channels → MatchingSourceNames/MatchingChannelIDs",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "internal/tui/help.go",
+    "semantic": "owns helpModel as a field; forwards key messages when showHelp is true",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "internal/tui/filter.go",
+    "semantic": "calls SourceFilter.IsEmpty and SourceFilter.FilterLabel in status bar render; passes SourceFilter to refreshFilteredCmd and summarizeFilteredCmd",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "internal/tui/styles.go",
+    "semantic": "uses spinnerStyle, loadingStyle, errorStyle, activeTabStyle, inactiveTabStyle, statusBarStyle, helpDescStyle",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "internal/tui/keys.go",
+    "semantic": "matches global keys singleton for Quit, Help, Refresh, Summarize, Tab",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "[internal/storage]",
+    "semantic": "reads channels and message summaries, creates and deletes channels via store interface",
+    "data_flow": "store.Channels().List/Create/Delete/GetByUsername, store.MessageSummaries().GetByChannelAndDate",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "[RefreshService]",
+    "semantic": "calls RefreshAll and RefreshFiltered on optional refresh service",
+    "data_flow": "sourceNames []string → RefreshResult",
+    "coupling": "interface-mediated"
+  },
+  {
+    "from": "internal/tui/app.go",
+    "to": "[SummarizeService]",
+    "semantic": "calls SummarizeUnsummarized and SummarizeFiltered on optional summarize service",
+    "data_flow": "channelIDs []int64 → SummarizeQueueResult",
+    "coupling": "interface-mediated"
+  }
 ]

@@ -1,10 +1,14 @@
 [
-  {"to": "internal/tui/app.go", "relationship": "imported_by", "usage": "message types and service interfaces for main app event orchestration"},
-  {"to": "internal/tui/channels.go", "relationship": "imported_by", "usage": "message types for channel operations and ChannelItem display model"},
-  {"to": "internal/tui/dashboard.go", "relationship": "imported_by", "usage": "message types for summary loading/filtering and SummaryItem display model"},
-  {"to": "internal/tui/filter_overlay.go", "relationship": "imported_by", "usage": "message types for filter operations"},
-  {"to": "internal/tui/filter.go", "relationship": "imported_by", "usage": "ChannelItem reference for filtering logic"},
-  {"to": "internal/tui/help.go", "relationship": "imported_by", "usage": "message types for help overlay"},
-  {"to": "tg-digest/internal/refresh", "relationship": "imports", "usage": "boundary — RefreshService interface and RefreshResult type from refresh module"},
-  {"to": "tg-digest/internal/summarizer", "relationship": "imports", "usage": "boundary — SummarizeService interface and SummarizeQueueResult type from summarizer module"}
+  {
+    "from": "internal/tui/types.go",
+    "to": "[tg-digest/internal/refresh]",
+    "semantic": "uses refresh.RefreshResult as return type in RefreshService interface and refreshCompleteMsg",
+    "coupling": "direct"
+  },
+  {
+    "from": "internal/tui/types.go",
+    "to": "[tg-digest/internal/summarizer]",
+    "semantic": "uses summarizer.SummarizeQueueResult as return type in SummarizeService interface and summarizeCompleteMsg",
+    "coupling": "direct"
+  }
 ]

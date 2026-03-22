@@ -1,0 +1,21 @@
+{
+  "waves": [
+    {
+      "id": 1,
+      "files": [
+        "internal/source/hackernews/hn.go",
+        "internal/source/hackernews/hn_test.go",
+        "internal/source/reddit/reddit.go",
+        "internal/source/reddit/reddit_test.go",
+        "internal/source/registry.go",
+        "internal/source/registry_test.go",
+        "internal/source/rss/rss.go",
+        "internal/source/rss/rss_test.go",
+        "internal/source/source.go",
+        "internal/source/telegram/telegram.go",
+        "internal/source/telegram/telegram_test.go"
+      ],
+      "rationale": "Default: all files in single wave (wave planning did not produce output)"
+    }
+  ]
+}

@@ -1,33 +1,33 @@
 {
   "path": "internal/tui/channels.go",
-  "type": "source",
-  "summary": "Bubble Tea sub-model for the Sources view: channel list navigation, delete confirmation, and three-step add-source wizard (type → name → url)",
-  "exports": [
-    "channelsModel",
-    "newChannelsModel",
-    "sourceTypeOptions"
-  ],
-  "imports": [
-    "fmt",
-    "strings",
-    "github.com/charmbracelet/bubbles/key",
-    "github.com/charmbracelet/bubbletea"
-  ],
-  "imported_by": [
-    "internal/tui/app.go",
-    "internal/tui/channels_test.go"
-  ],
-  "side_effects": [
-    "Implements Bubble Tea sub-model (Update, View)",
-    "Manages channel list state: cursor position, delete confirmation flag",
-    "Implements three-step add-source wizard with text input buffering",
-    "Renders source badges with type identifiers (TG, RSS, RD, HN)"
-  ],
-  "config_deps": [
-    "keys (keyMap from keys.go) — Up, Down, Delete, Add, Confirm, Cancel",
-    "titleStyle, helpDescStyle, sourceTypeBadgeStyle, selectedStyle, unselectedStyle, messageCountStyle, channelNameStyle (from styles.go)",
-    "sourceTypeBadge helper function (from dashboard.go, same package)",
-    "addStep type and constants (from types.go)"
-  ],
-  "notes": "channelsModel implements the Sources tab of the TUI. 7 functions: constructor, Update with three message types (channelsLoadedMsg, channelDeletedMsg, KeyMsg), three handlers for different modes (handleNormalKey, handleConfirmKey, handleAddKey), View, renderAddView. sourceTypeOptions = [telegram, rss, reddit, hackernews]. Add wizard collects sourceType, name (username), and url (varies: channel handle for TG, feed URL for RSS, subreddit for Reddit, feed type for HN). View shows channel list with badges and 'Added' dates, delete confirmation prompt."
+  "role": "presenter",
+  "summary": "Channels/sources sub-model: lists monitored sources, handles delete-with-confirm, and runs a 3-step add-source wizard",
+  "state": "channelsModel value type; holds channels list, cursor, confirmDelete flag, addMode flag, wizard step (addStep), addCursor, addSourceType, addNameInput, addURLInput",
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "The add-source wizard is entirely self-contained within channelsModel — it manages 3-step state (type selection, name input, URL input) and only emits addSourceMsg to App when the final step (URL) is confirmed with a non-empty value.",
+      "loc": "channels.go:113-176"
+    },
+    {
+      "kind": "behavior",
+      "text": "channelDeletedMsg is handled in channelsModel.Update to splice out the deleted item from the local slice — this is optimistic local removal before the App reloads channels from storage.",
+      "loc": "channels.go:40-50"
+    },
+    {
+      "kind": "pattern",
+      "text": "Input handling in addStepName and addStepURL is manual (switch on msg.Type for KeyBackspace/KeyEnter/KeyRunes) rather than using a bubbles/textinput component — trades simplicity for lack of cursor positioning in the text field.",
+      "loc": "channels.go:138-176"
+    },
+    {
+      "kind": "risk",
+      "text": "addURLInput is required non-empty to advance (line 159), but addNameInput trimming is done via != empty without trimming — whitespace-only names are accepted as valid.",
+      "loc": "channels.go:145"
+    },
+    {
+      "kind": "behavior",
+      "text": "sourceTypeOptions slice defines the canonical ordering of source types for the add wizard. It is separate from filterTypeCycle in dashboard.go — both must be kept in sync if source types are added.",
+      "loc": "channels.go:26"
+    }
+  ]
 }

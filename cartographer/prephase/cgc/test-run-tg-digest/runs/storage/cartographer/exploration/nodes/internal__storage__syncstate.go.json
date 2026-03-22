@@ -1,11 +1,24 @@
 {
   "path": "internal/storage/syncstate.go",
-  "type": "source",
-  "summary": "SyncState repository implementation with Get and Upsert methods for tracking per-channel sync progress",
-  "exports": ["Get", "Upsert"],
-  "imports": ["context", "database/sql", "fmt"],
-  "imported_by": ["internal/storage/storage.go"],
-  "side_effects": ["direct SQL queries against sync_state table"],
-  "config_deps": ["sync_state table schema from migrations"],
-  "notes": "Implements SyncStateRepository interface (storage.go:54-57). Get() returns nil for not-found (no error). Upsert() uses SQLite ON CONFLICT for idempotent updates. Checkpoint field is flexible string type to support etag, version strings, or other sync markers. Part of repository pattern family: channels.go, messages.go, message_summaries.go, all embedded in sqliteStore."
+  "role": "repository",
+  "summary": "Implements SyncStateRepository with get/upsert over sync_state, storing a string checkpoint per channel",
+  "contracts": {
+    "requires": ["sync_state table exists (migration 001, modified by 002)", "channel_id references an existing channel"],
+    "guarantees": [
+      "Get returns (nil, nil) when no row exists for channelID",
+      "Upsert is idempotent: inserts on first call, updates checkpoint and last_sync_at on subsequent calls for the same channelID"
+    ]
+  },
+  "effects": ["SQLite reads and writes on sync_state table"],
+  "observations": [
+    {
+      "kind": "behavior",
+      "text": "Checkpoint is TEXT (migration 002 converted from INTEGER last_msg_id). This allows sources to use arbitrary checkpoint formats — Telegram message IDs, ETags, ISO timestamps, etc. The storage layer has no opinion on the format.",
+      "loc": "syncstate.go:39-59"
+    },
+    {
+      "kind": "coupling",
+      "text": "Used by the refresh pipeline to determine resume position per channel. The checkpoint string semantics are owned by the source adapters, not this repository."
+    }
+  ]
 }
