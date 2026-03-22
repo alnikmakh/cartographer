@@ -1,0 +1,86 @@
+{
+  "scope": "internal/tui",
+  "purpose": "Bubble Tea terminal UI for tg-digest: a two-tab (Dashboard / Sources) application that displays date-navigable AI-summarized content cards per source, supports per-source filtering, and orchestrates storage reads/writes plus optional refresh and summarization services.",
+  "exposes": {
+    "types": [
+      "App",
+      "AppOption",
+      "SummaryItem",
+      "ChannelItem",
+      "SourceFilter"
+    ],
+    "interfaces": [
+      "RefreshService",
+      "SummarizeService"
+    ],
+    "entry_points": [
+      "NewApp(store storage.Store, opts ...AppOption) App",
+      "WithRefresh(svc RefreshService, autoRefresh bool, interval time.Duration) AppOption",
+      "WithSummarize(svc SummarizeService) AppOption"
+    ]
+  },
+  "consumes": {
+    "external": [
+      "[internal/storage]",
+      "[RefreshService]",
+      "[SummarizeService]",
+      "[tg-digest/internal/refresh]",
+      "[tg-digest/internal/summarizer]",
+      "[github.com/charmbracelet/bubbles/key]",
+      "[github.com/charmbracelet/lipgloss]"
+    ],
+    "config": [
+      "storage.Store (non-nil, required)",
+      "RefreshService (optional, via WithRefresh)",
+      "SummarizeService (optional, via WithSummarize)",
+      "autoRefresh bool and interval time.Duration (via WithRefresh)"
+    ]
+  },
+  "cross_scope_touchpoints": [
+    {
+      "scope": "internal/storage",
+      "direction": "consumes",
+      "surface": "storage.Store — Channels().List/Create/CreateNonTelegram/Delete/GetByUsername, MessageSummaries().GetByChannelAndDate",
+      "coupling": "direct"
+    },
+    {
+      "scope": "cmd/digest",
+      "direction": "consumed_by",
+      "surface": "NewApp, WithRefresh, WithSummarize, AppOption — cmd/digest constructs and runs the App",
+      "coupling": "direct"
+    },
+    {
+      "scope": "internal/refresh",
+      "direction": "consumes",
+      "surface": "refresh.RefreshResult (return type in RefreshService interface and refreshCompleteMsg)",
+      "coupling": "interface-mediated"
+    },
+    {
+      "scope": "internal/summarizer",
+      "direction": "consumes",
+      "surface": "summarizer.SummarizeQueueResult (return type in SummarizeService interface and summarizeCompleteMsg)",
+      "coupling": "interface-mediated"
+    }
+  ],
+  "invariants": [
+    "SourceFilter zero value matches all sources — callers and service methods both treat nil slice returns from MatchingChannelIDs/MatchingSourceNames as 'all'",
+    "When both SourceFilter.Types and SourceFilter.Names are set, Match requires both to pass (AND semantics) — the filter_overlay only ever produces Names-only filters, never Types+Names combinations",
+    "All storage operations happen inside tea.Cmd closures, never in Update — preserves the Elm architecture pure-function guarantee",
+    "filterOverlayModel.buildFilter returns an empty SourceFilter (not a full-selection Names filter) when all sources are selected — preserves the nil-means-all invariant for downstream services"
+  ],
+  "risks": [
+    "Sub-view commands are eagerly executed inline via result := cmd() in handleKeyMsg (app.go:285-303) rather than returned to the Bubble Tea runtime — breaks normal BubbleTea message routing and prevents middleware from intercepting loadSummariesMsg, deleteChannelMsg, and addSourceMsg",
+    "dashboard.expanded map is keyed by filtered-slice index; changing the active filter does NOT reset the map — previously expanded indices may refer to different sources after a filter change, causing incorrect card rendering (dashboard.go:143-154)",
+    "refreshFilteredCmd and summarizeFilteredCmd capture dashboard.filter and channels.channels at key-press time as stale value-type snapshots — filter state may diverge from channels if both were changing concurrently",
+    "Add-source wizard accepts whitespace-only source names: addNameInput is checked != '' but not trimmed (channels.go:145)"
+  ],
+  "patterns": [
+    "Functional options (AppOption) for optional RefreshService and SummarizeService — keeps NewApp minimal and testable without those capabilities",
+    "Elm architecture (Model/Update/View) via Bubble Tea; all side effects in tea.Cmd closures returned from Update",
+    "Service interfaces (RefreshService, SummarizeService) defined in the consumer package (tui/types.go) for dependency inversion — all other tui files are insulated from concrete refresh/summarizer packages",
+    "Package-level singleton keyMap (keys var in keys.go) — all key matching across all sub-models goes through this one instance",
+    "Centralized style constants in styles.go — only filter_overlay.go constructs a local style at render time (for dynamic width boxing)",
+    "Manual text-input handling (switch on msg.Type) in channels.go wizard steps instead of bubbles/textinput — simpler but no cursor positioning",
+    "Test integration uses a real SQLite database (t.TempDir) for storage; only RefreshService and SummarizeService are mocked"
+  ]
+}

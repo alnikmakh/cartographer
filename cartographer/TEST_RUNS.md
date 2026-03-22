@@ -1,185 +1,201 @@
-# How to Build a Cartographer Test Run
+# How to Run Cartographer v2
 
-The cartographer skip the pre-phase for testing — you manually create
-the scope.json that the pre-phase would have produced, then run
-`--init` and the main loop against a real codebase.
+Cartographer v2 uses a wave-based pipeline: CGC graph for structure,
+Sonnet for per-file analysis, Opus for cross-cutting review.
+
+## Full Pipeline (Recommended)
+
+The `run.sh` orchestrator runs the complete pipeline:
+
+```bash
+# Full generation — prephase + explore + synthesize + cross-scope
+./cartographer/run.sh /path/to/source/root
+
+# Incremental update — only re-explore changed files
+./cartographer/run.sh /path/to/source/root --incremental
+```
+
+Environment variables:
+```bash
+PROVIDER=claude          # or cursor
+CLAUDE_MODEL=sonnet      # exploration + synthesis model (default: sonnet)
+CROSS_MODEL=opus         # cross-scope model (default: opus)
+SKIP_PREPHASE=1          # reuse existing scopes
+SKIP_CROSS=1             # skip cross-scope synthesis
+SCOPE=storage            # only process one scope (debugging)
+```
+
+## Manual Step-by-Step
+
+### 1. Index the codebase
+
+```bash
+pip install codegraphcontext kuzu
+cgc index /path/to/source/root
+```
+
+### 2. Run prephase (Opus scope determination)
+
+```bash
+./cartographer/prephase/cgc/auto.sh
+```
+
+Produces `cartographer/prephase/scopes/<slug>/scope.json` for each scope.
+
+### 3. Set up exploration
+
+Copy a scope.json into the exploration directory:
+
+```bash
+mkdir -p cartographer/exploration
+cp cartographer/prephase/scopes/<slug>/scope.json cartographer/exploration/
+```
+
+### 4. Initialize and explore
+
+```bash
+./cartographer/explore.sh --init    # validates scope, extracts CGC graph, creates revision.json
+./cartographer/explore.sh           # wave planning + wave execution (Sonnet)
+```
+
+The explore script:
+1. Runs Sonnet to plan exploration waves from CGC graph (`waves.json`)
+2. Executes waves sequentially, accumulating context
+3. Each wave produces v2 nodes (role, contracts, effects, state, observations) and semantic edges
+
+Override model: `CLAUDE_MODEL=sonnet ./cartographer/explore.sh` (sonnet is already the default).
+
+### 5. Synthesize
+
+```bash
+./cartographer/synthesize.sh /path/to/source/root
+```
+
+Produces:
+- `exploration/findings.md` — architectural narrative
+- `exploration/scope-manifest.json` — machine-readable summary for cross-scope
+
+Override model: `SYNTH_MODEL=sonnet` (default) or `SYNTH_MODEL=opus`.
+
+### 6. Cross-scope synthesis (multi-scope only)
+
+```bash
+./cartographer/cross-synthesize.sh /path/to/source/root
+```
+
+Collects all scope-manifest.json + findings.md files, runs Opus for
+adversarial cross-cutting analysis. Produces `exploration/architecture.md`.
+
+### 7. Incremental update
+
+After making changes to the source:
+
+```bash
+./cartographer/explore.sh --incremental      # re-explore changed files only
+./cartographer/synthesize.sh --incremental /path/to/source/root  # re-synthesize if stale
+```
+
+## Writing scope.json Manually
+
+All three fields required — `--init` validates their presence.
+
+```json
+{
+  "seed": "src/core/main.ts",
+  "boundaries": {
+    "explore_within": ["src/core/**"],
+    "boundary_packages": ["src/utils", "src/db"]
+  },
+  "hints": ["Uses repository pattern", "Heavy use of generics"]
+}
+```
+
+**seed** — any file in the slice. Documents intent.
+
+**explore_within** — directory globs the agent will fully explore. Use `**` suffix.
+
+**boundary_packages** — sibling packages imported but not fully explored.
+The agent records boundary edges but doesn't read source in these packages.
+
+**hints** — optional observations for the explorer to watch for.
 
 ## Directory Layout
 
-The script resolves `PROJECT_ROOT` as the parent of `cartographer/`.
-Your test workspace needs this shape:
+After `--init`:
 
 ```
-test_run/                          ← PROJECT_ROOT
-├── cartographer/
-│   ├── explore.sh                 ← copy from repo
-│   ├── PROMPT.md                  ← copy from repo
-│   ├── logs/
-│   └── exploration/
-│       └── scope.json             ← you create this
-└── <codebase>/                    ← symlink or real checkout
-    └── src/...
+exploration/
+├── scope.json          ← your input
+├── queue_all.txt       ← all in-scope files
+├── queue_explored.txt  ← explored files (grows during exploration)
+├── waves.json          ← Sonnet-planned exploration order
+├── cgc_graph.json      ← AST dependency data from CGC
+├── revision.json       ← SHA tracking for incremental mode
+├── findings.md         ← synthesis output
+├── scope-manifest.json ← machine-readable manifest
+├── nodes/              ← v2 node files (role, contracts, observations)
+└── edges/              ← v2 edge files (semantic, data_flow, coupling)
 ```
 
-The codebase can be a symlink:
-
-```bash
-mkdir -p test_run/cartographer/exploration test_run/cartographer/logs
-cp cartographer/explore.sh cartographer/PROMPT.md test_run/cartographer/
-ln -s /path/to/real/repo test_run/<repo-name>
-```
-
-Paths in scope.json are relative to PROJECT_ROOT, so if the
-symlink is `test_run/myrepo`, paths look like `myrepo/src/...`.
-
-## Writing scope.json
-
-The pre-phase normally produces this. For testing, write it by hand.
-All three fields are required — `--init` validates their presence.
+## v2 Node Schema
 
 ```json
 {
-  "seed": "myrepo/src/core/main.ts",
-  "boundaries": {
-    "explore_within": ["myrepo/src/core/**"],
-    "boundary_packages": ["myrepo/src/utils", "myrepo/src/db"]
-  }
+  "path": "src/auth/service.ts",
+  "role": "orchestrator",
+  "summary": "Coordinates JWT validation and RBAC checks",
+  "contracts": {
+    "requires": ["JWT_SECRET env var"],
+    "guarantees": ["Returns AuthContext or throws — never partial"]
+  },
+  "effects": ["Redis read/write per request"],
+  "state": "LRU cache, 5-min TTL",
+  "observations": [
+    { "kind": "risk", "text": "Revoked tokens valid up to 5 min", "loc": "service.ts:89" }
+  ]
 }
 ```
 
-### How to choose each field
+## v2 Edge Schema
 
-**seed** — any file in the slice. Not used by the script loop
-(everything in explore_within gets queued), but documents intent.
+```json
+{
+  "from": "src/auth/service.ts",
+  "to": "src/auth/jwt.ts",
+  "semantic": "delegates token parsing",
+  "data_flow": "raw JWT → decoded Claims",
+  "coupling": "direct"
+}
+```
 
-**explore_within** — the directory glob(s) the agent will fully
-describe. This is your slice. Use `**` suffix. Multiple globs OK:
-`["myrepo/src/core/**", "myrepo/src/api/**"]`.
-
-**boundary_packages** — sibling packages that the slice imports
-from but you don't want to fully explore. The agent creates
-minimal boundary nodes for these (just interface, no deep read).
-Look at the import statements in your slice to find these.
-
-### Sizing the slice
-
-Check file count before writing scope.json:
+## Inspecting Results
 
 ```bash
-find myrepo/src/core -type f -name '*.ts' | grep -v test | wc -l
-```
+# Progress
+wc -l < exploration/queue_all.txt       # total files
+wc -l < exploration/queue_explored.txt  # explored so far
 
-The script sends BATCH_SIZE=3 files per iteration. So:
-- 9 files → 3 iterations
-- 20 files → 7 iterations
-- 50 files → 17 iterations
-
-Each iteration is one full agent invocation (cold start, read
-scope, explore files, write output). Budget time accordingly.
-
-## Running
-
-```bash
-# 1. Initialize — creates queue_all.txt, queue_explored.txt, index.json
-cd test_run
-bash cartographer/explore.sh --init
-
-# 2. Run with haiku (cheapest, fastest)
-CLAUDE_MODEL=claude-haiku-4-5-20251001 bash cartographer/explore.sh
-
-# Or limit iterations explicitly:
-CLAUDE_MODEL=claude-haiku-4-5-20251001 bash cartographer/explore.sh 5
-
-# Or use a different provider:
-bash cartographer/explore.sh codex 5
-```
-
-## What --init produces
-
-```
-exploration/
-├── scope.json          ← unchanged (your input)
-├── queue_all.txt       ← one file path per line, all in-scope files
-├── queue_explored.txt  ← empty (nothing explored yet)
-├── index.json          ← {} (empty)
-├── findings.md         ← header only
-├── nodes/              ← empty dir
-└── edges/              ← empty dir
-```
-
-## What the loop produces
-
-After each iteration, the script checks which files in the batch
-got a node file written by the agent. Only those are appended to
-queue_explored.txt. If the agent fails or skips a file, it stays
-in the queue for next iteration.
-
-```
-exploration/
-├── queue_explored.txt                          ← grows each iteration
-├── index.json                                  ← agent updates this
-├── nodes/
-│   ├── myrepo__src__core__main.ts.json         ← node description
-│   └── myrepo__src__core__router.ts.json
-└── edges/
-    ├── myrepo__src__core__main.ts.edges.json   ← dependency edges
-    └── myrepo__src__core__router.ts.edges.json
-```
-
-## Inspecting results
-
-```bash
-# How many files done?
-wc -l < exploration/queue_all.txt      # total
-wc -l < exploration/queue_explored.txt # explored
-
-# What's still pending?
+# Pending files
 comm -23 <(sort exploration/queue_all.txt) <(sort exploration/queue_explored.txt)
 
-# Read a node:
-cat exploration/nodes/myrepo__src__core__main.ts.json | python3 -m json.tool
+# Read a v2 node
+cat exploration/nodes/src__auth__service.ts.json | python3 -m json.tool
 
-# Check index completeness:
-python3 -c "
-import json
-idx = json.load(open('exploration/index.json'))
-print(f'{len(idx)} entries')
-for k,v in idx.items():
-    print(f\"  {'✓' if v.get('explored') else '○'} {k}\")
-"
+# Wave plan
+cat exploration/waves.json | python3 -m json.tool
+
+# Revision state
+cat exploration/revision.json | python3 -m json.tool
 ```
 
-## Cleanup
+## Models
 
-```bash
-rm -rf test_run
-```
+| Phase | Default | Override | Notes |
+|-------|---------|----------|-------|
+| Prephase | Opus | — | Cross-cutting judgment, MCP graph queries |
+| Wave planning | Sonnet | `CLAUDE_MODEL=X` | Graph analysis only, no file reading |
+| Exploration | Sonnet | `CLAUDE_MODEL=X` | Reads full source, produces rich nodes |
+| Per-scope synthesis | Sonnet | `SYNTH_MODEL=X` | Rich v2 input compensates for smaller model |
+| Cross-scope synthesis | Opus | `CROSS_MODEL=X` | Adversarial cross-cutting analysis |
 
-## Example: tg-digest/internal/summarizer
-
-Slice: 5 source files + 4 test files = 9 files total.
-
-Boundary packages: storage, config, source, refresh, tui, telegram, cmd.
-These are sibling packages under `tg-digest/internal/` that the
-summarizer imports from.
-
-```json
-{
-  "seed": "tg-digest/internal/summarizer/summarizer.go",
-  "boundaries": {
-    "explore_within": ["tg-digest/internal/summarizer/**"],
-    "boundary_packages": [
-      "tg-digest/internal/storage",
-      "tg-digest/internal/config",
-      "tg-digest/internal/source",
-      "tg-digest/internal/refresh",
-      "tg-digest/internal/tui",
-      "tg-digest/internal/telegram",
-      "tg-digest/cmd"
-    ]
-  }
-}
-```
-
-Result: 3 iterations, 9/9 files explored, all with node + edge
-output. Haiku completed it in ~4 minutes total.
+Opus is used for exactly 2 calls (prephase + cross-scope) regardless of scope count.

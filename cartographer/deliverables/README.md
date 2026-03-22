@@ -1,11 +1,22 @@
-# Cartographer — Portable Pipeline
+# Cartographer v2 — Portable Pipeline
 
 Self-contained codebase mapping pipeline. Produces architectural
-documentation by exploring source files and synthesizing findings.
+documentation by exploring source files in intelligently-ordered waves
+and synthesizing findings — all verified against source code.
 
-Designed for single-package use: point it at one package directory,
-get a findings.md with architecture, data flows, boundaries, and
-non-obvious behaviors — all verified against source code.
+## Pipeline
+
+```
+CGC index (instant)
+  → Opus prephase: scope determination via dependency graph
+  → Sonnet wave planning: orders files using CGC graph
+  → Sonnet wave exploration: reads full source, accumulates context
+  → Sonnet per-scope synthesis → findings.md + scope-manifest.json
+  → Opus cross-scope synthesis → architecture.md
+```
+
+Opus is used for exactly 2 calls (prephase + cross-scope). Sonnet handles
+everything else.
 
 ## Prerequisites
 
@@ -20,46 +31,28 @@ npm install -g @anthropic-ai/claude-code  # Claude CLI (default)
 ## Quick Start
 
 ```bash
-# 1. Index your package
-cgc index /path/to/your/package
+# 1. Full pipeline — prephase + explore + synthesize + cross-scope
+./cartographer/run.sh /path/to/source/root
 
-# 2. Run prephase (produces scope.json)
-./run.sh /path/to/your/package
-
-# 3. Review and pick a scope
-cat cartographer/prephase/scopes/*/scope.json
-
-# 4. Copy scope into exploration dir
-mkdir -p cartographer/exploration
-cp cartographer/prephase/scopes/<slug>/scope.json cartographer/exploration/
-
-# 5. Initialize and run exploration (Haiku by default)
-./explore.sh --init
-CLAUDE_MODEL=haiku ./explore.sh
-
-# 6. Run synthesis (Opus by default, reads source for verification)
-./synthesize.sh /path/to/your/package
-
-# 7. Read the output
-cat cartographer/exploration/findings.md
+# 2. Read the output
+cat cartographer/exploration/findings.md           # per-scope narrative
+cat cartographer/exploration/scope-manifest.json   # machine-readable
+cat cartographer/exploration/architecture.md       # cross-scope analysis
 ```
 
 ## Single-Package Workflow
 
-For a single package within a monorepo:
+For a single package (or to skip prephase):
 
 ```bash
-# Point everything at one package
-PACKAGE=/path/to/monorepo/packages/my-service
+PACKAGE=/path/to/your/package
 
+# 1. Index
 cgc index "$PACKAGE"
-./run.sh "$PACKAGE"
 
-# The prephase may produce multiple slices within the package.
-# For a single scope covering the whole package, you can write
-# scope.json manually:
-mkdir -p exploration
-cat > exploration/scope.json << 'EOF'
+# 2. Write scope.json
+mkdir -p cartographer/exploration
+cat > cartographer/exploration/scope.json << 'EOF'
 {
   "seed": "src/index.ts",
   "boundaries": {
@@ -70,31 +63,51 @@ cat > exploration/scope.json << 'EOF'
 }
 EOF
 
-# PROJECT_ROOT tells explore.sh where the source files are
-PROJECT_ROOT="$PACKAGE" ./explore.sh --init
-PROJECT_ROOT="$PACKAGE" CLAUDE_MODEL=haiku ./explore.sh
-./synthesize.sh "$PACKAGE"
+# 3. Initialize (validates scope, extracts CGC graph)
+PROJECT_ROOT="$PACKAGE" ./cartographer/explore.sh --init
+
+# 4. Explore (Sonnet wave-based)
+PROJECT_ROOT="$PACKAGE" ./cartographer/explore.sh
+
+# 5. Synthesize (Sonnet + source verification)
+./cartographer/synthesize.sh "$PACKAGE"
+
+# 6. Read output
+cat cartographer/exploration/findings.md
+cat cartographer/exploration/scope-manifest.json
+```
+
+## Incremental Updates
+
+After modifying source files:
+
+```bash
+# Re-explore only changed files, re-synthesize if needed
+./cartographer/run.sh /path/to/source/root --incremental
+```
+
+Or manually:
+```bash
+./cartographer/explore.sh --incremental
+./cartographer/synthesize.sh --incremental /path/to/source/root
 ```
 
 ## Using Cursor CLI
 
-All three phases support Cursor CLI as an alternative provider.
+All phases support Cursor CLI as an alternative provider.
 
 ```bash
-# Prephase with Cursor
-PROVIDER=cursor ./run.sh /path/to/your/package
+# Full pipeline
+PROVIDER=cursor ./cartographer/run.sh /path/to/source/root
 
-# Exploration with Cursor
-./explore.sh cursor
-CURSOR_MODEL=sonnet-4 ./explore.sh cursor 10
-
-# Synthesis with Cursor
-PROVIDER=cursor ./synthesize.sh /path/to/source/root
+# Individual phases
+PROVIDER=cursor ./cartographer/explore.sh cursor
+PROVIDER=cursor ./cartographer/synthesize.sh /path/to/source/root
 ```
 
 **Cursor differences from Claude:**
-- MCP: Cursor auto-discovers from `.cursor/mcp.json` (run.sh sets this up automatically)
-- Synthesis: Cursor has no `--tools`/`--allowedTools` flags — relies on prompt discipline for read-only behavior
+- MCP: auto-discovers from `.cursor/mcp.json`
+- Synthesis: no `--tools`/`--allowedTools` flags — relies on prompt discipline
 - Permissions: uses `--yolo` instead of `--dangerously-skip-permissions`
 - Model names differ (e.g., `sonnet-4` vs `sonnet`)
 
@@ -102,56 +115,55 @@ PROVIDER=cursor ./synthesize.sh /path/to/source/root
 
 | Variable | Used by | Default | Description |
 |----------|---------|---------|-------------|
-| `PROJECT_ROOT` | explore.sh | parent dir of explore.sh | Where source files live |
-| `EXPLORATION_DIR` | explore.sh, synthesize.sh | `./exploration` | Where to write nodes/edges/index |
-| `PROVIDER` | run.sh, synthesize.sh | claude | AI CLI provider (`claude` or `cursor`) |
-| `CLAUDE_MODEL` | explore.sh | (provider default) | Model for exploration (Claude) |
-| `CURSOR_MODEL` | explore.sh | (provider default) | Model for exploration (Cursor) |
-| `SYNTH_MODEL` | synthesize.sh | opus | Model for synthesis |
-| `SOURCE_ROOT` | synthesize.sh | (required arg) | Same as PROJECT_ROOT |
-| `CURSOR_CMD` | all scripts | agent | Cursor CLI command name |
-| `CLAUDE_CMD` | explore.sh | claude | Claude CLI command name |
+| `PROJECT_ROOT` | explore.sh | parent of script | Where source files live (for file discovery) |
+| `SOURCE_ROOT` | explore.sh | PROJECT_ROOT | Git repo for incremental SHA tracking |
+| `EXPLORATION_DIR` | explore.sh, synthesize.sh | `./exploration` | Output directory for nodes/edges/findings |
+| `PROVIDER` | all scripts | claude | AI CLI provider (`claude` or `cursor`) |
+| `CLAUDE_MODEL` | explore.sh | sonnet | Model for wave planning + exploration |
+| `SYNTH_MODEL` | synthesize.sh | sonnet | Model for per-scope synthesis |
+| `CROSS_MODEL` | cross-synthesize.sh | opus | Model for cross-scope synthesis |
+| `SKIP_PREPHASE` | run.sh | — | Set to `1` to skip prephase |
+| `SKIP_CROSS` | run.sh | — | Set to `1` to skip cross-scope synthesis |
+| `SCOPE` | run.sh | — | Process only this scope slug |
 
-## File Structure
+## Output Files
 
 ```
-deliverables/
-├── README.md              ← this file
-├── update.sh              ← sync prompts from cartographer source
-├── run.sh                 ← prephase: CGC index + auto scope detection
-├── explore.sh             ← exploration loop (drives AI agent per batch)
-├── synthesize.sh          ← synthesis: structured data + source → findings.md
-├── PROMPT.md              ← exploration agent instructions
-├── SYNTHESIS_PROMPT.md    ← synthesis agent instructions
-├── prephase/
-│   ├── AUTO_PROMPT.md     ← auto prephase instructions
-│   ├── PROMPT.md          ← interactive prephase instructions
-│   └── mcp.json           ← MCP config for CGC
-└── exploration/           ← created at runtime
-    ├── scope.json
-    ├── queue_all.txt
-    ├── queue_explored.txt
-    ├── index.json
-    ├── findings.md         ← final output
-    ├── nodes/*.json
-    └── edges/*.json
+exploration/
+├── scope.json              ← input: exploration parameters
+├── waves.json              ← Sonnet-planned exploration order
+├── cgc_graph.json          ← AST dependency data from CGC
+├── revision.json           ← SHA tracking for incremental mode
+├── queue_all.txt           ← all in-scope files
+├── queue_explored.txt      ← explored files
+├── findings.md             ← architectural narrative
+├── scope-manifest.json     ← machine-readable manifest
+├── architecture.md         ← cross-scope analysis (multi-scope only)
+├── nodes/                  ← v2 node files
+│   └── <sanitized>.json    ← role, contracts, effects, state, observations
+└── edges/                  ← v2 edge files
+    └── <sanitized>.edges.json  ← semantic, data_flow, coupling
 ```
 
 ## Providers
 
-| Phase | Supported Providers | Notes |
-|-------|-------------------|-------|
+| Phase | Supported | Notes |
+|-------|-----------|-------|
 | Prephase | claude, cursor | MCP required for CGC graph queries |
-| Exploration | claude, codex, gemini, copilot, cursor | Any provider works |
+| Wave planning | claude, codex, gemini, copilot, cursor | Any provider |
+| Exploration | claude, codex, gemini, copilot, cursor | Any provider |
 | Synthesis | claude, cursor | Claude preferred (tool restrictions) |
+| Cross-scope | claude, cursor | Opus recommended |
 
 ## Models
 
 | Phase | Default | Override | Notes |
 |-------|---------|----------|-------|
-| Prephase | Opus | — | Needs MCP tools, architectural judgment |
-| Exploration | haiku | `CLAUDE_MODEL=sonnet` / `CURSOR_MODEL=sonnet-4` | Cheap file-by-file reading |
-| Synthesis | Opus | `SYNTH_MODEL=sonnet` | Source-verified, needs precision |
+| Prephase | Opus | — | Cross-cutting judgment, MCP tools |
+| Wave planning | Sonnet | `CLAUDE_MODEL=X` | Graph analysis only |
+| Exploration | Sonnet | `CLAUDE_MODEL=X` | Full source reading |
+| Per-scope synthesis | Sonnet | `SYNTH_MODEL=X` | Rich v2 input compensates |
+| Cross-scope synthesis | Opus | `CROSS_MODEL=X` | Adversarial analysis |
 
 ## Updating Prompts
 
@@ -160,6 +172,3 @@ If you modify prompts in the main `cartographer/` directory:
 ```bash
 ./update.sh
 ```
-
-This copies the latest prompts into deliverables without touching
-the local scripts (run.sh, synthesize.sh).

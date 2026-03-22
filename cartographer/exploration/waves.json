@@ -1,0 +1,49 @@
+{
+  "waves": [
+    {
+      "id": 1,
+      "files": [
+        "internal/tui/types.go",
+        "internal/tui/styles.go",
+        "internal/tui/keys.go"
+      ],
+      "rationale": "Pure foundation files with no intra-TUI dependencies. types.go defines shared data structures used throughout the package. styles.go and keys.go define constants (visual styles and key bindings) that are referenced by nearly every other component. Reading these first gives the exploration agent the vocabulary needed to understand all subsequent files."
+    },
+    {
+      "id": 2,
+      "files": [
+        "internal/tui/help.go",
+        "internal/tui/help_test.go"
+      ],
+      "rationale": "Help display component — likely a leaf that depends on keys.go (to enumerate bindings) and styles.go (for rendering), but nothing else in the package imports it. Grouping with its test keeps the unit coherent. Placed after wave 1 so key/style definitions are already understood."
+    },
+    {
+      "id": 3,
+      "files": [
+        "internal/tui/filter.go",
+        "internal/tui/filter_test.go",
+        "internal/tui/dashboard.go",
+        "internal/tui/dashboard_test.go",
+        "internal/tui/channels.go",
+        "internal/tui/channels_test.go"
+      ],
+      "rationale": "The tightly coupled core interaction cluster. filter.go is the local hub (called by dashboard and filter_overlay) but also calls dashboard.go, making them bidirectionally coupled. channels.go and dashboard.go are likewise bidirectionally coupled. Because all three form a mutual-dependency triangle they must be read together — reading any one in isolation would leave unresolved references. Tests are included to clarify contracts and expected behavior for each component."
+    },
+    {
+      "id": 4,
+      "files": [
+        "internal/tui/filter_overlay.go",
+        "internal/tui/filter_overlay_test.go"
+      ],
+      "rationale": "Filter overlay is a consumer of filter.go — it calls into the filter hub established in wave 3 but nothing in wave 3 depends on it. Placing it after the core cluster ensures filter.go's API is already understood before the overlay's usage patterns are examined."
+    },
+    {
+      "id": 5,
+      "files": [
+        "internal/tui/app.go",
+        "internal/tui/app_test.go"
+      ],
+      "rationale": "The top-level TUI orchestrator. With 9 fan-out, app.go imports and wires together channels, filter, dashboard, and external boundary packages (internal/storage, cmd/digest). It should be read last so all the components it composes are already understood. app_test.go likely exercises the full wiring and is best interpreted with complete context of all prior waves."
+    }
+  ]
+}

@@ -1,83 +1,89 @@
-# Cartographer Synthesis Phase
+# Cartographer v2 Synthesis Phase
 
-You are synthesizing a codebase exploration into an architectural narrative.
+You are synthesizing a codebase exploration into an architectural narrative
+and a machine-readable scope manifest.
 
-The cartographer has already explored every file — reading source code,
-recording per-file summaries, exports, imports, side effects, and
-inter-file edges. You receive both the cartographer's structured output
-AND access to the actual source files. Use the structured data as your
-map, then read the source code to verify claims and fill in precision.
+The cartographer has explored every file using wave-based exploration with
+Sonnet — reading full source code, recording per-file structured data
+(role, contracts, effects, state, observations) and semantic edges
+(coupling types, data flow). You receive this rich structured output
+AND access to the actual source files.
 
 ## Your Workflow
 
 ### Phase 1: Orient from structured data
 
-Read the four artifacts below to build your mental model. This gives you
-the full picture — file list, dependencies, summaries, behavioral notes.
+Read the artifacts below to build your mental model:
+- scope.json — exploration parameters and intent
+- v2 nodes — rich per-file data with contracts, effects, observations
+- v2 edges — semantic relationships with coupling types and data flow
+- CGC graph — AST-parsed structural ground truth
+
+The v2 nodes are substantially richer than v1. Contracts tell you
+preconditions and guarantees. Observations (with `kind` and `loc`) point
+to specific architecturally notable behaviors. Effects enumerate external
+interactions. Use these to prioritize what to verify in source.
 
 ### Phase 2: Verify against source code
 
-Read the actual source files to fact-check and enrich. Priorities:
+Read actual source files to fact-check and enrich. Priorities:
 
 1. **Seed file and interface definitions** — read these first. Get the
-   real signatures, types, and contracts. The node `exports` field has
-   names only; the source has the full picture.
-2. **Data flow entry points** — read the files that initiate operations
-   to trace actual call chains. Don't invent sequences from edge pairs.
-3. **Files with behavioral claims in `notes`** — if a node says
-   "skips messages under 150 chars", open the file and confirm the
-   threshold, the exact condition, and what happens instead.
-4. **Test files** — skim for test function names and table-driven test
+   real signatures, types, and contracts.
+2. **Files with observations of kind "risk" or "behavior"** — verify
+   specific claims. The `loc` field tells you exactly where to look.
+3. **Data flow entry points** — trace actual call chains. Edges with
+   `data_flow` descriptions help you know what to follow.
+4. **Cross-scope boundary files** — files that interact with
+   boundary_packages. Verify the coupling type claimed in edges.
+5. **Test files** — skim for test function names and table-driven test
    cases. These reveal behavioral contracts and edge cases.
 
-Do NOT read every file line-by-line. Use the structured data to know
-**what** to look for, then read source to confirm **how** it actually
-works. For large scopes (30+ files), prioritize the seed, interfaces,
-and any file where `notes` makes a specific behavioral claim.
+Do NOT read every file. The v2 nodes already contain verified
+observations from Sonnet reading full source. Focus on confirming
+the highest-value claims and filling gaps the nodes don't cover.
 
-### Phase 3: Write findings
+### Phase 3: Write TWO outputs
 
-Produce the document below, grounded in what you verified.
+You produce two artifacts:
+
+1. **findings.md** — architectural narrative (output as your text response)
+2. **scope-manifest.json** — machine-readable summary (write via Write tool)
 
 ## Your Structured Input
 
-You receive four consolidated artifacts:
-
 ### scope.json
 The exploration parameters: seed file, `explore_within` globs, and
-`boundary_packages` (neighboring code that was observed but not explored).
-This tells you the **intent** — what area was targeted and where the
-walls are.
+`boundary_packages`.
 
-### index.json
-A flat map of every explored file with a one-line summary and explored
-status. Use this for orientation — the file list and quick descriptions.
-
-### nodes (consolidated)
+### Nodes (consolidated v2)
 Per-file structured data:
-- `path`, `type` (source / test / config / boundary)
+- `path` — file path relative to project root
+- `role` — file's architectural role (entry-point, orchestrator, adapter, etc.)
 - `summary` — one-line description
-- `exports` — public API surface (names only — verify signatures in source)
-- `imports` — dependencies
-- `imported_by` — reverse dependencies (when known)
-- `side_effects` — external interactions (network, disk, env vars)
-- `config_deps` — configuration this file depends on
-- `notes` — free-text architectural observations from the explorer
+- `contracts` — `{ requires: [...], guarantees: [...] }` (when non-trivial)
+- `effects` — external interactions (when present)
+- `state` — mutable state description (when stateful)
+- `observations` — `[{ kind, text, loc? }]` (when notable)
 
-The `notes` field is your richest signal but also the least reliable.
-It captures behavioral nuance that structural fields miss, but may
-contain imprecise or wrong claims. **Always verify specific claims
-from `notes` against the source code before including them.**
+Observations are your richest signal. They have `kind` (behavior, risk,
+pattern, coupling, invariant) and optional `loc` (file:line range).
+**Always verify risk and behavior observations against source code.**
 
-### edges (consolidated)
-Inter-file relationships as `{from, to, relationship, usage}` tuples.
-Relationship types: `imports`, `imported_by`, `tests`, `tested_by`,
-`implements`, `boundary`.
+### Edges (consolidated v2)
+Semantic relationships:
+- `from`, `to` — file paths (or `[External System]` for boundaries)
+- `semantic` — what the relationship means
+- `data_flow` — what data moves across this edge (when notable)
+- `coupling` — direct, interface-mediated, event-driven, config-mediated
 
-Edges with `"boundary"` in their usage or relationship point to packages
-outside the explored scope — these define the interface surface.
+### CGC Graph
+AST-parsed dependency data. Use as structural ground truth to validate
+edge claims.
 
 ## What to Produce
+
+### Output 1: findings.md
 
 Write a `findings.md` with the sections below. Every section must earn
 its place — if the explored scope is small and a section would be trivial
@@ -85,204 +91,141 @@ or empty, collapse it into an adjacent section or drop it.
 
 ---
 
-### 1. Purpose
+#### 1. Purpose
 
 2-4 sentences. What does this area of the codebase do, stated from the
-perspective of its **callers** — the code or users that depend on it?
+perspective of its **callers**?
 
-Derive this from:
-- The seed file's exports (the intended entry point)
+Derive from:
+- The seed file's exports
 - Boundary edges pointing inward (who consumes this code)
 - The overall shape of the exports across all files
 
-Do NOT restate the scope.json. The reader already knows what was explored.
-Tell them what this code **is for**.
+#### 2. Architecture
 
-### 2. Architecture
+**Dependency diagram** — ASCII representation showing how key files/types
+relate. Use node `role` fields to group by architectural function. Mark
+boundary packages.
 
-The structural skeleton. Two parts:
+For scopes with 30+ files, group into clusters by role. For 100+ files,
+use two-level diagrams.
 
-**Dependency diagram** — an ASCII representation showing how the key
-files/types relate. Use a layout that makes the dependency direction
-obvious (top-down or left-to-right). Group files by role. Mark boundary
-packages.
+**Key interfaces and signatures** — from source code, not guessed. Focus
+on the API surface consumers depend on.
 
-```
-Example:
-  types.ts ──── defines ────→ core interfaces
-    ↑                            ↑
-    │                            │
-  service.ts ── uses ──→ repository.ts ──→ [database]†
-    ↑                                       † boundary
-    │
-  handler.ts ── uses ──→ [express.Router]†
-```
+**Pattern identification** — name patterns clearly present. Reference
+which files participate using node `role` and `observations` of kind
+"pattern".
 
-Guidelines for the diagram:
-- Include every file that is structurally significant (defines interfaces,
-  orchestrates, or sits at a boundary). Leaf files that implement a single
-  concern can be mentioned by name in a cluster without full edges.
-- Show boundary packages with a `†` marker and a footnote.
-- For scopes with 30+ files, group into clusters/layers rather than
-  showing every file. Name the clusters, list their members, show
-  inter-cluster edges.
-- For scopes with 100+ files, use a two-level diagram: a high-level
-  cluster map, then one sub-diagram per cluster showing internal structure.
+#### 3. Data Flow
 
-**Key interfaces and signatures** — list the primary public types and
-functions with their actual signatures (from source code, not guessed).
-Focus on the entry points and contracts that callers depend on. For
-interfaces, show the method set. Keep this concise — only the API
-surface a consumer needs to know.
+Trace 1-3 representative flows from entry point to boundary. **Build
+flows from source code + edge `data_flow` fields.** Use real function
+names and signatures.
 
-**Pattern identification** — name the architectural patterns you observe.
-Strategy, Repository, Facade, Mediator, Pipeline, Event-driven, etc.
-Only name patterns that are clearly present — don't force-fit. For each,
-state which files participate and what role they play.
+#### 4. Boundaries
 
-### 3. Data Flow
+Table of every boundary package, role, consuming files, and key types.
+Use edge `coupling` types to characterize each boundary relationship.
 
-How does a typical operation move through this code? Trace 1-3
-representative flows from entry point to boundary, showing the path
-through files and the transformations that happen at each step.
+#### 5. Non-Obvious Behaviors
 
-**Build flows from source code, not from edge pairs.** Read the entry
-point file, follow the actual function calls, and record the real chain.
-The edges tell you which files connect; the source tells you how.
-
-Format as numbered steps:
-
-```
-1. handler.ts receives HTTP request
-2. handler.ts calls service.validate(input) — returns ValidationError | nil
-3. service.ts calls repository.find(ctx, id) — SQL lookup
-4. repository.ts queries [database]† — boundary crossing
-5. service.ts transforms result → response DTO
-6. handler.ts sends HTTP response
-```
-
-Use real function names and real signatures from the source code.
-
-Choose flows that reveal the architecture. If there's one primary happy
-path and one interesting error/edge path, show both.
-
-### 4. Boundaries
-
-A table of every boundary package (from scope.json + observed boundary
-edges), what role it plays, and which files in scope interact with it:
-
-| Boundary | Role | Used By | Key Types |
-|----------|------|---------|-----------|
-| storage | persistence | service.ts, repository.ts | Store, Message |
-| config | configuration | service.ts | Config |
-
-This section answers: "if I change this boundary package, what in the
-explored scope breaks?"
-
-### 5. Non-Obvious Behaviors
-
-Bullet list of things a developer wouldn't guess from reading type
-signatures alone. These are the findings that justify the entire
-exploration.
-
-**Every claim in this section must be verified against source code.**
-Include the file and approximate location so a reader can confirm.
+Bullet list of findings a developer wouldn't guess from type signatures.
+**Every claim must be verified against source code.** Use observation
+`loc` fields to check efficiently.
 
 Sources:
-- Node `notes` fields — behavioral observations (verify before including)
-- Node `side_effects` — hidden external interactions
-- Node `config_deps` — implicit coupling through configuration
-- Actual source code — thresholds, fallbacks, edge cases you found
+- Node observations of kind "behavior", "risk", "invariant"
+- Node `effects` — hidden external interactions
+- Node `contracts` — surprising preconditions or guarantees
+- Edge `data_flow` — non-obvious data transformations
 
-Examples of what belongs here:
-- Threshold values that change control flow
-- Implicit ordering requirements
-- Error handling strategies (fail-fast, retry, partial success)
-- Shared mutable state or singleton patterns
-- Performance-relevant details (batching, caching, connection pooling)
-- Things that work differently than their names suggest
+#### 6. Test Coverage Shape
 
-Do NOT list obvious facts. "service.ts imports repository.ts" is not a
-finding. "service.ts skips the LLM call entirely for messages under 150
-characters and copies them verbatim" is.
-
-### 6. Test Coverage Shape
-
-Not line-count metrics. Qualitative assessment:
-
-- What scenarios are well-tested?
-- What's conspicuously absent? (error paths, edge cases, integration
-  points that only have unit tests or vice versa)
-- Are tests testing behavior or implementation details?
-- Do test files reveal additional behavioral contracts not visible in
-  source nodes? (e.g., test names that describe business rules)
-
-Derive from: reading test files (function names, table test cases,
-assertions) + `tested_by` / `tests` edges.
-
-If no test files exist in the explored scope, say so in one line and
-drop this section.
+Qualitative assessment. Derive from test-role nodes and their edges.
 
 ---
 
+### Output 2: scope-manifest.json
+
+Write this file using the Write tool to the path:
+`cartographer/exploration/scope-manifest.json`
+
+```json
+{
+  "scope": "<scope name from seed path>",
+  "purpose": "<1-2 sentence purpose>",
+  "exposes": {
+    "types": ["<exported type names>"],
+    "interfaces": ["<exported interface names>"],
+    "entry_points": ["<public entry point signatures>"]
+  },
+  "consumes": {
+    "external": ["<[External System] names from boundary edges>"],
+    "config": ["<config dependencies from node contracts>"]
+  },
+  "cross_scope_touchpoints": [
+    {
+      "scope": "<other scope name>",
+      "direction": "consumed_by | consumes | bidirectional",
+      "surface": "<what types/interfaces cross the boundary>",
+      "coupling": "direct | interface-mediated | event-driven | config-mediated"
+    }
+  ],
+  "invariants": ["<system-wide rules from observations of kind 'invariant'>"],
+  "risks": ["<from observations of kind 'risk'>"],
+  "patterns": ["<from observations of kind 'pattern'>"]
+}
+```
+
+Derive each field from the structured node/edge data:
+- `exposes` — from nodes with role entry-point, orchestrator; their exports
+- `consumes` — from boundary edges and node contracts.requires
+- `cross_scope_touchpoints` — from edges to/from boundary_packages
+- `invariants` — from observations of kind "invariant"
+- `risks` — from observations of kind "risk"
+- `patterns` — from observations of kind "pattern"
+
 ## Scale-Dependent Behavior
 
-Adapt your output to the scope size:
-
-**Small scope (< 15 files):** Read every source file. Every file is
-visible in the diagram. Data flows can be exhaustive. Findings tend to
-be behavioral.
+**Small scope (< 15 files):** Read every source file. Every file visible
+in diagram. Data flows can be exhaustive.
 
 **Medium scope (15-60 files):** Read seed, interfaces, and files with
-behavioral claims. Group files into logical clusters in the diagram.
-Show 2-3 representative flows. Focus findings on cross-cluster
-interactions and surprising coupling.
+risk/behavior observations. Group by role clusters. 2-3 flows.
 
-**Large scope (60-200 files):** Read seed, interface files, and a
-sample from each cluster. Two-level diagrams (cluster map + per-cluster
-detail). Flows should trace the primary spine of the architecture.
-Findings should emphasize systemic patterns — shared conventions,
-recurring structures, architectural violations.
+**Large scope (60-200 files):** Two-level diagrams. Primary spine flows.
+Systemic patterns.
 
-**Very large scope (200+ files):** Three-level diagrams if needed
-(domain → cluster → file). Lead with the domain decomposition. Findings
-should include an assessment of the overall architecture's consistency
-and any structural debt (circular dependencies, god modules, orphaned
-files). At this scale, identifying what's anomalous matters more than
-cataloging what's normal.
+**Very large scope (200+ files):** Three-level diagrams. Domain
+decomposition. Structural debt assessment.
 
 ## What NOT to Do
 
-- Do not repeat per-file summaries. The index already has those.
-- Do not list every import/export. The node files already have those.
-- Do not describe what each file does one-by-one. That's the index.
-- Do not speculate. If you haven't verified it in source, don't state it
-  as fact.
-- Do not produce generic observations that would apply to any codebase.
-  ("The code follows separation of concerns." — useless.)
-- Do not pad. If this is a 9-file package and findings fit in 40 lines,
-  that's fine. If it's a 200-file service and it needs 200 lines, that's
-  also fine. Length should match density of insight.
-- Do not invent function signatures. If you didn't read the source, use
-  the export name only. Wrong signatures are worse than no signatures.
+- Do not repeat per-file summaries
+- Do not list every import/export
+- Do not describe files one-by-one
+- Do not speculate — verify in source
+- Do not produce generic observations
+- Do not pad — length should match insight density
+- Do not invent function signatures
 
 ## Output Format
 
-Your text output is captured as the findings document. Do NOT use any
-write tools — just output the markdown directly as your response text.
-Do not ask for permissions. Do not add preamble, commentary, or
-wrap in code blocks. Your entire text response becomes `findings.md`.
+Your **text output** is captured as findings.md. Output raw markdown
+directly — no preamble, no code blocks wrapping the whole thing.
 
-Start with a YAML frontmatter block:
-
+Start with YAML frontmatter:
 ```
 ---
 scope: <seed file path>
 files_explored: <count>
 boundary_packages: <count>
-generated: <timestamp placeholder — the script fills this>
+generated: <timestamp placeholder>
 ---
 ```
 
-Then the sections. Use `##` for section headers (not `#` — the script
-may prepend a title).
+Then sections with `##` headers.
+
+**Also** use the Write tool to write `scope-manifest.json` to
+`cartographer/exploration/scope-manifest.json`.
