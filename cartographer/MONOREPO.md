@@ -3,15 +3,32 @@
 How to run cartographer against individual packages in a monorepo
 (Turborepo, Nx, Lerna, Rush, or any `packages/` structure).
 
-## Overview
+## When to Use Prephase vs Skip It
 
-Cartographer maps one package at a time. For a monorepo, you either:
-1. **Run per-package** — map each package independently
-2. **Run cross-package** — map multiple packages, then cross-scope synthesis finds the connections
+The decision depends on package size:
 
-Both approaches use the same pipeline. The key is setting paths correctly.
+**Small package (< 30 files)** — skip prephase, one scope covers the whole
+package. Write scope.json by hand, explore as a single scope. The wave
+planner handles file ordering within the scope. No need for Opus to decide
+boundaries when you can see them yourself.
 
-## Quick Start: Single Package
+**Large package (30-200 files)** — run prephase. Opus analyzes the CGC
+dependency graph and splits the package into natural scopes (by import
+cluster, fan-in hub, etc.). Each scope gets its own wave plan, exploration,
+and synthesis. Cross-scope synthesis then connects them.
+
+**Very large package (200+ files) or full monorepo** — always run prephase.
+A single scope at this size produces diluted findings. Prephase identifies
+the internal architecture and creates focused scopes that produce
+actionable analysis.
+
+Rule of thumb: if you can hold the package's dependency graph in your head,
+skip prephase. If you can't, let Opus figure it out.
+
+## Small Package (< 30 files): Skip Prephase
+
+Write scope.json by hand and run exploration + synthesis directly.
+No prephase, no Opus cost for scoping.
 
 ```bash
 MONOREPO=/path/to/your/monorepo
@@ -20,7 +37,7 @@ PACKAGE=packages/api-server
 # 1. Index the package
 cgc index "$MONOREPO/$PACKAGE"
 
-# 2. Create scope
+# 2. Create scope (manual — you know the boundaries)
 mkdir -p cartographer/exploration
 cat > cartographer/exploration/scope.json << EOF
 {
@@ -39,13 +56,18 @@ PROJECT_ROOT="$MONOREPO" ./cartographer/explore.sh
 ./cartographer/synthesize.sh "$MONOREPO"
 ```
 
-Output: `cartographer/exploration/findings.md`
+Output: `cartographer/exploration/findings.md` + `scope-manifest.json`
 
-## Full Monorepo: Multiple Packages
+This is the fastest path. One Sonnet wave plan call, one Sonnet exploration
+pass, one Sonnet synthesis — three LLM calls total for a small package.
 
-### Option A: Automatic scope detection
+## Large Package (30+ files): Use Prephase
 
-Let the prephase (Opus + CGC) determine scopes automatically:
+Prephase (Opus) analyzes the dependency graph and splits the package into
+focused scopes. Each scope gets wave exploration and synthesis. Cross-scope
+synthesis connects the dots.
+
+### Option A: Automatic scope detection (recommended for 30+ files)
 
 ```bash
 MONOREPO=/path/to/your/monorepo
