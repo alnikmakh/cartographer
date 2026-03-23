@@ -149,7 +149,7 @@ Qualitative assessment. Derive from test-role nodes and their edges.
 ### Output 2: scope-manifest.json
 
 Write this file using the Write tool to the path:
-`cartographer/exploration/scope-manifest.json`
+`{{EXPLORATION_DIR}}/scope-manifest.json`
 
 ```json
 {
@@ -228,4 +228,4 @@ generated: <timestamp placeholder>
 Then sections with `##` headers.
 
 **Also** use the Write tool to write `scope-manifest.json` to
-`cartographer/exploration/scope-manifest.json`.
+`{{EXPLORATION_DIR}}/scope-manifest.json`.

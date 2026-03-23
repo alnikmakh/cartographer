@@ -151,7 +151,7 @@ echo ""
 
 PROMPT_FILE=$(mktemp)
 cat > "$PROMPT_FILE" <<PROMPT_EOF
-$(cat "$SYNTHESIS_PROMPT")
+$(sed "s|{{EXPLORATION_DIR}}|$EXPLORATION_DIR|g" "$SYNTHESIS_PROMPT")
 
 ## Source Code Access
 

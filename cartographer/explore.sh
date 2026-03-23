@@ -547,8 +547,8 @@ if [ ! -f "$WAVES_FILE" ] || [ "$PENDING" -eq "$DISCOVERED" ]; then
     echo "  Running Sonnet to plan exploration order..."
     echo ""
 
-    # Build wave planning prompt
-    WAVE_PLAN_CONTENT=$(cat "$WAVE_PLAN_PROMPT")
+    # Build wave planning prompt — replace {{EXPLORATION_DIR}} with real path
+    WAVE_PLAN_CONTENT=$(sed "s|{{EXPLORATION_DIR}}|$EXPLORATION_DIR|g" "$WAVE_PLAN_PROMPT")
 
     SCOPE_JSON=$(cat "$SCOPE_FILE")
     CGC_GRAPH=""
@@ -558,6 +558,10 @@ if [ ! -f "$WAVES_FILE" ] || [ "$PENDING" -eq "$DISCOVERED" ]; then
     WAVE_PROMPT="$WAVE_PLAN_CONTENT
 
 ---
+
+## EXPLORATION_DIR
+
+\`$EXPLORATION_DIR\`
 
 ## scope.json
 
@@ -688,16 +692,37 @@ $file"
     echo -e "  Rationale: $WAVE_RATIONALE"
     echo ""
 
-    # Build exploration prompt for this wave
-    EXPLORE_CONTENT=$(cat "$EXPLORE_PROMPT")
+    # Build exploration prompt — replace {{EXPLORATION_DIR}} with real path
+    EXPLORE_CONTENT=$(sed "s|{{EXPLORATION_DIR}}|$EXPLORATION_DIR|g" "$EXPLORE_PROMPT")
     SCOPE_JSON=$(cat "$SCOPE_FILE")
     CGC_GRAPH=""
     [ -f "$CGC_GRAPH_FILE" ] && CGC_GRAPH=$(cat "$CGC_GRAPH_FILE")
-    PRIOR_NODES=$(consolidate_nodes)
+
+    # List available prior node files (paths only — Sonnet reads on demand)
+    PRIOR_NODE_LISTING=""
+    if [ -d "$NODES_DIR" ] && [ -n "$(ls "$NODES_DIR"/*.json 2>/dev/null)" ]; then
+        PRIOR_NODE_LISTING=$(python3 -c "
+import json, glob, os
+for f in sorted(glob.glob('$NODES_DIR/*.json')):
+    try:
+        with open(f) as fh:
+            node = json.load(fh)
+        path = node.get('path', os.path.basename(f))
+        role = node.get('role', '?')
+        summary = node.get('summary', '')[:80]
+        print(f'- {path} ({role}): {summary}')
+        print(f'  Read: {f}')
+    except: pass
+")
+    fi
 
     FULL_PROMPT="$EXPLORE_CONTENT
 
 ---
+
+## EXPLORATION_DIR
+
+\`$EXPLORATION_DIR\`
 
 ## scope.json
 
@@ -711,11 +736,12 @@ $SCOPE_JSON
 $CGC_GRAPH
 \`\`\`
 
-## Prior Wave Output (nodes from previous waves)
+## Prior Wave Nodes (available on disk — read as needed)
 
-\`\`\`json
-$PRIOR_NODES
-\`\`\`
+These nodes were produced by previous waves. Read specific files when you
+need to cross-reference a dependency. Do NOT read all of them.
+
+$PRIOR_NODE_LISTING
 
 ## Wave $WAVE_ID — Explore These Files
 

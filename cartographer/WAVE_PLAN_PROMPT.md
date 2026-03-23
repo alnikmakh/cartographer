@@ -77,7 +77,7 @@ Group the file list into ordered waves. Output `waves.json`:
 
 ## Output
 
-Write `waves.json` to `cartographer/exploration/waves.json`.
+Write `waves.json` to `{{EXPLORATION_DIR}}/waves.json`.
 
 Your output must be valid JSON. Include a rationale for each wave explaining
 why these files are grouped and ordered this way. The exploration agent uses

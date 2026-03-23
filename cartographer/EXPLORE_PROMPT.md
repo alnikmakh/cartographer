@@ -12,10 +12,17 @@ call relationships, fan-in/fan-out. This is ground truth for structure.
 Use it for orientation — you know the dependency skeleton before reading
 any source code.
 
-### Prior Wave Output
-Nodes produced by previous waves (waves 1..N-1). This is your accumulated
-understanding. Reference prior nodes to avoid re-describing shared types
-or re-tracing known relationships. Build on what's already documented.
+### Prior Wave Nodes (available on disk)
+Nodes produced by previous waves (waves 1..N-1) are stored as individual
+JSON files in the nodes directory. You receive a listing of available node
+files below. **Read only the nodes you need** — don't read them all.
+Read a prior node when:
+- The current file imports or depends on a previously explored file
+- You need to check coupling type or contracts for a cross-reference
+- The CGC graph shows a dependency edge to an already-explored file
+
+Reference prior nodes to avoid re-describing shared types or re-tracing
+known relationships. Build on what's already documented.
 
 ### Wave Assignment
 Your wave's file list and rationale from waves.json. The rationale explains
@@ -60,12 +67,15 @@ Cross-reference with prior wave nodes:
 For every file you explore, write two output files.
 The file path is sanitized: replace every `/` with `__`.
 
+The output directory is provided below as `EXPLORATION_DIR`. All paths
+are relative to the project root.
+
 Example: exploring `tg-digest/internal/telegram/client.go`
 - sanitized name = `tg-digest__internal__telegram__client.go`
 
 **Write 1** — Node file in `nodes/` directory:
 
-    cartographer/exploration/nodes/tg-digest__internal__telegram__client.go.json
+    {{EXPLORATION_DIR}}/nodes/tg-digest__internal__telegram__client.go.json
 
 ```json
 {
@@ -94,7 +104,7 @@ Example: exploring `tg-digest/internal/telegram/client.go`
 
 **Write 2** — Edge file in `edges/` directory:
 
-    cartographer/exploration/edges/tg-digest__internal__telegram__client.go.edges.json
+    {{EXPLORATION_DIR}}/edges/tg-digest__internal__telegram__client.go.edges.json
 
 ```json
 [
